@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts</ArtifactsPath>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)..\.artifacts</ArtifactsPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Roslynator.Analyzers" Version="4.13.1">

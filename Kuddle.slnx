@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="dotnet.config" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Kuddle.Tests/Kuddle.Tests.csproj" />
     <Project Path="src/Kuddle/Kuddle.csproj" />
