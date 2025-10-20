@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Kuddle.Tests/Kuddle.Tests.csproj" />
+    <Project Path="src/Kuddle/Kuddle.csproj" />
+  </Folder>
+</Solution>
