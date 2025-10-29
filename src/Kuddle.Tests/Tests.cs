@@ -3,9 +3,22 @@
 public class Tests
 {
     [Test]
-    public void Basic()
+    public async Task Fluent()
     {
-        Console.WriteLine("This is a basic test");
+        var parser = FluentParser.Expression;
+        var expression = parser.Parse("1 + 1 / 3 * 4");
+
+        await Assert.That(expression).IsNotNull();
+    }
+
+    [Test]
+    public async Task Basic()
+    {
+        var parser = KdlParser.V2();
+
+        var result = parser.Parse("node deadbeef");
+
+        await Assert.That(result).IsNotNull();
     }
 
     [Test]

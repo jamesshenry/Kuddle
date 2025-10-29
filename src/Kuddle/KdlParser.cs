@@ -1,11 +1,39 @@
-﻿namespace Kuddle;
+﻿using Parlot.Fluent;
+using static Parlot.Fluent.Parsers;
 
-public static class KdlParser
+namespace Kuddle;
+
+public class KdlParser
 {
-    public static KdlDocument Parse(string text)
+    private static readonly KdlParser v2 = new();
+
+    public KdlDocument Parse(string text)
     {
         return new KdlDocument();
     }
 
-    public record KdlDocument;
+    public static KdlParser V2()
+    {
+        return v2;
+    }
 }
+
+public class V2Parser
+{
+    public V2Parser()
+    {
+        var document = Deferred<KdlDocument>();
+        Parser = document.Compile();
+    }
+
+    private readonly Parser<KdlDocument> Parser;
+
+    public KdlDocument Parse(string text)
+    {
+        var result = Parser.TryParse(text, out var document);
+
+        return document ?? throw new Exception();
+    }
+}
+
+public record KdlDocument;
