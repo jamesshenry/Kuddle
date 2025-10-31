@@ -1,3 +1,4 @@
+using Parlot;
 using Parlot.Fluent;
 using static Parlot.Fluent.Parsers;
 
@@ -63,5 +64,9 @@ public static class FluentParser
         expression.Named("expression");
 
         Expression = expression;
+
+        var integer = Terms.Integer().Then<TextSpan>();
+        var hello = Terms.Text("Hello", caseInsensitive: true).Then<Hello>();
+        var intOrHello = integer.Or(hello);
     }
 }

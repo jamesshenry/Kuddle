@@ -1,18 +1,9 @@
 using Parlot;
 using Parlot.Fluent;
 using static Parlot.Fluent.Parsers;
+using static Kuddle.Parser.SymbolToken;
 
 namespace Kuddle.Parser;
-
-public static class Token
-{
-    public static readonly Parser<char> OpenParen = Literals.Char('(');
-    public static readonly Parser<char> CloseParen = Terms.Char(')');
-    public static readonly Parser<char> OpenBrace = Terms.Char('{');
-    public static readonly Parser<char> CloseBrace = Terms.Char('}');
-    public static readonly Parser<char> SingleQuote = Terms.Char('"');
-    public static readonly Parser<string> DoubleQuote = Terms.Text("\"\"");
-}
 
 public static class Atoms
 {
@@ -66,11 +57,20 @@ public static class CharacterSets
         ];
 }
 
-public static class CustomParser
+public static class Tokens
 {
-    public static readonly Parser<TextSpan> NonNewLineWhiteSpace = Capture(
-        ZeroOrMany(
-            Literals.AnyOf(CharacterSets.NonNewLineWhitespaceChars).Or(Literals.WhiteSpace())
-        )
+    public static readonly Parser<TextSpan> UnicodeSpace = Capture(
+        Literals.AnyOf(CharacterSets.NonNewLineWhitespaceChars).Or(Literals.WhiteSpace())
     );
+
+    public static readonly Parser<TextSpan> MultiLineComment = SlashStar.And(CommentedBlock)
+    public static readonly Parser<TextSpan> CommentedBlock = StarSlash.Or(MultiLineComment)
 }
+
+public abstract record Token(int Line, int Column);
+
+public abstract record KeywordToken(int Line, int Column) : Token(Line, Column);
+
+public sealed record IdentifierToken(string Name, int Line, int Column) : Token(Line, Column);
+
+public sealed record IntegerLiteralToken(long Value, int Line, int Column) : Token(Line, Column);
