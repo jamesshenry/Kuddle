@@ -1,7 +1,7 @@
 using Parlot;
 using Parlot.Fluent;
-using static Parlot.Fluent.Parsers;
 using static Kuddle.Parser.SymbolToken;
+using static Parlot.Fluent.Parsers;
 
 namespace Kuddle.Parser;
 
@@ -62,9 +62,6 @@ public static class Tokens
     public static readonly Parser<TextSpan> UnicodeSpace = Capture(
         Literals.AnyOf(CharacterSets.NonNewLineWhitespaceChars).Or(Literals.WhiteSpace())
     );
-
-    public static readonly Parser<TextSpan> MultiLineComment = SlashStar.And(CommentedBlock)
-    public static readonly Parser<TextSpan> CommentedBlock = StarSlash.Or(MultiLineComment)
 }
 
 public abstract record Token(int Line, int Column);
