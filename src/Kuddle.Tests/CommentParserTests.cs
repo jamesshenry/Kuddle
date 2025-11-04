@@ -8,7 +8,7 @@ public class CommentParserTests
     [Test]
     public async Task CanParseSimpleSingleLineComment()
     {
-        var sut = CommentParsers.MultiLineComment;
+        var sut = CommentParsers.SingleLineComment;
 
         var comment = """// I am a single line comment""";
 

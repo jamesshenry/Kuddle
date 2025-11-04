@@ -1,18 +1,8 @@
 using Parlot;
 using Parlot.Fluent;
-using static Kuddle.Parser.SymbolToken;
 using static Parlot.Fluent.Parsers;
 
 namespace Kuddle.Parser;
-
-public static class Atoms
-{
-    public static readonly Parser<char> OpenParen = Literals.Char('(');
-    public static readonly Parser<char> CloseParen = Terms.Char(')');
-    public static readonly Parser<char> OpenBrace = Terms.Char('{');
-    public static readonly Parser<char> CloseBrace = Terms.Char('}');
-    public static readonly Parser<char> SingleQuote = Terms.Char('"');
-}
 
 public static class CharacterSets
 {
@@ -55,19 +45,7 @@ public static class CharacterSets
             // Ideographic Space
             '\u3000',
         ];
+
+    public static ReadOnlySpan<char> NewLineWhitespaceChars =>
+        ['\u000D', '\u000A', '\u0085', '\u000B', '\u000C', '\u2028', '\u2029'];
 }
-
-public static class Tokens
-{
-    public static readonly Parser<TextSpan> UnicodeSpace = Capture(
-        Literals.AnyOf(CharacterSets.NonNewLineWhitespaceChars).Or(Literals.WhiteSpace())
-    );
-}
-
-public abstract record Token(int Line, int Column);
-
-public abstract record KeywordToken(int Line, int Column) : Token(Line, Column);
-
-public sealed record IdentifierToken(string Name, int Line, int Column) : Token(Line, Column);
-
-public sealed record IntegerLiteralToken(long Value, int Line, int Column) : Token(Line, Column);
