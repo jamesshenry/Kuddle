@@ -8,7 +8,7 @@ public class CommentParserTests
     [Test]
     public async Task CanParseSimpleSingleLineComment()
     {
-        var sut = CommentParsers.SingleLineComment;
+        var sut = KuddleGrammar.SingleLineComment;
 
         var comment = """// I am a single line comment""";
 
@@ -21,7 +21,7 @@ public class CommentParserTests
     [Test]
     public async Task CanParseSimpleMultiLineComment()
     {
-        var sut = CommentParsers.MultiLineComment;
+        var sut = KuddleGrammar.MultiLineComment;
 
         var comment = """
 /*
@@ -39,7 +39,7 @@ comments
     [Test]
     public async Task CanParseNestedMultiLineComment()
     {
-        var sut = CommentParsers.MultiLineComment;
+        var sut = KuddleGrammar.MultiLineComment;
 
         var comment = """
 /*

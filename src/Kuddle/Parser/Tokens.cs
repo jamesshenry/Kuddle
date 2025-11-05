@@ -6,7 +6,7 @@ namespace Kuddle.Parser;
 
 public static class CharacterSets
 {
-    public static ReadOnlySpan<char> NonNewLineWhitespaceChars =>
+    public static ReadOnlySpan<char> UnicodeSpaceChars =>
         [
             // Character Tabulation
             '\u0009',
@@ -46,6 +46,6 @@ public static class CharacterSets
             '\u3000',
         ];
 
-    public static ReadOnlySpan<char> NewLineWhitespaceChars =>
+    public static ReadOnlySpan<char> NewLineChars =>
         ['\u000D', '\u000A', '\u0085', '\u000B', '\u000C', '\u2028', '\u2029'];
 }

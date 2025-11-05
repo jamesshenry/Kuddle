@@ -9,4 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Parlot" Version="1.5.2" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kuddle.Tests" />
+  </ItemGroup>
 </Project>
