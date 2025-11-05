@@ -85,21 +85,15 @@ public static class KuddleGrammar
     public static readonly Parser<TextSpan> Hex;
     public static readonly Parser<TextSpan> Octal;
     public static readonly Parser<TextSpan> Binary;
-
     public static readonly Parser<TextSpan> Number;
-
-    private static bool IsBinaryChar(char c) => c == '0' || c == '1';
-
-    private static bool IsOctalChar(char c) => c >= '0' && c <= '7';
-
-    private static bool IsHexChar(char c) =>
-        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || c == '_';
     #endregion
+
     #region Keywords and booleans
     public static readonly Parser<string> Boolean;
     public static readonly Parser<string> KeywordNumber;
     public static readonly Parser<string> Keyword;
     #endregion
+
     #region Specific code points
     public static readonly Parser<char> Bom = Literals.Char('\uFEFF');
     #endregion
@@ -117,4 +111,11 @@ public static class KuddleGrammar
     public static readonly Parser<TextSpan> NodeSpace;
     public static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
     #endregion
+
+    private static bool IsBinaryChar(char c) => c == '0' || c == '1';
+
+    private static bool IsOctalChar(char c) => c >= '0' && c <= '7';
+
+    private static bool IsHexChar(char c) =>
+        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || c == '_';
 }
