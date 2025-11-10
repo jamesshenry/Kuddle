@@ -81,7 +81,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task NewLine_ParsesLf()
     {
-        var sut = KuddleGrammar.NewLine;
+        var sut = KuddleGrammar.SingleNewLine;
 
         var input = "\n";
         bool success = sut.TryParse(input, out var value);
@@ -93,7 +93,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task NewLine_ParsesCrLf()
     {
-        var sut = KuddleGrammar.NewLine;
+        var sut = KuddleGrammar.SingleNewLine;
 
         var input = "\r\n";
         bool success = sut.TryParse(input, out var value);

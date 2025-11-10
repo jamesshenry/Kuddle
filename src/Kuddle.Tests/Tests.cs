@@ -3,15 +3,6 @@
 public class Tests
 {
     [Test]
-    public async Task Fluent()
-    {
-        var parser = FluentParser.Expression;
-        var expression = parser.Parse("1 + 1 / 3 * 4");
-
-        await Assert.That(expression).IsNotNull();
-    }
-
-    [Test]
     public async Task Basic()
     {
         var parser = KdlParser.V2();
