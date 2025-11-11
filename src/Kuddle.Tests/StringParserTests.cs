@@ -209,7 +209,7 @@ Hello \       World
     {
         var sut = KuddleGrammar.QuotedString;
 
-        var input = "\"hello\r\nworld\"";
+        var input = $"\"hello{Environment.NewLine}world\"";
         bool success = sut.TryParse(input, out var value);
 
         var expected = """
