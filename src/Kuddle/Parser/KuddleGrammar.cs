@@ -68,13 +68,26 @@ public static class KuddleGrammar
                 return singleQuoteRaw.Or(tripleQuoteRaw);
             }
         );
-
+        var identifierChar = Literals.Pattern(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
+        var unambiguousStartChar = identifierChar.When(
+            (_, c) => c.Span[^1] >= 'a' && c.Span[^1] <= 'z'
+        ); // A simple but effective example rule
         IdentifierChar = Literals.NoneOf(CharacterSets.IdentifierExcludedChars, 1, 1);
         UnambiguousIdent = Capture(
-            IdentifierChar
-                .When((a, b) => !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.')
-                .And(ZeroOrMany(IdentifierChar))
-        );
+                IdentifierChar
+                    .When(
+                        (a, b) =>
+                        {
+                            var c = !IsDigitChar(b.Span[0]);
+                            var d = !IsSigned(b.Span[0]);
+                            var e = b.Span[0] != '.';
+                            return c && d && e;
+                        }
+                    )
+                    .And(ZeroOrMany(IdentifierChar))
+            )
+            .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
+            .ElseError("");
         SignedIdent = Capture(
             Sign.And(
                 ZeroOrOne(
@@ -90,11 +103,20 @@ public static class KuddleGrammar
                 .And(
                     ZeroOrOne(
                         IdentifierChar
-                            .When((a, b) => !IsDigitChar(b.Span[0]))
+                            .When(
+                                (a, b) =>
+                                {
+                                    var c = !IsDigitChar(b.Span[0]);
+                                    return c;
+                                }
+                            )
+                            .ElseError("No numbers allowed")
                             .And(ZeroOrMany(IdentifierChar))
                     )
                 )
         );
+        IdentifierString = UnambiguousIdent.Or(SignedIdent).Or(DottedIdent);
+
         HexSequence = Literals.Pattern(IsHexChar, 1, 1);
         HexUnicode = HexSequence.When((a, b) => !IsLoneSurrogate(b.Span[0]));
         WsEscape = Capture(
@@ -122,7 +144,6 @@ public static class KuddleGrammar
             ZeroOrOne(Literals.Text("\"").Or(Literals.Text("\"\"")))
                 .And(ZeroOrMany(StringCharacter))
         );
-        IdentifierString = UnambiguousIdent.Or(SignedIdent).Or(DottedIdent);
         QuotedString = Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
             .Or(
                 Between(
@@ -214,6 +235,11 @@ public static class KuddleGrammar
         LineSpace = lineSpace;
     }
 
+    private static bool IsDisallowedKeywordString(ReadOnlySpan<char> value)
+    {
+        return value != "true" && value != "false";
+    }
+
     private static bool IsLoneSurrogate(char codePoint) =>
         codePoint >= 0xD800 && codePoint <= 0xDFFF;
 
@@ -250,21 +276,21 @@ public static class KuddleGrammar
     public static readonly Parser<TextSpan> SingleNewLine;
     public static readonly Parser<TextSpan> NodeSpace;
     public static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
-    private static readonly Parser<TextSpan> Type;
-    private static readonly Parser<TextSpan> RawString;
-    private static readonly Parser<TextSpan> IdentifierChar;
-    private static readonly Parser<TextSpan> UnambiguousIdent;
-    private static readonly Parser<TextSpan> SignedIdent;
-    private static readonly Parser<TextSpan> DottedIdent;
-    private static readonly Parser<TextSpan> HexSequence;
-    private static readonly Parser<TextSpan> HexUnicode;
-    private static readonly Parser<TextSpan> WsEscape;
-    private static readonly Parser<TextSpan> StringCharacter;
-    private static readonly Parser<TextSpan> SingleLineStringBody;
-    private static readonly Parser<TextSpan> MultiLineStringBody;
-    private static readonly Parser<TextSpan> IdentifierString;
-    private static readonly Parser<TextSpan> QuotedString;
-    private static readonly Parser<TextSpan> String;
+    internal static readonly Parser<TextSpan> Type;
+    internal static readonly Parser<TextSpan> RawString;
+    internal static readonly Parser<TextSpan> IdentifierChar;
+    internal static readonly Parser<TextSpan> UnambiguousIdent;
+    internal static readonly Parser<TextSpan> SignedIdent;
+    internal static readonly Parser<TextSpan> DottedIdent;
+    internal static readonly Parser<TextSpan> HexSequence;
+    internal static readonly Parser<TextSpan> HexUnicode;
+    internal static readonly Parser<TextSpan> WsEscape;
+    internal static readonly Parser<TextSpan> StringCharacter;
+    internal static readonly Parser<TextSpan> SingleLineStringBody;
+    internal static readonly Parser<TextSpan> MultiLineStringBody;
+    internal static readonly Parser<TextSpan> IdentifierString;
+    internal static readonly Parser<TextSpan> QuotedString;
+    internal static readonly Parser<TextSpan> String;
     #endregion
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';
@@ -276,7 +302,7 @@ public static class KuddleGrammar
 
     private static bool IsDigitChar(char c) => c >= '0' && c <= '9';
 
-    private static bool IsSigned(char c) => c != '+' && c != '-';
+    private static bool IsSigned(char c) => c == '+' || c == '-';
 
     private static bool IsDisallowedLiteralCodePoint(char c)
     {
@@ -287,6 +313,16 @@ public static class KuddleGrammar
             || (c >= '\u2066' && c <= '\u2069')
             || c == '\uFEFF';
     }
+
+    private static readonly HashSet<string> ReservedKeywords = new()
+    {
+        "inf",
+        "-inf",
+        "nan",
+        "true",
+        "false",
+        "null",
+    };
 }
 
 public abstract record KdlValue(string? TypeAnnotation);
