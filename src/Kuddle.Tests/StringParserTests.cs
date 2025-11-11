@@ -1,8 +1,9 @@
+using System.Diagnostics;
 using Kuddle.Parser;
 
 namespace Kuddle.Tests;
 
-public class StringParsersTests
+public class StringParserTests
 {
     // Note: These tests are stubs until StringParsers is implemented
     // They represent the string parsing rules from the KDL grammar:
@@ -80,6 +81,22 @@ public class StringParsersTests
     }
 
     [Test]
+    [Arguments("true")]
+    [Arguments("false")]
+    [Arguments("null")]
+    [Arguments("inf")]
+    [Arguments("-inf")]
+    [Arguments("nan")]
+    public async Task UnambiguousIdent_DoesNotParseDisallowedKeywordString(string input)
+    {
+        var sut = KuddleGrammar.UnambiguousIdent;
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsFalse();
+    }
+
+    [Test]
     [Arguments("one")]
     [Arguments("two")]
     [Arguments("three")]
@@ -101,131 +118,107 @@ public class StringParsersTests
     }
 
     [Test]
-    [Arguments("true")]
-    [Arguments("false")]
-    public async Task IdentifierString_DoesNotParseDisallowedKeywordString(string input)
+    [Arguments("\\   ")]
+    public async Task WsEscape_ParsesWhiteSpace(string input)
     {
-        var sut = KuddleGrammar.UnambiguousIdent;
+        var sut = KuddleGrammar.WsEscape;
 
         bool success = sut.TryParse(input, out var value);
 
-        await Assert.That(success).IsFalse();
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo("");
     }
 
-    // [Test]
-    // public async Task IdentifierString_RejectsFalseKeyword()
-    // {
-    //     var sut = KuddleGrammar.IdentifierString;
+    [Test]
+    public async Task QuotedString_ParsesSingleLineString()
+    {
+        var sut = KuddleGrammar.QuotedString;
 
-    //     var input = "false";
-    //     bool success = sut.TryParse(input, out var value);
+        const string input = """
+"hello world"
+""";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsFalse();
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo("hello world");
+    }
 
-    // [Test]
-    // public async Task IdentifierString_RejectsNullKeyword()
-    // {
-    //     var sut = KuddleGrammar.IdentifierString;
+    [Test]
+    public async Task QuotedString_ParsesEmptyString()
+    {
+        var sut = KuddleGrammar.QuotedString;
 
-    //     var input = "null";
-    //     bool success = sut.TryParse(input, out var value);
+        const string input = """
+""
+""";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsFalse();
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo("");
+    }
 
-    // [Test]
-    // public async Task IdentifierString_RejectsInfKeyword()
-    // {
-    //     var sut = KuddleGrammar.IdentifierString;
+    // [Arguments("\"Hello World\"")]
+    [Test]
+    [Arguments(
+        """
+Hello \       World
+"""
+    )]
+    public async Task QuotedString_EscapesWhitespace(string input)
+    {
+        var sut = KuddleGrammar.SingleLineStringBody;
 
-    //     var input = "inf";
-    //     bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var value, out var error);
 
-    //     await Assert.That(success).IsFalse();
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo("Hello World");
+    }
 
-    // [Test]
-    // public async Task IdentifierString_RejectsNegativeInfKeyword()
-    // {
-    //     var sut = KuddleGrammar.IdentifierString;
+    //     [Test]
+    //     public async Task QuotedString_HandlesEscapeSequences()
+    //     {
+    //         var sut = KuddleGrammar.QuotedString;
 
-    //     var input = "-inf";
-    //     bool success = sut.TryParse(input, out var value);
+    //         var input = "\"\\n\\t\\\\\\\"\"";
+    //         bool success = sut.TryParse(input, out var value);
+    //         Debug.WriteLine(input);
+    //         await Assert.That(success).IsTrue();
+    //         await Assert
+    //             .That(value.ToString())
+    //             .IsEqualTo(
+    //                 """
 
-    //     await Assert.That(success).IsFalse();
-    // }
+    // """
+    //             );
+    //     }
 
-    // [Test]
-    // public async Task IdentifierString_RejectsNanKeyword()
-    // {
-    //     var sut = KuddleGrammar.IdentifierString;
+    [Test]
+    public async Task QuotedString_HandlesUnicodeEscapes()
+    {
+        var sut = KuddleGrammar.QuotedString;
 
-    //     var input = "nan";
-    //     bool success = sut.TryParse(input, out var value);
+        var input = "\"\\u{1F600}\"";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsFalse();
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo("😀");
+    }
 
-    // [Test]
-    // public async Task QuotedString_ParsesSingleLineString()
-    // {
-    //     var sut = KuddleGrammar.QuotedString;
+    [Test]
+    public async Task QuotedString_HandlesWhitespaceEscapes()
+    {
+        var sut = KuddleGrammar.QuotedString;
 
-    //     var input = "\"hello world\"";
-    //     bool success = sut.TryParse(input, out var value);
+        var input = "\"hello\r\nworld\"";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
-
-    // [Test]
-    // public async Task QuotedString_ParsesEmptyString()
-    // {
-    //     var sut = KuddleGrammar.QuotedString;
-
-    //     var input = "\"\"";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
-
-    // [Test]
-    // public async Task QuotedString_HandlesEscapeSequences()
-    // {
-    //     var sut = KuddleGrammar.QuotedString;
-
-    //     var input = "\"\\n\\t\\\\\\\"\"";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
-
-    // [Test]
-    // public async Task QuotedString_HandlesUnicodeEscapes()
-    // {
-    //     var sut = KuddleGrammar.QuotedString;
-
-    //     var input = "\"\\u{1F600}\"";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
-
-    // [Test]
-    // public async Task QuotedString_HandlesWhitespaceEscapes()
-    // {
-    //     var sut = KuddleGrammar.QuotedString;
-
-    //     var input = "\"hello \\\nworld\"";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        var expected = """
+hello
+world
+""";
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo(expected);
+    }
 
     // [Test]
     // public async Task RawString_ParsesSimpleRawString()

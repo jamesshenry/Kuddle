@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using Kuddle.Extensions;
 using Parlot;
 using Parlot.Fluent;
 using static Parlot.Fluent.Parsers;
@@ -40,15 +44,7 @@ public static class KuddleGrammar
                 static Parser<TextSpan> CreateBodyParser(Parser<TextSpan> closingDelimiter) =>
                     AnyCharBefore(closingDelimiter)
                         .When(
-                            (context, textspan) =>
-                            {
-                                foreach (var c in textspan.Span)
-                                {
-                                    if (IsDisallowedLiteralCodePoint(c))
-                                        return false;
-                                }
-                                return true;
-                            }
+                            (context, textspan) => textspan.Span.Any(IsDisallowedLiteralCodePoint)
                         );
 
                 var closeSingleQuoteRaw = Capture(singleQuote.And(Literals.Text(hashString)));
@@ -71,32 +67,103 @@ public static class KuddleGrammar
         var identifierChar = Literals.Pattern(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
         var unambiguousStartChar = identifierChar.When(
             (_, c) => c.Span[^1] >= 'a' && c.Span[^1] <= 'z'
-        ); // A simple but effective example rule
-        IdentifierChar = Literals.NoneOf(CharacterSets.IdentifierExcludedChars, 1, 1);
-        UnambiguousIdent = Capture(
-                IdentifierChar
-                    .When(
-                        (a, b) =>
-                        {
-                            var c = !IsDigitChar(b.Span[0]);
-                            var d = !IsSigned(b.Span[0]);
-                            var e = b.Span[0] != '.';
-                            return c && d && e;
-                        }
-                    )
-                    .And(ZeroOrMany(IdentifierChar))
-            )
-            .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
-            .ElseError("");
-        SignedIdent = Capture(
-            Sign.And(
-                ZeroOrOne(
-                    IdentifierChar
-                        .When((a, b) => !IsDigitChar(b.Span[0]) && b.Span[0] != '.')
-                        .And(ZeroOrMany(IdentifierChar))
+        );
+        var literalCodePoint = Literals
+            .NoneOf("", minSize: 1, maxSize: 1)
+            .When((context, c) => !IsDisallowedLiteralCodePoint(c.Span[0]));
+
+        var hexSequence = Literals.Pattern(IsHexChar, 1, 6);
+        HexUnicode = hexSequence.When((a, b) => !IsLoneSurrogate(b.Span[0]));
+
+        WsEscape = Literals
+            .Char('\\')
+            .And(
+                Literals.Pattern(
+                    c =>
+                        CharacterSets.WhiteSpaceAndNewLineChars.Contains(c) || char.IsWhiteSpace(c),
+                    minSize: 1,
+                    maxSize: 0
                 )
             )
+            .Then(x => new TextSpan());
+        var stringEscapeChars = Literals
+            .AnyOf(
+                """
+nrt"\bfs
+"""
+            )
+            .Then(ts =>
+                ts.Span[0] switch
+                {
+                    'n' => new TextSpan(Environment.NewLine),
+                    'r' => new TextSpan("\r"),
+                    't' => new TextSpan("\t"),
+                    '"' => new TextSpan("\""),
+                    '\\' => new TextSpan(@"\"),
+                    'b' => new TextSpan("\b"),
+                    'f' => new TextSpan("\f"),
+                    's' => new TextSpan(" "),
+                    _ => throw new Exception(),
+                }
+            );
+        var unicodeEscape = Between(Literals.Text("u{"), HexUnicode, Literals.Char('}'))
+            .Then(hexSpan =>
+            {
+                int codePoint = int.Parse(
+                    hexSpan.Span,
+                    NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture
+                );
+
+                string unicodeChar = char.ConvertFromUtf32(codePoint);
+
+                return new TextSpan(unicodeChar);
+            });
+        ;
+        var escapeSequence = Literals.Char('\\').SkipAnd(stringEscapeChars.Or(unicodeEscape));
+        var plainCharacter = Literals.Pattern(c =>
+            c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c)
         );
+        StringCharacter = OneOf(WsEscape, escapeSequence, plainCharacter);
+
+        SingleLineStringBody = ZeroOrMany(
+                StringCharacter
+            // SkipWhiteSpace(
+            //         StringCharacter.When(
+            //             (context, sc) => !sc.Span.ContainsAny(CharacterSets.NewLineChars)
+            //         )
+            //     )
+            //     .WithWhiteSpaceParser(WsEscape)
+            // OneOf(plainCharacter, WsEscape.Then(ts => new TextSpan()))
+            )
+            .Then(x =>
+            {
+                var sb = new StringBuilder();
+                foreach (var item in x)
+                {
+                    sb.Append(item.Span);
+                }
+                return new TextSpan(sb.ToString());
+            });
+
+        MultiLineStringBody = Capture(
+            ZeroOrOne(Literals.Text("\"").Or(Literals.Text("\"\"")))
+                .And(ZeroOrMany(StringCharacter))
+        );
+        QuotedString = Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
+            .Or(
+                Between(
+                    Literals.Text("\"\"\""),
+                    Capture(
+                        SingleNewLine
+                            .And(ZeroOrOne(MultiLineStringBody.And(SingleNewLine)))
+                            .And(Literals.AnyOf(CharacterSets.WhitespaceChars, 1).Or(WsEscape))
+                    ),
+                    Literals.Text("\"\"\"")
+                )
+            );
+        IdentifierChar = Literals.NoneOf(CharacterSets.IdentifierExcludedChars, 1, 1);
+
         DottedIdent = Capture(
             Sign.Optional()
                 .And(Literals.Char('.'))
@@ -115,48 +182,31 @@ public static class KuddleGrammar
                     )
                 )
         );
-        IdentifierString = UnambiguousIdent.Or(SignedIdent).Or(DottedIdent);
 
-        HexSequence = Literals.Pattern(IsHexChar, 1, 1);
-        HexUnicode = HexSequence.When((a, b) => !IsLoneSurrogate(b.Span[0]));
-        WsEscape = Capture(
-            Literals
-                .Char('\\')
-                .And(Literals.AnyOf(CharacterSets.WhiteSpaceAndNewLineChars, minSize: 1))
-        );
-        var stringEscapeChars = Literals.AnyOf("\"\\bfnrts");
-        var unicodeEscape = Between(Literals.Text("u{"), HexUnicode, Literals.Char('}'));
-        var escapeSequence = Literals.Char('\\').SkipAnd(stringEscapeChars.Or(unicodeEscape));
-        var plainCharacter = Literals.Pattern(c =>
-            c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c)
-        );
-
-        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
-
-        SingleLineStringBody = Capture(
-            ZeroOrMany(
-                StringCharacter.When(
-                    (context, sc) => !sc.Span.ContainsAny(CharacterSets.NewLineChars)
+        SignedIdent = Capture(
+            Sign.And(
+                ZeroOrOne(
+                    IdentifierChar
+                        .When((a, b) => !IsDigitChar(b.Span[0]) && b.Span[0] != '.')
+                        .And(ZeroOrMany(IdentifierChar))
                 )
             )
         );
-        MultiLineStringBody = Capture(
-            ZeroOrOne(Literals.Text("\"").Or(Literals.Text("\"\"")))
-                .And(ZeroOrMany(StringCharacter))
-        );
-        QuotedString = Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
-            .Or(
-                Between(
-                    Literals.Text("\"\"\""),
-                    Capture(
-                        SingleNewLine
-                            .And(ZeroOrOne(MultiLineStringBody.And(SingleNewLine)))
-                            .And(Literals.AnyOf(CharacterSets.WhitespaceChars, 1).Or(WsEscape))
-                    ),
-                    Literals.Text("\"\"\"")
-                )
-            );
-        String = IdentifierString.Or(QuotedString).Or(RawString);
+
+        UnambiguousIdent = Capture(
+                IdentifierChar
+                    .When(
+                        (a, b) =>
+                            !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.'
+                    )
+                    .And(ZeroOrMany(IdentifierChar))
+            )
+            .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
+            .ElseError("");
+
+        IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent);
+
+        String = OneOf(IdentifierString, QuotedString, RawString);
         // Numbers
         Integer = Literals
             .AnyOf(CharacterSets.DigitsAndUnderscore)
@@ -282,7 +332,6 @@ public static class KuddleGrammar
     internal static readonly Parser<TextSpan> UnambiguousIdent;
     internal static readonly Parser<TextSpan> SignedIdent;
     internal static readonly Parser<TextSpan> DottedIdent;
-    internal static readonly Parser<TextSpan> HexSequence;
     internal static readonly Parser<TextSpan> HexUnicode;
     internal static readonly Parser<TextSpan> WsEscape;
     internal static readonly Parser<TextSpan> StringCharacter;
