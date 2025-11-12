@@ -157,40 +157,49 @@ public class StringParserTests
         await Assert.That(value.ToString()).IsEqualTo("");
     }
 
-    // [Arguments("\"Hello World\"")]
     [Test]
-    [Arguments(
-        """
-Hello \       World
-"""
-    )]
-    public async Task QuotedString_EscapesWhitespace(string input)
+    public async Task QuotedString_ParsesEmptyMultilineString()
     {
-        var sut = KuddleGrammar.SingleLineStringBody;
+        var sut = KuddleGrammar.QuotedString;
 
-        bool success = sut.TryParse(input, out var value, out var error);
+        const string input = """"
+"""
+"""
+"""";
+        bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo("Hello World");
+        await Assert.That(value.ToString()).IsEqualTo("");
     }
 
-    //     [Test]
-    //     public async Task QuotedString_HandlesEscapeSequences()
-    //     {
-    //         var sut = KuddleGrammar.QuotedString;
-
-    //         var input = "\"\\n\\t\\\\\\\"\"";
-    //         bool success = sut.TryParse(input, out var value);
-    //         Debug.WriteLine(input);
-    //         await Assert.That(success).IsTrue();
-    //         await Assert
-    //             .That(value.ToString())
-    //             .IsEqualTo(
-    //                 """
-
+    [Test]
+    [Arguments(
+        """"
+"""
+Lorem ipsum canis canem edit
+"""
+""""
+    )]
+    //     [Arguments(
+    //         """
+    // "Lorem ipsum canis canem edit"
     // """
-    //             );
-    //     }
+    //     )]
+    public async Task QuotedString_HandlesEscapeSequences(string input)
+    {
+        var sut = KuddleGrammar.QuotedString;
+
+        bool success = sut.TryParse(input, out var value);
+        Debug.WriteLine(input);
+        await Assert.That(success).IsTrue();
+        await Assert
+            .That(value.ToString())
+            .IsEqualTo(
+                """
+Lorem ipsum canis canem edit
+"""
+            );
+    }
 
     [Test]
     public async Task QuotedString_HandlesUnicodeEscapes()
@@ -205,16 +214,31 @@ Hello \       World
     }
 
     [Test]
-    public async Task QuotedString_HandlesWhitespaceEscapes()
+    [Arguments(
+        """
+Hello \       World
+"""
+    )]
+    [Arguments(
+        """
+            "Hello\nWorld"
+            """
+    )]
+    [Arguments(
+        """
+"Hello\n\
+    World"
+"""
+    )]
+    public async Task QuotedString_HandlesWhitespaceEscapes(string input)
     {
         var sut = KuddleGrammar.QuotedString;
 
-        var input = $"\"hello{Environment.NewLine}world\"";
         bool success = sut.TryParse(input, out var value);
 
         var expected = """
-hello
-world
+Hello
+World
 """;
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(expected);

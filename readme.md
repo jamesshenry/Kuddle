@@ -124,3 +124,65 @@ version :=
     '/-' unicode-space* 'kdl-version' unicode-space+ ('1' | '2')
     unicode-space* newline
 ```
+
+## Whitespace
+
+The following characters should be treated as non-Newline ({{newline}}) [white
+space](https://www.unicode.org/Public/UCD/latest/ucd/PropList.txt):
+
+| Name                      | Code Pt  |
+| ------------------------- | -------- |
+| Character Tabulation      | `U+0009` |
+| Space                     | `U+0020` |
+| No-Break Space            | `U+00A0` |
+| Ogham Space Mark          | `U+1680` |
+| En Quad                   | `U+2000` |
+| Em Quad                   | `U+2001` |
+| En Space                  | `U+2002` |
+| Em Space                  | `U+2003` |
+| Three-Per-Em Space        | `U+2004` |
+| Four-Per-Em Space         | `U+2005` |
+| Six-Per-Em Space          | `U+2006` |
+| Figure Space              | `U+2007` |
+| Punctuation Space         | `U+2008` |
+| Thin Space                | `U+2009` |
+| Hair Space                | `U+200A` |
+| Narrow No-Break Space     | `U+202F` |
+| Medium Mathematical Space | `U+205F` |
+| Ideographic Space         | `U+3000` |
+
+## Newline
+
+The following character sequences [should be treated as new
+lines](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-5/#G41643):
+
+| Acronym | Name                          | Code Pt             |
+| ------- | ----------------------------- | ------------------- |
+| CRLF    | Carriage Return and Line Feed | `U+000D` + `U+000A` |
+| CR      | Carriage Return               | `U+000D`            |
+| LF      | Line Feed                     | `U+000A`            |
+| NEL     | Next Line                     | `U+0085`            |
+| VT      | Vertical tab                  | `U+000B`            |
+| FF      | Form Feed                     | `U+000C`            |
+| LS      | Line Separator                | `U+2028`            |
+| PS      | Paragraph Separator           | `U+2029`            |
+
+Note that for the purpose of new lines, the specific sequence `CRLF` is
+considered _a single newline_.
+
+## Disallowed Literal Code Points
+
+The following code points may not appear literally anywhere in the document.
+They may be represented in Strings (but not Raw Strings) using Unicode Escapes ({{escapes}}) (`\u{...}`,
+except for non Unicode Scalar Value, which can't be represented even as escapes).
+
+- The codepoints `U+0000-0008` or the codepoints `U+000E-001F` (various
+  control characters).
+- `U+007F` (the Delete control character).
+- Any codepoint that is not a [Unicode Scalar
+  Value](https://unicode.org/glossary/#unicode_scalar_value) (`U+D800-DFFF`).
+- `U+200E-200F`, `U+202A-202E`, and `U+2066-2069`, the [unicode
+  "direction control"
+  characters](https://www.w3.org/International/questions/qa-bidi-unicode-controls)
+- `U+FEFF`, aka Zero-width Non-breaking Space (ZWNBSP)/Byte Order Mark (BOM),
+  except as the first code point in a document.

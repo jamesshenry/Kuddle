@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Kuddle.Extensions;
 using Parlot;
 using Parlot.Fluent;
@@ -90,7 +91,9 @@ public static class KuddleGrammar
             .AnyOf(
                 """
 nrt"\bfs
-"""
+""",
+                minSize: 1,
+                maxSize: 1
             )
             .Then(ts =>
                 ts.Span[0] switch
@@ -124,18 +127,9 @@ nrt"\bfs
         var plainCharacter = Literals.Pattern(c =>
             c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c)
         );
-        StringCharacter = OneOf(WsEscape, escapeSequence, plainCharacter);
+        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
 
-        SingleLineStringBody = ZeroOrMany(
-                StringCharacter
-            // SkipWhiteSpace(
-            //         StringCharacter.When(
-            //             (context, sc) => !sc.Span.ContainsAny(CharacterSets.NewLineChars)
-            //         )
-            //     )
-            //     .WithWhiteSpaceParser(WsEscape)
-            // OneOf(plainCharacter, WsEscape.Then(ts => new TextSpan()))
-            )
+        SingleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
             {
                 var sb = new StringBuilder();
@@ -146,22 +140,50 @@ nrt"\bfs
                 return new TextSpan(sb.ToString());
             });
 
-        MultiLineStringBody = Capture(
-            ZeroOrOne(Literals.Text("\"").Or(Literals.Text("\"\"")))
-                .And(ZeroOrMany(StringCharacter))
+        var minOneWhitespace = Literals.AnyOf(CharacterSets.WhitespaceChars, minSize: 1);
+        var eatEscapedWhitespace = Capture(
+                Literals.Char('\\').And(Literals.AnyOf(CharacterSets.WhiteSpaceAndNewLineChars))
+            )
+            .Then(x => new TextSpan(""));
+
+        var nonTerminatingQuote = Capture(
+            OneOf(
+                Literals.Text("\"\"").And(Not(Literals.Char('"'))),
+                Literals.Text("\"").And(Not(Literals.Char('"')))
+            )
         );
-        QuotedString = Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
-            .Or(
-                Between(
-                    Literals.Text("\"\"\""),
-                    Capture(
-                        SingleNewLine
-                            .And(ZeroOrOne(MultiLineStringBody.And(SingleNewLine)))
-                            .And(Literals.AnyOf(CharacterSets.WhitespaceChars, 1).Or(WsEscape))
-                    ),
-                    Literals.Text("\"\"\"")
-                )
-            );
+
+        var multilineChar = OneOf(nonTerminatingQuote, escapeSequence, plainCharacter);
+
+        MultiLineStringBody = ZeroOrMany(OneOf(multilineChar, eatEscapedWhitespace))
+            .Then(listOfSpans =>
+            {
+                var sb = new StringBuilder();
+                foreach (var span in listOfSpans)
+                {
+                    sb.Append(span.Span);
+                }
+                return new TextSpan(sb.ToString());
+            });
+
+        var multilineOpener = tripleQuote.AndSkip(SingleNewLine);
+        var optionalBody = MultiLineStringBody.AndSkip(SingleNewLine).Optional();
+
+        var multilineCloser = ZeroOrMany(minOneWhitespace.Or(eatEscapedWhitespace))
+            .SkipAnd(tripleQuote);
+
+        QuotedString = OneOf(
+            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"')),
+            Between(
+                Literals.Text("\"\"\""),
+                Capture(
+                    SingleNewLine
+                        .And(ZeroOrOne(MultiLineStringBody.And(SingleNewLine)))
+                        .And(Literals.AnyOf(CharacterSets.WhitespaceChars, 1).Or(WsEscape))
+                ),
+                Literals.Text("\"\"\"")
+            )
+        );
         IdentifierChar = Literals.NoneOf(CharacterSets.IdentifierExcludedChars, 1, 1);
 
         DottedIdent = Capture(
