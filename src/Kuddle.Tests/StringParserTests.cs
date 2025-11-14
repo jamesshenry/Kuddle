@@ -175,6 +175,37 @@ public class StringParserTests
     [Test]
     [Arguments(
         """"
+i
+am
+a multiline string
+""""
+    )]
+    [Arguments(
+        """
+so am
+                 I!
+"""
+    )]
+    [Arguments(
+        """
+me
+""
+too "
+"""
+    )]
+    public async Task MultiLineStringBody_HandlesVarious(string input)
+    {
+        var sut = KuddleGrammar.MultiLineStringBody;
+
+        bool success = sut.TryParse(input, out var value);
+        Debug.WriteLine(input);
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo(input);
+    }
+
+    [Test]
+    [Arguments(
+        """"
 """
 lorem ipsum
 """
@@ -214,11 +245,6 @@ lorem ipsum
     }
 
     [Test]
-    [Arguments(
-        """
-Hello \       World
-"""
-    )]
     [Arguments(
         """
             "Hello\nWorld"

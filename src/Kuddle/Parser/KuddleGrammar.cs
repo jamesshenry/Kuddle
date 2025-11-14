@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -18,9 +19,8 @@ public static class KuddleGrammar
         var nodeSpace = Deferred<TextSpan>();
         var @string = Deferred<TextSpan>();
 
-        SingleNewLine = Literals
-            .AnyOf(CharacterSets.NewLineChars, minSize: 1, maxSize: 1)
-            .Or(Capture(Literals.Text("\r\n")));
+        SingleNewLine = Capture(Literals.Text("\r\n"))
+            .Or(Literals.Pattern(CharacterSets.IsNewline, minSize: 1, maxSize: 1));
 
         Type = Between(
             Literals.Char('('),
@@ -80,8 +80,7 @@ public static class KuddleGrammar
             .Char('\\')
             .And(
                 Literals.Pattern(
-                    c =>
-                        CharacterSets.WhiteSpaceAndNewLineChars.Contains(c) || char.IsWhiteSpace(c),
+                    c => CharacterSets.IsNewline(c) || char.IsWhiteSpace(c),
                     minSize: 1,
                     maxSize: 0
                 )
@@ -124,10 +123,13 @@ nrt"\bfs
             });
         ;
         var escapeSequence = Literals.Char('\\').SkipAnd(stringEscapeChars.Or(unicodeEscape));
-        var plainCharacter = Literals.Pattern(c =>
-            c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c)
+        var plainCharacter = Literals.Pattern(
+            c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c),
+            1,
+            1
         );
-        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
+        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter)
+            .When((_, ts) => !CharacterSets.IsDisallowedLiteralCodePoint(ts.Span[0]));
 
         SingleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
@@ -140,11 +142,17 @@ nrt"\bfs
                 return new TextSpan(sb.ToString());
             });
 
-        var minOneWhitespace = Literals.AnyOf(CharacterSets.WhitespaceChars, minSize: 1);
-        var eatEscapedWhitespace = Capture(
-                Literals.Char('\\').And(Literals.AnyOf(CharacterSets.WhiteSpaceAndNewLineChars))
-            )
-            .Then(x => new TextSpan(""));
+        var minOneWhitespace = Literals.Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1);
+        // var eatEscapedWhitespace = Capture(
+        //         Literals
+        //             .Char('\\')
+        //             .And(
+        //                 Literals.Pattern(c =>
+        //                     CharacterSets.IsWhiteSpace(c) || CharacterSets.IsNewline(c)
+        //                 )
+        //             )
+        //     )
+        //     .Then(x => new TextSpan(""));
 
         var nonTerminatingQuote = Capture(
             OneOf(
@@ -153,38 +161,45 @@ nrt"\bfs
             )
         );
 
-        var multilineChar = OneOf(nonTerminatingQuote, escapeSequence, plainCharacter);
-
-        MultiLineStringBody = ZeroOrMany(OneOf(multilineChar, eatEscapedWhitespace))
+        MultiLineStringBody = ZeroOrMany(nonTerminatingQuote.Optional().And(StringCharacter))
             .Then(listOfSpans =>
             {
                 var sb = new StringBuilder();
-                foreach (var span in listOfSpans)
+                foreach (var tuple in listOfSpans)
                 {
-                    sb.Append(span.Span);
+                    if (tuple.Item1.HasValue)
+                        sb.Append(tuple.Item1.Value);
+                    sb.Append(tuple.Item2.Span);
                 }
                 return new TextSpan(sb.ToString());
             });
 
-        var multilineOpener = tripleQuote.AndSkip(SingleNewLine);
-        var optionalBody = MultiLineStringBody.AndSkip(SingleNewLine).Optional();
+        var optionalBody = ZeroOrOne(MultiLineStringBody.AndSkip(SingleNewLine));
 
-        var multilineCloser = ZeroOrMany(minOneWhitespace.Or(eatEscapedWhitespace))
-            .SkipAnd(tripleQuote);
+        var trailingSpaceOrEscaped = ZeroOrMany(
+            Literals.Pattern(CharacterSets.IsWhiteSpace, minSize: 1)
+        );
+
+        var multiLineQuoted = Between(
+            tripleQuote,
+            Capture(SingleNewLine.SkipAnd(optionalBody).Then(_ => new TextSpan()))
+                .Or(Capture(Always(new TextSpan())))
+                .AndSkip(trailingSpaceOrEscaped),
+            tripleQuote
+        );
 
         QuotedString = OneOf(
-            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"')),
-            Between(
-                Literals.Text("\"\"\""),
-                Capture(
-                    SingleNewLine
-                        .And(ZeroOrOne(MultiLineStringBody.And(SingleNewLine)))
-                        .And(Literals.AnyOf(CharacterSets.WhitespaceChars, 1).Or(WsEscape))
-                ),
-                Literals.Text("\"\"\"")
-            )
+            multiLineQuoted,
+            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
         );
-        IdentifierChar = Literals.NoneOf(CharacterSets.IdentifierExcludedChars, 1, 1);
+        IdentifierChar = Literals.Pattern(
+            c =>
+                !CharacterSets.IsNewline(c)
+                && !CharacterSets.IsWhiteSpace(c)
+                && !"\\/(){};[]\"#=".Contains(c),
+            1,
+            1
+        );
 
         DottedIdent = Capture(
             Sign.Optional()
@@ -231,7 +246,7 @@ nrt"\bfs
         String = OneOf(IdentifierString, QuotedString, RawString);
         // Numbers
         Integer = Literals
-            .AnyOf(CharacterSets.DigitsAndUnderscore)
+            .Pattern(c => char.IsDigit(c) || c == '_')
             .When((a, b) => b.Span[0] != '_');
         Exponent = Literals.Char('e').Or(Literals.Char('E')).And(Sign.Optional()).And(Integer);
         Decimal = Capture(
@@ -285,7 +300,7 @@ nrt"\bfs
         SlashDash = Capture(Literals.Text("/-").And(lineSpace));
 
         Ws = Literals
-            .AnyOf(CharacterSets.WhitespaceChars, minSize: 1, maxSize: 1)
+            .Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1, maxSize: 1)
             .Or(MultiLineComment);
         EscLine = Capture(
             Literals
@@ -294,7 +309,7 @@ nrt"\bfs
                 .And(
                     OneOf(
                         SingleLineComment,
-                        Literals.AnyOf(CharacterSets.NewLineChars, maxSize: 1),
+                        Literals.Pattern(CharacterSets.IsNewline, maxSize: 1),
                         Capture(Always().Eof())
                     )
                 )

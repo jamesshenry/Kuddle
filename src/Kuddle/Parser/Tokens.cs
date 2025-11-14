@@ -7,79 +7,65 @@ namespace Kuddle.Parser;
 
 public static class CharacterSets
 {
-    public static ReadOnlySpan<char> WhitespaceChars =>
-        [
-            // Character Tabulation
-            '\u0009',
-            // Space
-            '\u0020',
-            // No-Break Space
-            '\u00A0',
-            // Ogham Space Mark
-            '\u1680',
-            // En Quad
-            '\u2000',
-            // Em Quad
-            '\u2001',
-            // En Space
-            '\u2002',
-            // Em Space
-            '\u2003',
-            // Three-Per-Em Space
-            '\u2004',
-            // Four-Per-Em Space
-            '\u2005',
-            // Six-Per-Em Space
-            '\u2006',
-            // Figure Space
-            '\u2007',
-            // Punctuation Space
-            '\u2008',
-            // Thin Space
-            '\u2009',
-            // Hair Space
-            '\u200A',
-            // Narrow No-Break Space
-            '\u202F',
-            // Medium Mathematical Space
-            '\u205F',
-            // Ideographic Space
-            '\u3000',
-        ];
-
-    public static ReadOnlySpan<char> NewLineChars =>
-        ['\u000D', '\u000A', '\u0085', '\u000B', '\u000C', '\u2028', '\u2029'];
-    public static ReadOnlySpan<char> WhiteSpaceAndNewLineChars
-    {
-        get
-        {
-            var buffer = new char[WhitespaceChars.Length + NewLineChars.Length];
-            WhitespaceChars.CopyTo(buffer);
-            NewLineChars.CopyTo(buffer);
-            return buffer;
-        }
-    }
-
     public static ReadOnlySpan<char> Digits => "0123456789";
     public static ReadOnlySpan<char> DigitsAndUnderscore => "0123456789_";
     public static ReadOnlySpan<char> StringExcludedChars =>
         ['[', '"', '\\', 'b', 'f', 'n', 't', 'r', 's'];
-    public static ReadOnlySpan<char> IdentifierExcludedChars
+
+    internal static bool IsWhiteSpace(char c)
     {
-        get
+        return c switch
         {
-            // combine manually once at startup
-            var s1 = WhitespaceChars;
-            var s2 = NewLineChars;
-            var extras = "\\/(){};[]\"#=";
+            '\u0009' => true, // Character Tabulation
+            '\u0020' => true, // Space
+            '\u00A0' => true, // No-Break Space
+            '\u1680' => true, // Ogham Space Mark
+            '\u2000' => true, // En Quad
+            '\u2001' => true, // Em Quad
+            '\u2002' => true, // En Space
+            '\u2003' => true, // Em Space
+            '\u2004' => true, // Three-Per-Em Space
+            '\u2005' => true, // Four-Per-Em Space
+            '\u2006' => true, // Six-Per-Em Space
+            '\u2007' => true, // Figure Space
+            '\u2008' => true, // Punctuation Space
+            '\u2009' => true, // Thin Space
+            '\u200A' => true, // Hair Space
+            '\u202F' => true, // Narrow No-Break Space
+            '\u205F' => true, // Medium Mathematical Space
+            '\u3000' => true, // Ideographic Space
+            _ => false,
+        };
+    }
 
-            var buffer = new char[s1.Length + s2.Length + extras.Length];
-            s1.CopyTo(buffer);
-            s2.CopyTo(buffer.AsSpan(s1.Length));
-            extras.AsSpan().CopyTo(buffer.AsSpan(s1.Length + s2.Length));
+    internal static bool IsNewline(char c)
+    {
+        return c switch
+        {
+            '\u000D' => true,
+            '\u000A' => true,
+            '\u0085' => true,
+            '\u000B' => true,
+            '\u000C' => true,
+            '\u2028' => true,
+            '\u2029' => true,
+            _ => false,
+        };
+    }
 
-            return buffer;
-        }
+    internal static bool IsDisallowedLiteralCodePoint(char c)
+    {
+        return c switch
+        {
+            >= '\u0000' and <= '\u0008' => true, // various control characters
+            '\u007F' => true,
+            >= '\uD800' and <= '\uDFFF' => true, // unicode scalar value
+            (>= '\u200E' and <= '\u200F')
+            or (>= '\u202A' and <= '\u202E')
+            or (>= '\u2066' and <= '\u2069') => true, // unicode 'direction control' characters
+            '\uFEFF' => true, // unicode BOM
+            _ => false,
+        };
     }
 }
 
