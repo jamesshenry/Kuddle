@@ -176,7 +176,7 @@ public class StringParserTests
     [Arguments(
         """"
 """
-Lorem ipsum canis canem edit
+lorem ipsum
 """
 """"
     )]
@@ -196,7 +196,7 @@ Lorem ipsum canis canem edit
             .That(value.ToString())
             .IsEqualTo(
                 """
-Lorem ipsum canis canem edit
+lorem ipsum
 """
             );
     }
