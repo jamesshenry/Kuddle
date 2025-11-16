@@ -19,8 +19,7 @@ public static class KuddleGrammar
         var nodeSpace = Deferred<TextSpan>();
         var @string = Deferred<TextSpan>();
 
-        SingleNewLine = Capture(Literals.Text("\r\n"))
-            .Or(Literals.Pattern(CharacterSets.IsNewline, minSize: 1, maxSize: 1));
+        SingleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")));
 
         Type = Between(
             Literals.Char('('),
@@ -74,7 +73,9 @@ public static class KuddleGrammar
             .When((context, c) => !IsDisallowedLiteralCodePoint(c.Span[0]));
 
         var hexSequence = Literals.Pattern(IsHexChar, 1, 6);
-        HexUnicode = hexSequence.When((a, b) => !IsLoneSurrogate(b.Span[0])).Then();
+        HexUnicode = hexSequence
+            .When((a, b) => !IsLoneSurrogate(b.Span[0]))
+            .Then(ts => new TextSpan(Regex.Unescape(ts.Span.ToString())));
 
         WsEscape = Literals
             .Char('\\')
@@ -108,34 +109,20 @@ nrt"\bfs
                     _ => throw new Exception(),
                 }
             );
-        var unicodeEscape = Between(Literals.Text("u{"), HexUnicode, Literals.Char('}'))
-            .Then(hexSpan =>
-            {
-                int codePoint = int.Parse(
-                    hexSpan.Span,
-                    NumberStyles.HexNumber,
-                    CultureInfo.InvariantCulture
-                );
 
-                string unicodeChar = char.ConvertFromUtf32(codePoint);
-
-                return new TextSpan(unicodeChar);
-            });
-        ;
-        var escapeSequence = Literals.Char('\\').SkipAnd(stringEscapeChars.Or(unicodeEscape));
+        var escapeSequence = OneOf(
+            Literals.Text(@"\").SkipAnd(stringEscapeChars),
+            Literals
+                .Text("\\u")
+                .SkipAnd(HexUnicode)
+                .Then(ts => new TextSpan(char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer!, 16))))
+        );
         var plainCharacter = Literals.Pattern(
             c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c),
             1,
             1
         );
-        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter)
-            .When(
-                (_, ts) =>
-                {
-                    return ts.Length == 0
-                        || !CharacterSets.IsDisallowedLiteralCodePoint(ts.Span[0]);
-                }
-            );
+        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
 
         SingleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
@@ -149,16 +136,6 @@ nrt"\bfs
             });
 
         var minOneWhitespace = Literals.Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1);
-        // var eatEscapedWhitespace = Capture(
-        //         Literals
-        //             .Char('\\')
-        //             .And(
-        //                 Literals.Pattern(c =>
-        //                     CharacterSets.IsWhiteSpace(c) || CharacterSets.IsNewline(c)
-        //                 )
-        //             )
-        //     )
-        //     .Then(x => new TextSpan(""));
 
         var nonTerminatingQuote = Capture(
             OneOf(
@@ -167,18 +144,9 @@ nrt"\bfs
             )
         );
 
-        MultiLineStringBody = ZeroOrMany(nonTerminatingQuote.Optional().And(StringCharacter))
-            .Then(listOfSpans =>
-            {
-                var sb = new StringBuilder();
-                foreach (var tuple in listOfSpans)
-                {
-                    if (tuple.Item1.HasValue)
-                        sb.Append(tuple.Item1.Value);
-                    sb.Append(tuple.Item2.Span);
-                }
-                return new TextSpan(sb.ToString());
-            });
+        MultiLineStringBody = Capture(
+            ZeroOrMany(nonTerminatingQuote.Optional().And(StringCharacter))
+        );
 
         var optionalBody = ZeroOrOne(MultiLineStringBody.AndSkip(SingleNewLine));
 
@@ -186,23 +154,23 @@ nrt"\bfs
             Literals.Pattern(CharacterSets.IsWhiteSpace, minSize: 1)
         );
 
-        var multiLineQuoted = Between(
+        MultiLineQuoted = Between(
                 tripleQuote,
-                SingleNewLine
-                    .Optional()
-                    .SkipAnd(MultiLineStringBody)
-                    .AndSkip(SingleNewLine.Optional()),
-                // Capture(SingleNewLine.SkipAnd(optionalBody).Then(_ => new TextSpan()))
-                //     .Or(Capture(Always(new TextSpan())))
-                //     .AndSkip(trailingSpaceOrEscaped),
+                SingleNewLine.Optional().SkipAnd(MultiLineStringBody),
                 tripleQuote
             )
             .When((_, ts) => ts.Span.EndsWith("\n") || ts.Span.EndsWith("\r\n"))
+            .Then(ts =>
+            {
+                var span = ts.Span.EndsWith("\r\n".AsSpan()) ? ts.Span[..^2] : ts.Span[..^1];
+
+                return new TextSpan(span.ToString());
+            })
             .ElseError("Multiline string should end in newline");
 
         QuotedString = OneOf(
             Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"')),
-            multiLineQuoted
+            MultiLineQuoted
         );
         IdentifierChar = Literals.Pattern(
             c =>
@@ -267,7 +235,11 @@ nrt"\bfs
                 .And(ZeroOrOne(Literals.Char('.').And(Integer)))
                 .And(Exponent.Optional())
         );
-        Hex = Capture(Sign.Optional().And(Literals.Text("0x")).And(Literals.Pattern(IsHexChar)));
+        Hex = Capture(
+            Sign.Optional()
+                .And(Literals.Text("0x"))
+                .And(Literals.Pattern(c => c == '_' || IsHexChar(c)))
+        );
         Octal = Capture(
             Sign.Optional()
                 .AndSkip(Literals.Text("0o"))
@@ -387,6 +359,7 @@ nrt"\bfs
     internal static readonly Parser<TextSpan> SingleLineStringBody;
     internal static readonly Parser<TextSpan> MultiLineStringBody;
     internal static readonly Parser<TextSpan> IdentifierString;
+    internal static readonly Parser<TextSpan> MultiLineQuoted;
     internal static readonly Parser<TextSpan> QuotedString;
     internal static readonly Parser<TextSpan> String;
     #endregion
@@ -396,7 +369,7 @@ nrt"\bfs
     private static bool IsOctalChar(char c) => c >= '0' && c <= '7';
 
     private static bool IsHexChar(char c) =>
-        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || c == '_';
+        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 
     private static bool IsDigitChar(char c) => c >= '0' && c <= '9';
 

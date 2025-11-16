@@ -216,9 +216,9 @@ lorem ipsum
     // "Lorem ipsum canis canem edit"
     // """
     //     )]
-    public async Task QuotedString_HandlesEscapeSequences(string input)
+    public async Task MultiLineQuotedString_CanParseMultiLine(string input)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.MultiLineQuoted;
         bool success = sut.TryParse(input, out var value, out var error);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
@@ -236,7 +236,9 @@ lorem ipsum
     {
         var sut = KuddleGrammar.QuotedString;
 
-        var input = "\"\\u{1F600}\"";
+        var input = """
+"\u1F600"
+""";
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();

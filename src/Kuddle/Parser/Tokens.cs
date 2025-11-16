@@ -53,20 +53,20 @@ public static class CharacterSets
         };
     }
 
-    internal static bool IsDisallowedLiteralCodePoint(char c)
-    {
-        return c switch
-        {
-            >= '\u0000' and <= '\u0008' => true, // various control characters
-            '\u007F' => true,
-            >= '\uD800' and <= '\uDFFF' => true, // unicode scalar value
-            (>= '\u200E' and <= '\u200F')
-            or (>= '\u202A' and <= '\u202E')
-            or (>= '\u2066' and <= '\u2069') => true, // unicode 'direction control' characters
-            '\uFEFF' => true, // unicode BOM
-            _ => false,
-        };
-    }
+    // internal static bool IsDisallowedLiteralCodePoint(char c)
+    // {
+    //     return c switch
+    //     {
+    //         >= '\u0000' and <= '\u0008' => true, // various control characters
+    //         '\u007F' => true,
+    //         >= '\uD800' and <= '\uDFFF' => true, // unicode scalar value
+    //         (>= '\u200E' and <= '\u200F')
+    //         or (>= '\u202A' and <= '\u202E')
+    //         or (>= '\u2066' and <= '\u2069') => true, // unicode 'direction control' characters
+    //         '\uFEFF' => true, // unicode BOM
+    //         _ => false,
+    //     };
+    // }
 }
 
 public static class Tokens
