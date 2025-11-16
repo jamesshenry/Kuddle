@@ -190,7 +190,7 @@ so am
         """
 me
 ""
-too "
+too 
 """
     )]
     public async Task MultiLineStringBody_HandlesVarious(string input)
@@ -219,8 +219,7 @@ lorem ipsum
     public async Task QuotedString_HandlesEscapeSequences(string input)
     {
         var sut = KuddleGrammar.QuotedString;
-
-        bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var value, out var error);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
         await Assert
@@ -247,8 +246,8 @@ lorem ipsum
     [Test]
     [Arguments(
         """
-            "Hello\nWorld"
-            """
+"Hello\nWorld"
+"""
     )]
     [Arguments(
         """
@@ -260,7 +259,7 @@ lorem ipsum
     {
         var sut = KuddleGrammar.QuotedString;
 
-        bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var value, out var error);
 
         var expected = """
 Hello

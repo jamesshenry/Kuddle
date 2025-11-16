@@ -74,7 +74,7 @@ public static class KuddleGrammar
             .When((context, c) => !IsDisallowedLiteralCodePoint(c.Span[0]));
 
         var hexSequence = Literals.Pattern(IsHexChar, 1, 6);
-        HexUnicode = hexSequence.When((a, b) => !IsLoneSurrogate(b.Span[0]));
+        HexUnicode = hexSequence.When((a, b) => !IsLoneSurrogate(b.Span[0])).Then();
 
         WsEscape = Literals
             .Char('\\')
@@ -129,7 +129,13 @@ nrt"\bfs
             1
         );
         StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter)
-            .When((_, ts) => !CharacterSets.IsDisallowedLiteralCodePoint(ts.Span[0]));
+            .When(
+                (_, ts) =>
+                {
+                    return ts.Length == 0
+                        || !CharacterSets.IsDisallowedLiteralCodePoint(ts.Span[0]);
+                }
+            );
 
         SingleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
@@ -181,16 +187,22 @@ nrt"\bfs
         );
 
         var multiLineQuoted = Between(
-            tripleQuote,
-            Capture(SingleNewLine.SkipAnd(optionalBody).Then(_ => new TextSpan()))
-                .Or(Capture(Always(new TextSpan())))
-                .AndSkip(trailingSpaceOrEscaped),
-            tripleQuote
-        );
+                tripleQuote,
+                SingleNewLine
+                    .Optional()
+                    .SkipAnd(MultiLineStringBody)
+                    .AndSkip(SingleNewLine.Optional()),
+                // Capture(SingleNewLine.SkipAnd(optionalBody).Then(_ => new TextSpan()))
+                //     .Or(Capture(Always(new TextSpan())))
+                //     .AndSkip(trailingSpaceOrEscaped),
+                tripleQuote
+            )
+            .When((_, ts) => ts.Span.EndsWith("\n") || ts.Span.EndsWith("\r\n"))
+            .ElseError("Multiline string should end in newline");
 
         QuotedString = OneOf(
-            multiLineQuoted,
-            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
+            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"')),
+            multiLineQuoted
         );
         IdentifierChar = Literals.Pattern(
             c =>
