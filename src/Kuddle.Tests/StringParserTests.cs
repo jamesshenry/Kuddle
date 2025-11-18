@@ -17,7 +17,7 @@ public class StringParserTests
     [Arguments("-negative")]
     public async Task SignedIdent_ParsesSignedIdentifier(string input)
     {
-        var sut = KuddleGrammar.SignedIdent;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -31,7 +31,7 @@ public class StringParserTests
     [Arguments(".three")]
     public async Task DottedIdent_ParsesDottedIdentifier(string input)
     {
-        var sut = KuddleGrammar.DottedIdent;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -44,7 +44,7 @@ public class StringParserTests
     [Arguments(".01")]
     public async Task DottedIdent_DoesNotParseNumberDottedNumber(string input)
     {
-        var sut = KuddleGrammar.DottedIdent;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -59,7 +59,7 @@ public class StringParserTests
     [Arguments("test_case")]
     public async Task UnambiguousIdent_ParsesUnambiguousIdentifier(string input)
     {
-        var sut = KuddleGrammar.UnambiguousIdent;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -109,7 +109,7 @@ public class StringParserTests
     [Arguments("-negative")]
     public async Task IdentifierString_ParsesIdentifierString(string input)
     {
-        var sut = KuddleGrammar.IdentifierString;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -121,9 +121,9 @@ public class StringParserTests
     [Arguments("\\   ")]
     public async Task WsEscape_ParsesWhiteSpace(string input)
     {
-        var sut = KuddleGrammar.WsEscape;
+        var sut = KuddleGrammar.QuotedString;
 
-        bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var value, out var error);
 
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo("");
@@ -173,34 +173,17 @@ public class StringParserTests
     }
 
     [Test]
-    [Arguments(
-        """"
-i
-am
-a multiline string
-""""
-    )]
-    [Arguments(
-        """
-so am
-                 I!
-"""
-    )]
-    [Arguments(
-        """
-me
-""
-too 
-"""
-    )]
-    public async Task MultiLineStringBody_HandlesVarious(string input)
+    [Arguments("\"\"\"i\r\nam\n\"\"\"", "i\nam")]
+    [Arguments("\"\"\"so am\r\n                 I!\n\"\"\"", "so am\n                 I!")]
+    [Arguments("\"\"\"me\r\n\"\"\r\ntoo \n\"\"\"", "me\n\"\"\ntoo ")]
+    public async Task MultiLineStringBody_HandlesVarious(string input, string expected)
     {
-        var sut = KuddleGrammar.MultiLineStringBody;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value.ToString()).IsEqualTo(expected);
     }
 
     [Test]
@@ -218,7 +201,7 @@ lorem ipsum
     //     )]
     public async Task MultiLineQuotedString_CanParseMultiLine(string input)
     {
-        var sut = KuddleGrammar.MultiLineQuoted;
+        var sut = KuddleGrammar.QuotedString;
         bool success = sut.TryParse(input, out var value, out var error);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();

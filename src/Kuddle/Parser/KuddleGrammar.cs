@@ -117,11 +117,18 @@ nrt"\bfs
                 .SkipAnd(HexUnicode)
                 .Then(ts => new TextSpan(char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer!, 16))))
         );
-        var plainCharacter = Literals.Pattern(
-            c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c),
-            1,
-            1
-        );
+        var plainCharacter = Literals
+            .Pattern(c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c), 1, 1)
+            .Then(
+                (_, x) =>
+                {
+                    if (x.Span[0] == '\r')
+                    {
+                        return new TextSpan();
+                    }
+                    return x;
+                }
+            );
         StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
 
         SingleLineStringBody = ZeroOrMany(StringCharacter)
@@ -162,15 +169,14 @@ nrt"\bfs
             .When((_, ts) => ts.Span.EndsWith("\n") || ts.Span.EndsWith("\r\n"))
             .Then(ts =>
             {
-                var span = ts.Span.EndsWith("\r\n".AsSpan()) ? ts.Span[..^2] : ts.Span[..^1];
-
-                return new TextSpan(span.ToString());
-            })
-            .ElseError("Multiline string should end in newline");
+                var content = ts.Span;
+                string normalizedContent = content.ToString().Replace("\r\n", "\n");
+                return new TextSpan(normalizedContent[..^1]);
+            });
 
         QuotedString = OneOf(
-            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"')),
-            MultiLineQuoted
+            MultiLineQuoted,
+            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
         );
         IdentifierChar = Literals.Pattern(
             c =>
@@ -221,9 +227,10 @@ nrt"\bfs
             .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
             .ElseError("");
 
-        IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent);
-
-        String = OneOf(IdentifierString, QuotedString, RawString);
+        IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
+            .ElseError("Failed to parse identifier string");
+        String = OneOf(IdentifierString, QuotedString, RawString)
+            .ElseError("Failed to parse string");
         // Numbers
         Integer = Literals
             .Pattern(c => char.IsDigit(c) || c == '_')
@@ -304,11 +311,6 @@ nrt"\bfs
         NodeSpace = nodeSpace;
         lineSpace.Parser = NodeSpace.Or(SingleNewLine).Or(SingleLineComment);
         LineSpace = lineSpace;
-    }
-
-    private static bool IsDisallowedKeywordString(ReadOnlySpan<char> value)
-    {
-        return value != "true" && value != "false";
     }
 
     private static bool IsLoneSurrogate(char codePoint) =>
