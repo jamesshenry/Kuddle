@@ -118,10 +118,10 @@ public class StringParserTests
     }
 
     [Test]
-    [Arguments("\\   ")]
+    [Arguments("\"\\   \"")]
     public async Task WsEscape_ParsesWhiteSpace(string input)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value, out var error);
 
@@ -132,7 +132,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesSingleLineString()
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
 
         const string input = """
 "hello world"
@@ -146,7 +146,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesEmptyString()
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
 
         const string input = """
 ""
@@ -160,7 +160,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesEmptyMultilineString()
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
 
         const string input = """"
 """
@@ -178,7 +178,7 @@ public class StringParserTests
     [Arguments("\"\"\"me\r\n\"\"\r\ntoo \n\"\"\"", "me\n\"\"\ntoo ")]
     public async Task MultiLineStringBody_HandlesVarious(string input, string expected)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value);
         Debug.WriteLine(input);
@@ -192,40 +192,39 @@ public class StringParserTests
 """
 lorem ipsum
 """
-""""
+"""",
+        "lorem ipsum"
     )]
-    //     [Arguments(
-    //         """
-    // "Lorem ipsum canis canem edit"
-    // """
-    //     )]
-    public async Task MultiLineQuotedString_CanParseMultiLine(string input)
+    [Arguments(
+        """
+"Lorem ipsum canis canem edit"
+""",
+        "Lorem ipsum canis canem edit"
+    )]
+    public async Task MultiLineQuotedString_CanParseMultiLine(string input, string expected)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
         bool success = sut.TryParse(input, out var value, out var error);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
-        await Assert
-            .That(value.ToString())
-            .IsEqualTo(
-                """
-lorem ipsum
-"""
-            );
+        await Assert.That(value.ToString()).IsEqualTo(expected);
     }
 
     [Test]
-    public async Task QuotedString_HandlesUnicodeEscapes()
-    {
-        var sut = KuddleGrammar.QuotedString;
-
-        var input = """
+    [Arguments(
+        """
 "\u1F600"
-""";
+""",
+        "😀"
+    )]
+    public async Task QuotedString_HandlesUnicodeEscapes(string input, string expected)
+    {
+        var sut = KuddleGrammar.String;
+
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo("😀");
+        await Assert.That(value.ToString()).IsEqualTo(expected);
     }
 
     [Test]
@@ -242,7 +241,7 @@ lorem ipsum
     )]
     public async Task QuotedString_HandlesWhitespaceEscapes(string input)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.String;
 
         bool success = sut.TryParse(input, out var value, out var error);
 

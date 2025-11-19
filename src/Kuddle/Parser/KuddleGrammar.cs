@@ -229,7 +229,7 @@ nrt"\bfs
 
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
             .ElseError("Failed to parse identifier string");
-        String = OneOf(IdentifierString, QuotedString, RawString)
+        String = OneOf(QuotedString, IdentifierString, RawString)
             .ElseError("Failed to parse string");
         // Numbers
         Integer = Literals
@@ -267,7 +267,13 @@ nrt"\bfs
         Keyword = Boolean.Or(Literals.Text("#null"));
         KeywordNumber = OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"));
 
-        Number = OneOf(Capture(KeywordNumber), Hex, Octal, Binary, Decimal);
+        Number = OneOf(Capture(KeywordNumber), Hex, Octal, Binary, Decimal)
+            .Then(
+                (_, ts) =>
+                {
+                    return new KdlNumber(ts.Span.ToString(), BaseNumber.Decimal);
+                }
+            );
 
         var lineSpace = Deferred<TextSpan>();
         var multiLineComment = Deferred<TextSpan>();
@@ -324,7 +330,7 @@ nrt"\bfs
     public static readonly Parser<TextSpan> Hex;
     public static readonly Parser<TextSpan> Octal;
     public static readonly Parser<TextSpan> Binary;
-    public static readonly Parser<TextSpan> Number;
+    public static readonly Parser<KdlNumber> Number;
     #endregion
 
     #region Keywords and booleans
@@ -407,7 +413,7 @@ public sealed record KdlBoolean(bool Value) : KdlValue(TypeAnnotation: null);
 
 public sealed record KdlNull() : KdlValue(TypeAnnotation: null);
 
-public sealed record KdlNumber(string RawValue, BaseNumber Base, string? TypeAnnotation)
+public sealed record KdlNumber(string RawValue, BaseNumber Base, string? TypeAnnotation = null)
     : KdlValue(TypeAnnotation);
 
 public enum BaseNumber
