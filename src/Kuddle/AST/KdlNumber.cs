@@ -29,7 +29,7 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
     public long ToInt64()
     {
         var cleaned = Sanitise(RawValue, Base);
-        return long.Parse(cleaned.sanitised);
+        return Convert.ToInt64(cleaned.sanitised, cleaned.radix);
     }
 
     public int ToInt32()
@@ -50,12 +50,13 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
 
     public ulong ToUInt64()
     {
-        throw new NotImplementedException();
+        var (sanitised, radix) = Sanitise(RawValue, Base);
+        return Convert.ToUInt64(sanitised, radix);
     }
 
     public uint ToUInt32()
     {
-        throw new NotImplementedException();
+        return checked((uint)ToUInt64());
     }
 
     public ushort ToUInt16()
@@ -70,7 +71,9 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
 
     public double ToDouble()
     {
-        throw new NotImplementedException();
+        if (Kind != NumberKind.Decimal)
+            throw new InvalidOperationException();
+        return 2;
     }
 
     public float ToFloat()
