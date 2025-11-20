@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Kuddle.AST;
 using Kuddle.Extensions;
 using Parlot;
 using Parlot.Fluent;
@@ -268,10 +269,10 @@ nrt"\bfs
         KeywordNumber = OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"));
 
         Number = OneOf(Capture(KeywordNumber), Hex, Octal, Binary, Decimal)
-            .Then(
+            .Then<KdlValue>(
                 (_, ts) =>
                 {
-                    return new KdlNumber(ts.Span.ToString(), BaseNumber.Decimal);
+                    return new KdlNumber(ts.Span.ToString(), NumberBase.Decimal);
                 }
             );
 
@@ -330,7 +331,7 @@ nrt"\bfs
     public static readonly Parser<TextSpan> Hex;
     public static readonly Parser<TextSpan> Octal;
     public static readonly Parser<TextSpan> Binary;
-    public static readonly Parser<KdlNumber> Number;
+    public static readonly Parser<KdlValue> Number;
     #endregion
 
     #region Keywords and booleans
@@ -393,33 +394,13 @@ nrt"\bfs
             || c == '\uFEFF';
     }
 
-    private static readonly HashSet<string> ReservedKeywords = new()
-    {
+    private static readonly HashSet<string> ReservedKeywords =
+    [
         "inf",
         "-inf",
         "nan",
         "true",
         "false",
         "null",
-    };
-}
-
-public abstract record KdlValue(string? TypeAnnotation);
-
-public sealed record KdlString(string Value, string? TypeAnnotation = null)
-    : KdlValue(TypeAnnotation);
-
-public sealed record KdlBoolean(bool Value) : KdlValue(TypeAnnotation: null);
-
-public sealed record KdlNull() : KdlValue(TypeAnnotation: null);
-
-public sealed record KdlNumber(string RawValue, BaseNumber Base, string? TypeAnnotation = null)
-    : KdlValue(TypeAnnotation);
-
-public enum BaseNumber
-{
-    Decimal,
-    Hex,
-    Octal,
-    Binary,
+    ];
 }
