@@ -462,7 +462,7 @@ public class KdlNumberTests
     [Arguments("0.0", 0.0)]
     public async Task ToDouble_ConvertsDecimalNumbers(string input, double expected)
     {
-        var sut = new KdlNumber(input, NumberKind.Float);
+        var sut = new KdlNumber(input, NumberKind.Decimal);
         double result = sut.ToDouble();
         await Assert.That(result).IsEqualTo(expected);
     }
@@ -475,7 +475,7 @@ public class KdlNumberTests
     [Arguments("0.0", 0.0f)]
     public async Task ToFloat_ConvertsDecimalNumbers(string input, float expected)
     {
-        var sut = new KdlNumber(input, NumberKind.Float);
+        var sut = new KdlNumber(input, NumberKind.Decimal);
         float result = sut.ToFloat();
         await Assert.That(result).IsEqualTo(expected);
     }
@@ -488,7 +488,7 @@ public class KdlNumberTests
     [Arguments("0.0", 0.0)]
     public async Task ToDecimal_ConvertsDecimalNumbers(string input, decimal expected)
     {
-        var sut = new KdlNumber(input, NumberKind.Float);
+        var sut = new KdlNumber(input, NumberKind.Decimal);
         decimal result = sut.ToDecimal();
         await Assert.That(result).IsEqualTo(expected);
     }
@@ -567,7 +567,7 @@ public class KdlNumberTests
     [Arguments("-2.5")]
     public async Task ToInt32_ThrowsOnFloatNumbers(string input)
     {
-        var sut = new KdlNumber(input, NumberKind.Float);
+        var sut = new KdlNumber(input, NumberKind.Decimal);
         await Assert.That(() => sut.ToInt32()).Throws<InvalidOperationException>();
     }
 
@@ -578,7 +578,7 @@ public class KdlNumberTests
     [Arguments("-2.5")]
     public async Task ToInt64_ThrowsOnFloatNumbers(string input)
     {
-        var sut = new KdlNumber(input, NumberKind.Float);
+        var sut = new KdlNumber(input, NumberKind.Decimal);
         await Assert.That(() => sut.ToInt64()).Throws<InvalidOperationException>();
     }
 
@@ -589,7 +589,7 @@ public class KdlNumberTests
     [Arguments("-2.5")]
     public async Task ToBigInteger_ThrowsOnFloatNumbers(string input)
     {
-        var sut = new KdlNumber(input, NumberKind.Float);
+        var sut = new KdlNumber(input, NumberKind.Decimal);
         await Assert.That(() => sut.ToBigInteger()).Throws<InvalidOperationException>();
     }
 

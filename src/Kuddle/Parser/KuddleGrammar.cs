@@ -238,43 +238,64 @@ nrt"\bfs
             .When((a, b) => b.Span[0] != '_');
         Exponent = Literals.Char('e').Or(Literals.Char('E')).And(Sign.Optional()).And(Integer);
         Decimal = Capture(
-            Sign.Optional()
-                .And(Integer)
-                .And(ZeroOrOne(Literals.Char('.').And(Integer)))
-                .And(Exponent.Optional())
-        );
+                Sign.Optional()
+                    .And(Integer)
+                    .And(ZeroOrOne(Literals.Char('.').And(Integer)))
+                    .And(Exponent.Optional())
+            )
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Decimal));
         Hex = Capture(
-            Sign.Optional()
-                .And(Literals.Text("0x"))
-                .And(Literals.Pattern(c => c == '_' || IsHexChar(c)))
-        );
+                Sign.Optional()
+                    .And(Literals.Text("0x"))
+                    .And(Literals.Pattern(c => c == '_' || IsHexChar(c)))
+            )
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Integer));
         Octal = Capture(
-            Sign.Optional()
-                .AndSkip(Literals.Text("0o"))
-                .And(
-                    Literals
-                        .Pattern(IsOctalChar)
-                        .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsOctalChar(c))))
-                )
-        );
+                Sign.Optional()
+                    .AndSkip(Literals.Text("0o"))
+                    .And(
+                        Literals
+                            .Pattern(IsOctalChar)
+                            .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsOctalChar(c))))
+                    )
+            )
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Integer));
 
         Binary = Capture(
-            Sign.Optional()
-                .AndSkip(Literals.Text("0b"))
-                .And(Literals.Char('0').Or(Literals.Char('1')))
-                .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
-        );
+                Sign.Optional()
+                    .AndSkip(Literals.Text("0b"))
+                    .And(Literals.Char('0').Or(Literals.Char('1')))
+                    .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
+            )
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Integer));
         Boolean = Literals.Text("#true").Or(Literals.Text("#false"));
         Keyword = Boolean.Or(Literals.Text("#null"));
-        KeywordNumber = OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"));
+        KeywordNumber = OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"))
+            .Then((context, ts) => new KdlNumber(ts, NumberKind.Decimal));
 
-        Number = OneOf(Capture(KeywordNumber), Hex, Octal, Binary, Decimal)
-            .Then<KdlValue>(
-                (_, ts) =>
-                {
-                    return new KdlNumber(ts.Span.ToString(), NumberBase.Decimal);
-                }
-            );
+        Number = OneOf(KeywordNumber, Hex, Octal, Binary, Decimal)
+            .Then((context, value) => value as KdlValue);
+        // .Then<KdlValue>(
+        //     (_, ts) =>
+        //     {
+        //         var span = ts.Span;
+        //         return span switch
+        //         {
+        //             "#inf" or "#-inf" or "#nan" => new KdlNumber(
+        //                 span.ToString(),
+        //                 NumberKind.Special
+        //             ),
+        //             var s
+        //                 when s.Length > 2
+        //                     && s[0] == '0'
+        //                     && (s[1] is 'x' or 'X' or 'o' or 'O' or 'b' or 'B') =>
+        //                 new KdlNumber(s.ToString(), NumberKind.Integer),
+        //             var s when s.Contains('.') || s.IndexOfAny("eE".AsSpan()) >= 0 =>
+        //                 new KdlNumber(s.ToString(), NumberKind.Float),
+        //             var s => new KdlNumber(s.ToString(), NumberKind.Integer),
+        //         };
+        //     }
+        // );
 
         var lineSpace = Deferred<TextSpan>();
         var multiLineComment = Deferred<TextSpan>();
@@ -324,19 +345,19 @@ nrt"\bfs
         codePoint >= 0xD800 && codePoint <= 0xDFFF;
 
     #region Numbers
-    public static readonly Parser<TextSpan> Decimal;
+    public static readonly Parser<KdlNumber> Decimal;
     private static readonly Parser<TextSpan> Integer;
     public static readonly Parser<TextSpan> Sign;
     private static readonly Sequence<char, Option<TextSpan>, TextSpan> Exponent;
-    public static readonly Parser<TextSpan> Hex;
-    public static readonly Parser<TextSpan> Octal;
-    public static readonly Parser<TextSpan> Binary;
+    public static readonly Parser<KdlNumber> Hex;
+    public static readonly Parser<KdlNumber> Octal;
+    public static readonly Parser<KdlNumber> Binary;
     public static readonly Parser<KdlValue> Number;
     #endregion
 
     #region Keywords and booleans
     public static readonly Parser<string> Boolean;
-    public static readonly Parser<string> KeywordNumber;
+    public static readonly Parser<KdlNumber> KeywordNumber;
     public static readonly Parser<string> Keyword;
     #endregion
 

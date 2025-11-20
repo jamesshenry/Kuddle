@@ -22,7 +22,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -34,7 +34,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -46,7 +46,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -58,7 +58,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -70,7 +70,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -82,7 +82,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -94,7 +94,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -106,7 +106,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -118,7 +118,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -130,7 +130,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -142,7 +142,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -154,7 +154,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -166,7 +166,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -178,7 +178,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -190,7 +190,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -202,7 +202,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -214,7 +214,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -226,7 +226,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -238,7 +238,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -250,7 +250,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -262,7 +262,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
@@ -274,7 +274,7 @@ public class NumberParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(value?.RawValue).IsEqualTo(input);
     }
 
     [Test]
