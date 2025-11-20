@@ -244,7 +244,7 @@ public class NumberParsersTests
     [Test]
     public async Task Number_ParsesDecimal()
     {
-        var sut = KuddleGrammar.Number;
+        var sut = KuddleGrammar.Decimal;
 
         var input = "42";
         bool success = sut.TryParse(input, out var value);
@@ -256,7 +256,7 @@ public class NumberParsersTests
     [Test]
     public async Task Number_ParsesHex()
     {
-        var sut = KuddleGrammar.Number;
+        var sut = KuddleGrammar.Hex;
 
         var input = "0xFF";
         bool success = sut.TryParse(input, out var value);
@@ -268,7 +268,7 @@ public class NumberParsersTests
     [Test]
     public async Task Number_ParsesKeywordNumber()
     {
-        var sut = KuddleGrammar.Number;
+        var sut = KuddleGrammar.KeywordNumber;
 
         var input = "#inf";
         bool success = sut.TryParse(input, out var value);
