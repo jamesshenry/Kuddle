@@ -133,9 +133,9 @@ public class KdlNumberTests
 
     [Test]
     [Arguments("-42")] // Negative to unsigned
-    [Arguments("200_000")] // Too large for ushort
-    [Arguments("-200_000")] // Too small for sbyte
-    [Arguments("65_536")] // Too large for ushort (boundary)
+    [Arguments("200000")] // Too large for ushort
+    [Arguments("-200000")] // Too small for sbyte
+    [Arguments("65536")] // Too large for ushort (boundary)
     public async Task ToUInt16_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -144,10 +144,10 @@ public class KdlNumberTests
 
     [Test]
     [Arguments("-42")] // Negative to unsigned
-    [Arguments("50_000")] // Too large for short
-    [Arguments("-50_000")] // Too small for short
-    [Arguments("32_768")] // Too large for short (boundary)
-    [Arguments("-32_769")] // Too small for short (boundary)
+    [Arguments("50000")] // Too large for short
+    [Arguments("-50000")] // Too small for short
+    [Arguments("32768")] // Too large for short (boundary)
+    [Arguments("-32769")] // Too small for short (boundary)
     public async Task ToInt16_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -156,7 +156,7 @@ public class KdlNumberTests
 
     [Test]
     [Arguments("-42")] // Negative to unsigned
-    [Arguments("4_294_967_296")] // Larger than uint.MaxValue
+    [Arguments("4294967296")] // Larger than uint.MaxValue
     [Arguments("-1")] // Negative to unsigned
     public async Task ToUInt32_ThrowsOnInvalidValues(string input)
     {
@@ -166,7 +166,7 @@ public class KdlNumberTests
 
     [Test]
     [Arguments("-42")] // Negative to unsigned
-    [Arguments("18_446_744_073_709_551_616")] // Larger than ulong.MaxValue
+    [Arguments("18446744073709551616")] // Larger than ulong.MaxValue
     [Arguments("-1")] // Negative to unsigned
     public async Task ToUInt64_ThrowsOnInvalidValues(string input)
     {
@@ -175,8 +175,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("2_147_483_648")] // Larger than int.MaxValue
-    [Arguments("-2_147_483_649")] // Smaller than int.MinValue
+    [Arguments("2147483648")] // Larger than int.MaxValue
+    [Arguments("-2147483649")] // Smaller than int.MinValue
     public async Task ToInt32_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -327,8 +327,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("2_147_483_647")] // int.MaxValue
-    [Arguments("-2_147_483_648")] // int.MinValue
+    [Arguments("2147483647")] // int.MaxValue
+    [Arguments("-2147483648")] // int.MinValue
     public async Task ToInt32_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -337,7 +337,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("4_294_967_295")] // uint.MaxValue
+    [Arguments("4294967295")] // uint.MaxValue
     public async Task ToUInt32_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -346,8 +346,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("9_223_372_036_854_775_807")] // long.MaxValue
-    [Arguments("-9_223_372_036_854_775_808")] // long.MinValue
+    [Arguments("9223372036854775807")] // long.MaxValue
+    [Arguments("-9223372036854775808")] // long.MinValue
     public async Task ToInt64_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -356,7 +356,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("18_446_744_073_709_551_615")] // ulong.MaxValue
+    [Arguments("18446744073709551615")] // ulong.MaxValue
     public async Task ToUInt64_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -365,8 +365,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("32_767")] // short.MaxValue
-    [Arguments("-32_768")] // short.MinValue
+    [Arguments("32767")] // short.MaxValue
+    [Arguments("-32768")] // short.MinValue
     public async Task ToInt16_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -375,7 +375,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("65_535")] // ushort.MaxValue
+    [Arguments("65535")] // ushort.MaxValue
     public async Task ToUInt16_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
@@ -403,7 +403,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("123_456_789_012_345_678_901_234_567_890")] // Very large number
+    [Arguments("123456789012345678901234567890")] // Very large number
     public async Task ToBigInteger_HandlesVeryLargeNumbers(string input)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
