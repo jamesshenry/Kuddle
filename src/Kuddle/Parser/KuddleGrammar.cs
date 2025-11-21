@@ -21,7 +21,7 @@ public static class KuddleGrammar
         var nodeSpace = Deferred<TextSpan>();
         var @string = Deferred<TextSpan>();
 
-        SingleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")));
+        var singleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")));
 
         Type = Between(
             Literals.Char('('),
@@ -38,35 +38,36 @@ public static class KuddleGrammar
 
         var openingHashes = Capture(OneOrMany(hash));
 
-        RawString = openingHashes.Switch(
-            (context, ts) =>
-            {
-                string hashString = ts.ToString();
+        RawString = openingHashes
+            .Switch(
+                (context, hashes) =>
+                {
+                    string delimiter = hashes.ToString();
 
-                static Parser<TextSpan> CreateBodyParser(Parser<TextSpan> closingDelimiter) =>
-                    AnyCharBefore(closingDelimiter)
-                        .When(
-                            (context, textspan) => textspan.Span.Any(IsDisallowedLiteralCodePoint)
-                        );
+                    static Parser<TextSpan> BodyUntil(Parser<TextSpan> closer) =>
+                        AnyCharBefore(closer)
+                            .When((_, span) => !span.Span.Any(IsDisallowedLiteralCodePoint));
 
-                var closeSingleQuoteRaw = Capture(singleQuote.And(Literals.Text(hashString)));
-                var singleQuoteRaw = Between(
-                    singleQuote,
-                    CreateBodyParser(closeSingleQuoteRaw),
-                    closeSingleQuoteRaw
-                );
+                    var closeSingle = Capture(singleQuote.And(Literals.Text(delimiter)));
+                    var singleRaw = Between(singleQuote, BodyUntil(closeSingle), closeSingle);
 
-                var closeTripleQuoteRaw = Capture(tripleQuote.And(Literals.Text(hashString)));
-                var tripleQuoteRaw = Between(
-                    tripleQuote,
-                    CreateBodyParser(closeTripleQuoteRaw),
-                    closeTripleQuoteRaw
-                );
+                    var closeTriple = Capture(tripleQuote.And(Literals.Text(delimiter)));
+                    var tripleRaw = Between(tripleQuote, BodyUntil(closeTriple), closeTriple)
+                        .Then(ts => new TextSpan(Dedent(ts.ToString())));
 
-                return singleQuoteRaw.Or(tripleQuoteRaw);
-            }
+                    return tripleRaw.Or(singleRaw);
+                }
+            )
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Raw));
+
+        var identifierChar = Literals.Pattern(
+            c =>
+                !CharacterSets.IsNewline(c)
+                && !CharacterSets.IsWhiteSpace(c)
+                && !"\\/(){};[]\"#=".Contains(c),
+            1,
+            1
         );
-        var identifierChar = Literals.Pattern(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
         var unambiguousStartChar = identifierChar.When(
             (_, c) => c.Span[^1] >= 'a' && c.Span[^1] <= 'z'
         );
@@ -115,9 +116,10 @@ nrt"\bfs
         var escapeSequence = OneOf(
             Literals.Text(@"\").SkipAnd(stringEscapeChars),
             Literals
-                .Text("\\u")
+                .Text("\\u{")
                 .SkipAnd(HexUnicode)
-                .Then(ts => new TextSpan(char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer!, 16))))
+                .AndSkip(Literals.Char('}'))
+                .Then(ts => new TextSpan(char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer, 16))))
         );
         var plainCharacter = Literals
             .Pattern(c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c), 1, 1)
@@ -133,7 +135,7 @@ nrt"\bfs
             );
         StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
 
-        SingleLineStringBody = ZeroOrMany(StringCharacter)
+        var singleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
             {
                 var sb = new StringBuilder();
@@ -144,66 +146,40 @@ nrt"\bfs
                 return new TextSpan(sb.ToString());
             });
 
-        var minOneWhitespace = Literals.Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1);
+        MultiLineQuoted = tripleQuote
+            .SkipAnd(singleNewLine)
+            .SkipAnd(AnyCharBefore(tripleQuote))
+            .When(
+                (_, ts) =>
+                {
+                    var trimmed = ts.Span.TrimEnd(CharacterSets.WhiteSpaceChars);
 
-        var nonTerminatingQuote = Capture(
-            OneOf(
-                Literals.Text("\"\"").And(Not(Literals.Char('"'))),
-                Literals.Text("\"").And(Not(Literals.Char('"')))
+                    if (trimmed.IsEmpty)
+                        return true;
+                    char lastChar = trimmed[^1];
+                    return lastChar == '\n' || lastChar == '\r';
+                }
             )
-        );
-
-        MultiLineStringBody = Capture(
-            ZeroOrMany(nonTerminatingQuote.Optional().And(StringCharacter))
-        );
-
-        var optionalBody = ZeroOrOne(MultiLineStringBody.AndSkip(SingleNewLine));
-
-        var trailingSpaceOrEscaped = ZeroOrMany(
-            Literals.Pattern(CharacterSets.IsWhiteSpace, minSize: 1)
-        );
-
-        MultiLineQuoted = Between(
-                tripleQuote,
-                SingleNewLine.Optional().SkipAnd(MultiLineStringBody),
-                tripleQuote
-            )
-            .When((_, ts) => ts.Span.EndsWith("\n") || ts.Span.EndsWith("\r\n"))
             .Then(ts =>
             {
-                var content = ts.Span;
-                string normalizedContent = content.ToString().Replace("\r\n", "\n");
-                return new TextSpan(normalizedContent[..^1]);
-            });
+                var dedented = Dedent(ts.ToString());
 
-        QuotedString = OneOf(
-            MultiLineQuoted,
-            Between(Literals.Char('"'), SingleLineStringBody, Literals.Char('"'))
-        );
-        IdentifierChar = Literals.Pattern(
-            c =>
-                !CharacterSets.IsNewline(c)
-                && !CharacterSets.IsWhiteSpace(c)
-                && !"\\/(){};[]\"#=".Contains(c),
-            1,
-            1
-        );
+                return new KdlString(UnescapeKdl(dedented), StringKind.MultiLine);
+            })
+            .AndSkip(tripleQuote);
+        SingleLineQuoted = Between(Literals.Char('"'), singleLineStringBody, Literals.Char('"'))
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Quoted));
+        QuotedString = OneOf(MultiLineQuoted, SingleLineQuoted);
 
         DottedIdent = Capture(
             Sign.Optional()
                 .And(Literals.Char('.'))
                 .And(
                     ZeroOrOne(
-                        IdentifierChar
-                            .When(
-                                (a, b) =>
-                                {
-                                    var c = !IsDigitChar(b.Span[0]);
-                                    return c;
-                                }
-                            )
+                        identifierChar
+                            .When((a, b) => !IsDigitChar(b.Span[0]))
                             .ElseError("No numbers allowed")
-                            .And(ZeroOrMany(IdentifierChar))
+                            .And(ZeroOrMany(identifierChar))
                     )
                 )
         );
@@ -211,61 +187,66 @@ nrt"\bfs
         SignedIdent = Capture(
             Sign.And(
                 ZeroOrOne(
-                    IdentifierChar
+                    identifierChar
                         .When((a, b) => !IsDigitChar(b.Span[0]) && b.Span[0] != '.')
-                        .And(ZeroOrMany(IdentifierChar))
+                        .And(ZeroOrMany(identifierChar))
                 )
             )
         );
 
         UnambiguousIdent = Capture(
-                IdentifierChar
+                identifierChar
                     .When(
                         (a, b) =>
                             !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.'
                     )
-                    .And(ZeroOrMany(IdentifierChar))
+                    .And(ZeroOrMany(identifierChar))
             )
             .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
             .ElseError("");
 
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier))
             .ElseError("Failed to parse identifier string");
-        String = OneOf(QuotedString, IdentifierString, RawString)
+        String = OneOf(IdentifierString, RawString, QuotedString)
             .ElseError("Failed to parse string")
-            .Then((context, ts) => new KdlString(ts.Span.ToString()) as KdlValue);
-        // Numbers
+            .Then((context, ks) => ks as KdlValue);
+
         Integer = Literals
             .Pattern(c => char.IsDigit(c) || c == '_')
             .When((a, b) => b.Span[0] != '_');
-        Exponent = Literals.Char('e').Or(Literals.Char('E')).And(Sign.Optional()).And(Integer);
+        var exponent = Literals.Char('e').Or(Literals.Char('E')).And(Sign.Optional()).And(Integer);
         Decimal = Capture(
             Sign.Optional()
                 .And(Integer)
                 .And(ZeroOrOne(Literals.Char('.').And(Integer)))
-                .And(Exponent.Optional())
+                .And(exponent.Optional())
         );
         Hex = Capture(
-            Sign.Optional()
-                .And(Literals.Text("0x"))
-                .And(Literals.Pattern(c => c == '_' || IsHexChar(c)))
-        );
+                Sign.Optional()
+                    .And(Literals.Text("0x"))
+                    .And(Literals.Pattern(IsHexChar, 1, 1))
+                    .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsHexChar(c))))
+            )
+            .When((context, x) => x.Span[^1] != '_');
         Octal = Capture(
-            Sign.Optional()
-                .AndSkip(Literals.Text("0o"))
-                .And(
-                    Literals
-                        .Pattern(IsOctalChar)
-                        .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsOctalChar(c))))
-                )
-        );
+                Sign.Optional()
+                    .AndSkip(Literals.Text("0o"))
+                    .And(
+                        Literals
+                            .Pattern(IsOctalChar)
+                            .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsOctalChar(c))))
+                    )
+            )
+            .When((context, x) => x.Span[^1] != '_');
 
         Binary = Capture(
-            Sign.Optional()
-                .AndSkip(Literals.Text("0b"))
-                .And(Literals.Char('0').Or(Literals.Char('1')))
-                .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
-        );
+                Sign.Optional()
+                    .AndSkip(Literals.Text("0b"))
+                    .And(Literals.Char('0').Or(Literals.Char('1')))
+                    .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
+            )
+            .When((context, x) => x.Span[^1] != '_');
         Boolean = Literals.Text("#true").Or(Literals.Text("#false"));
         Keyword = Boolean.Or(Literals.Text("#null"));
         KeywordNumber = Capture(
@@ -278,7 +259,6 @@ nrt"\bfs
         var lineSpace = Deferred<TextSpan>();
         var multiLineComment = Deferred<TextSpan>();
 
-        // Comments
         var openComment = Literals.Text("/*");
         var closeComment = Literals.Text("*/");
 
@@ -315,18 +295,14 @@ nrt"\bfs
         nodeSpace.Parser = Capture(Ws.ZeroOrMany().And(EscLine).And(Ws.ZeroOrMany()))
             .Or(Capture(Ws.OneOrMany()));
         NodeSpace = nodeSpace;
-        lineSpace.Parser = NodeSpace.Or(SingleNewLine).Or(SingleLineComment);
+        lineSpace.Parser = NodeSpace.Or(singleNewLine).Or(SingleLineComment);
         LineSpace = lineSpace;
     }
 
-    private static bool IsLoneSurrogate(char codePoint) =>
-        codePoint >= 0xD800 && codePoint <= 0xDFFF;
-
     #region Numbers
     public static readonly Parser<TextSpan> Decimal;
-    private static readonly Parser<TextSpan> Integer;
+    internal static readonly Parser<TextSpan> Integer;
     public static readonly Parser<TextSpan> Sign;
-    private static readonly Sequence<char, Option<TextSpan>, TextSpan> Exponent;
     public static readonly Parser<TextSpan> Hex;
     public static readonly Parser<TextSpan> Octal;
     public static readonly Parser<TextSpan> Binary;
@@ -350,31 +326,33 @@ nrt"\bfs
     #endregion
 
     #region WhiteSpace
-    public static readonly Parser<TextSpan> Ws;
-    public static readonly Parser<TextSpan> EscLine;
-    public static readonly Parser<TextSpan> SingleNewLine;
-    public static readonly Parser<TextSpan> NodeSpace;
-    public static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
+    internal static readonly Parser<TextSpan> Ws;
+    internal static readonly Parser<TextSpan> EscLine;
+    internal static readonly Parser<TextSpan> NodeSpace;
+    internal static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
     internal static readonly Parser<TextSpan> Type;
-    internal static readonly Parser<TextSpan> RawString;
-    internal static readonly Parser<TextSpan> IdentifierChar;
+
+    // internal static readonly Parser<TextSpan> IdentifierChar;
     internal static readonly Parser<TextSpan> UnambiguousIdent;
     internal static readonly Parser<TextSpan> SignedIdent;
     internal static readonly Parser<TextSpan> DottedIdent;
     internal static readonly Parser<TextSpan> HexUnicode;
     internal static readonly Parser<TextSpan> WsEscape;
     internal static readonly Parser<TextSpan> StringCharacter;
-    internal static readonly Parser<TextSpan> SingleLineStringBody;
-    internal static readonly Parser<TextSpan> MultiLineStringBody;
-    internal static readonly Parser<TextSpan> IdentifierString;
-    internal static readonly Parser<TextSpan> MultiLineQuoted;
-    internal static readonly Parser<TextSpan> QuotedString;
+    internal static readonly Parser<KdlString> MultiLineQuoted;
+    internal static readonly Parser<KdlString> SingleLineQuoted;
+    internal static readonly Parser<KdlString> RawString;
+    internal static readonly Parser<KdlString> IdentifierString;
+    internal static readonly Parser<KdlString> QuotedString;
     internal static readonly Parser<KdlValue> String;
     #endregion
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';
 
     private static bool IsOctalChar(char c) => c >= '0' && c <= '7';
+
+    private static bool IsLoneSurrogate(char codePoint) =>
+        codePoint >= 0xD800 && codePoint <= 0xDFFF;
 
     private static bool IsHexChar(char c) =>
         (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
@@ -402,4 +380,57 @@ nrt"\bfs
         "false",
         "null",
     ];
+
+    static string UnescapeKdl(string input)
+    {
+        var parser = ZeroOrMany(StringCharacter);
+        if (parser.TryParse(input, out var result))
+        {
+            var sb = new StringBuilder();
+            foreach (var part in result!)
+                sb.Append(part.Span);
+            return sb.ToString();
+        }
+        return input;
+    }
+
+    static string Dedent(string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+            return "";
+
+        string text = raw.Replace("\r\n", "\n").Replace("\r", "\n");
+
+        int lastNewLineIndex = text.LastIndexOf('\n');
+
+        if (lastNewLineIndex == -1)
+            return "";
+
+        string indentation = text.Substring(lastNewLineIndex + 1);
+
+        var lines = text.Split('\n');
+        var sb = new StringBuilder();
+
+        for (int i = 0; i < lines.Length - 1; i++)
+        {
+            var line = lines[i];
+
+            if (line.StartsWith(indentation))
+            {
+                sb.Append(line.AsSpan(indentation.Length));
+            }
+            else if (string.IsNullOrWhiteSpace(line)) { }
+            else
+            {
+                sb.Append(line);
+            }
+
+            if (i < lines.Length - 2)
+            {
+                sb.Append('\n');
+            }
+        }
+
+        return sb.ToString();
+    }
 }

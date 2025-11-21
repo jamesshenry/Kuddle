@@ -173,12 +173,37 @@ public class StringParserTests
     }
 
     [Test]
-    [Arguments("\"\"\"i\r\nam\n\"\"\"", "i\nam")]
-    [Arguments("\"\"\"so am\r\n                 I!\n\"\"\"", "so am\n                 I!")]
-    [Arguments("\"\"\"me\r\n\"\"\r\ntoo \n\"\"\"", "me\n\"\"\ntoo ")]
+    [Arguments(
+        """"
+"""
+i
+am
+"""
+"""",
+        "i\nam"
+    )]
+    [Arguments(
+        """"
+"""
+so am
+                 I!
+"""
+"""",
+        "so am\n                 I!"
+    )]
+    [Arguments(
+        """"
+"""
+        foo
+    This is the base indentation
+            bar 
+    """
+"""",
+        "    foo\nThis is the base indentation\n        bar "
+    )]
     public async Task MultiLineStringBody_HandlesVarious(string input, string expected)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.MultiLineQuoted;
 
         bool success = sut.TryParse(input, out var value);
         Debug.WriteLine(input);
@@ -196,14 +221,17 @@ lorem ipsum
         "lorem ipsum"
     )]
     [Arguments(
-        """
-"Lorem ipsum canis canem edit"
-""",
-        "Lorem ipsum canis canem edit"
+        """"
+"""
+Lorem ipsum
+canis canem edit
+"""
+"""",
+        "Lorem ipsum\ncanis canem edit"
     )]
     public async Task MultiLineQuotedString_CanParseMultiLine(string input, string expected)
     {
-        var sut = KuddleGrammar.QuotedString;
+        var sut = KuddleGrammar.MultiLineQuoted;
         bool success = sut.TryParse(input, out var value, out var error);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
@@ -213,7 +241,7 @@ lorem ipsum
     [Test]
     [Arguments(
         """
-"\u1F600"
+"\u{1F600}"
 """,
         "😀"
     )]

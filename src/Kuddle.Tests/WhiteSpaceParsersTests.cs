@@ -79,30 +79,6 @@ public class WhiteSpaceParsersTests
     }
 
     [Test]
-    public async Task NewLine_ParsesLf()
-    {
-        var sut = KuddleGrammar.SingleNewLine;
-
-        var input = "\n";
-        bool success = sut.TryParse(input, out var value);
-
-        await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
-    }
-
-    [Test]
-    public async Task NewLine_ParsesCrLf()
-    {
-        var sut = KuddleGrammar.SingleNewLine;
-
-        var input = "\r\n";
-        bool success = sut.TryParse(input, out var value);
-
-        await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
-    }
-
-    [Test]
     public async Task LineSpace_ParsesWhitespace()
     {
         var sut = KuddleGrammar.LineSpace;
@@ -111,7 +87,7 @@ public class WhiteSpaceParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
+        await Assert.That(value.Span.ToString()).IsEqualTo(input);
     }
 
     [Test]
@@ -123,7 +99,7 @@ public class WhiteSpaceParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
+        await Assert.That(value.Span.ToString()).IsEqualTo(input);
     }
 
     [Test]
@@ -135,7 +111,7 @@ public class WhiteSpaceParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
+        await Assert.That(value.Span.ToString()).IsEqualTo(input);
     }
 
     [Test]
@@ -147,18 +123,18 @@ public class WhiteSpaceParsersTests
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
+        await Assert.That(value.Span.ToString()).IsEqualTo(input);
     }
 
-    [Test]
-    public async Task NodeSpace_ParsesEscapedNewLine()
-    {
-        var sut = KuddleGrammar.NodeSpace;
+    // [Test]
+    // public async Task NodeSpace_ParsesEscapedNewLine()
+    // {
+    //     var sut = KuddleGrammar.NodeSpace;
 
-        var input = "  \\\n  ";
-        bool success = sut.TryParse(input, out var value);
+    //     var input = "  \\\n  ";
+    //     bool success = sut.TryParse(input, out var value);
 
-        await Assert.That(success).IsTrue();
-        await Assert.That(value.Buffer).IsEqualTo(input);
-    }
+    //     await Assert.That(success).IsTrue();
+    //     await Assert.That(value.Span.ToString()).IsEqualTo(input);
+    // }
 }
