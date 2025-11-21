@@ -17,7 +17,7 @@ public class StringParserTests
     [Arguments("-negative")]
     public async Task SignedIdent_ParsesSignedIdentifier(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.SignedIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -31,7 +31,7 @@ public class StringParserTests
     [Arguments(".three")]
     public async Task DottedIdent_ParsesDottedIdentifier(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.DottedIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -44,7 +44,7 @@ public class StringParserTests
     [Arguments(".01")]
     public async Task DottedIdent_DoesNotParseNumberDottedNumber(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.DottedIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -59,7 +59,7 @@ public class StringParserTests
     [Arguments("test_case")]
     public async Task UnambiguousIdent_ParsesUnambiguousIdentifier(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.UnambiguousIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -109,7 +109,7 @@ public class StringParserTests
     [Arguments("-negative")]
     public async Task IdentifierString_ParsesIdentifierString(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.IdentifierString;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -121,7 +121,7 @@ public class StringParserTests
     [Arguments("\"\\   \"")]
     public async Task WsEscape_ParsesWhiteSpace(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value, out var error);
 
@@ -132,7 +132,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesSingleLineString()
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         const string input = """
 "hello world"
@@ -146,7 +146,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesEmptyString()
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         const string input = """
 ""
@@ -160,7 +160,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesEmptyMultilineString()
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         const string input = """"
 """
@@ -178,7 +178,7 @@ public class StringParserTests
     [Arguments("\"\"\"me\r\n\"\"\r\ntoo \n\"\"\"", "me\n\"\"\ntoo ")]
     public async Task MultiLineStringBody_HandlesVarious(string input, string expected)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value);
         Debug.WriteLine(input);
@@ -203,7 +203,7 @@ lorem ipsum
     )]
     public async Task MultiLineQuotedString_CanParseMultiLine(string input, string expected)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
         bool success = sut.TryParse(input, out var value, out var error);
         Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
@@ -219,7 +219,7 @@ lorem ipsum
     )]
     public async Task QuotedString_HandlesUnicodeEscapes(string input, string expected)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -241,7 +241,7 @@ lorem ipsum
     )]
     public async Task QuotedString_HandlesWhitespaceEscapes(string input)
     {
-        var sut = KuddleGrammar.String;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value, out var error);
 
