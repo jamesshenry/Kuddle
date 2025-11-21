@@ -13,6 +13,10 @@ public class KdlNumberTests
     [Arguments("0x2A", 42)] // Hex
     [Arguments("0o52", 42)] // Octal
     [Arguments("0b101010", 42)] // Binary
+    [Arguments("-42", -42)] // Negative Decimal
+    [Arguments("-0x2A", -42)] // Negative Hex
+    [Arguments("-0o52", -42)] // Negative Octal
+    [Arguments("-0b101010", -42)] // Negative Binary
     public async Task ToInt32_ConvertsAllBases(string input, int expected)
     {
         var sut = new KdlNumber(input);
@@ -37,6 +41,10 @@ public class KdlNumberTests
     [Arguments("0x2A", (long)42)] // Hex
     [Arguments("0o52", (long)42)] // Octal
     [Arguments("0b101010", (long)42)] // Binary
+    [Arguments("-42", (long)-42)] // Negative Decimal
+    [Arguments("-0x2A", (long)-42)] // Negative Hex
+    [Arguments("-0o52", (long)-42)] // Negative Octal
+    [Arguments("-0b101010", (long)-42)] // Negative Binary
     public async Task ToInt64_ConvertsAllBases(string input, long expected)
     {
         var sut = new KdlNumber(input);
@@ -61,6 +69,10 @@ public class KdlNumberTests
     [Arguments("0x2A", (short)42)] // Hex
     [Arguments("0o52", (short)42)] // Octal
     [Arguments("0b101010", (short)42)] // Binary
+    [Arguments("-42", (short)-42)] // Negative Decimal
+    [Arguments("-0x2A", (short)-42)] // Negative Hex
+    [Arguments("-0o52", (short)-42)] // Negative Octal
+    [Arguments("-0b101010", (short)-42)] // Negative Binary
     public async Task ToInt16_ConvertsAllBases(string input, short expected)
     {
         var sut = new KdlNumber(input);
@@ -97,6 +109,10 @@ public class KdlNumberTests
     [Arguments("0x2A", (sbyte)42)] // Hex
     [Arguments("0o52", (sbyte)42)] // Octal
     [Arguments("0b101010", (sbyte)42)] // Binary
+    [Arguments("-42", (sbyte)-42)] // Negative Decimal
+    [Arguments("-0x2A", (sbyte)-42)] // Negative Hex
+    [Arguments("-0o52", (sbyte)-42)] // Negative Octal
+    [Arguments("-0b101010", (sbyte)-42)] // Negative Binary
     public async Task ToSByte_ConvertsAllBases(string input, sbyte expected)
     {
         var sut = new KdlNumber(input);
@@ -198,7 +214,7 @@ public class KdlNumberTests
     public async Task ToInt32_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToInt32()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToInt32()).Throws<FormatException>();
     }
 
     [Test]
@@ -208,7 +224,7 @@ public class KdlNumberTests
     public async Task ToUInt32_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToUInt32()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToUInt32()).Throws<FormatException>();
     }
 
     [Test]
@@ -218,7 +234,7 @@ public class KdlNumberTests
     public async Task ToInt64_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToInt64()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToInt64()).Throws<FormatException>();
     }
 
     [Test]
@@ -228,7 +244,7 @@ public class KdlNumberTests
     public async Task ToUInt64_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToUInt64()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToUInt64()).Throws<FormatException>();
     }
 
     [Test]
@@ -238,7 +254,7 @@ public class KdlNumberTests
     public async Task ToInt16_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToInt16()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToInt16()).Throws<FormatException>();
     }
 
     [Test]
@@ -248,7 +264,7 @@ public class KdlNumberTests
     public async Task ToUInt16_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToUInt16()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToUInt16()).Throws<FormatException>();
     }
 
     [Test]
@@ -258,7 +274,7 @@ public class KdlNumberTests
     public async Task ToByte_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToByte()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToByte()).Throws<FormatException>();
     }
 
     [Test]
@@ -268,7 +284,7 @@ public class KdlNumberTests
     public async Task ToSByte_ThrowsOnSpecialNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToSByte()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToSByte()).Throws<FormatException>();
     }
 
     // [Test]
@@ -533,7 +549,7 @@ public class KdlNumberTests
     public async Task ToInt32_ThrowsOnFloatNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToInt32()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToInt32()).Throws<FormatException>();
     }
 
     [Test]
@@ -544,7 +560,7 @@ public class KdlNumberTests
     public async Task ToInt64_ThrowsOnFloatNumbers(string input)
     {
         var sut = new KdlNumber(input);
-        await Assert.That(() => sut.ToInt64()).Throws<InvalidOperationException>();
+        await Assert.That(() => sut.ToInt64()).Throws<FormatException>();
     }
 
     // [Test]
