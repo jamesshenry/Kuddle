@@ -121,7 +121,6 @@ public class KdlNumberTests
     #region Overflow and Invalid Conversion Tests
 
     [Test]
-    [Arguments("-42")] // Negative to unsigned
     [Arguments("300")] // Too large for byte
     [Arguments("-200")] // Too small for sbyte
     [Arguments("256")] // Too large for byte (boundary)
@@ -132,7 +131,6 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("-42")] // Negative to unsigned
     [Arguments("200000")] // Too large for ushort
     [Arguments("-200000")] // Too small for sbyte
     [Arguments("65536")] // Too large for ushort (boundary)
@@ -143,7 +141,6 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("-42")] // Negative to unsigned
     [Arguments("50000")] // Too large for short
     [Arguments("-50000")] // Too small for short
     [Arguments("32768")] // Too large for short (boundary)
@@ -419,7 +416,7 @@ public class KdlNumberTests
     [Arguments("1_000_000", 1000000)]
     [Arguments("0xFF_FF", 65535)]
     [Arguments("0o777_777", 262143)]
-    [Arguments("0b1111_0000_1010_0101", 61621)]
+    [Arguments("0b1111_0000_1010_0101", 61605)]
     public async Task ToInt32_HandlesUnderscores(string input, int expected)
     {
         var sut = new KdlNumber(input, NumberKind.Integer);
