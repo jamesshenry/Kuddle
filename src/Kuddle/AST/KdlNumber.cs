@@ -1,67 +1,57 @@
 using System;
-using System.Linq;
-using System.Numerics;
+using System.Globalization;
 
 namespace Kuddle.AST;
 
 public sealed record KdlNumber(string RawValue) : KdlValue
 {
-    private const StringComparison IgnoreCase = StringComparison.OrdinalIgnoreCase;
-
-    public NumberBase Base
+    public NumberBase GetBase()
     {
-        get
-        {
-            ReadOnlySpan<char> span = RawValue.AsSpan();
-            if (span.IsEmpty)
-                return NumberBase.Decimal;
-
-            // Skip sign
-            if (span[0] == '+' || span[0] == '-')
-            {
-                if (span.Length == 1)
-                    return NumberBase.Decimal;
-                span = span[1..];
-            }
-
-            // Check prefix
-            if (span.Length >= 2 && span[0] == '0')
-            {
-                char c = span[1];
-                if (c == 'x' || c == 'X')
-                    return NumberBase.Hex;
-                if (c == 'o' || c == 'O')
-                    return NumberBase.Octal;
-                if (c == 'b' || c == 'B')
-                    return NumberBase.Binary;
-            }
-
+        ReadOnlySpan<char> span = RawValue.AsSpan();
+        if (span.IsEmpty)
             return NumberBase.Decimal;
+
+        // Skip sign
+        if (span[0] == '+' || span[0] == '-')
+        {
+            if (span.Length == 1)
+                return NumberBase.Decimal;
+            span = span[1..];
         }
+
+        // Check prefix
+        if (span.Length >= 2 && span[0] == '0')
+        {
+            char c = span[1];
+            if (c == 'x' || c == 'X')
+                return NumberBase.Hex;
+            if (c == 'o' || c == 'O')
+                return NumberBase.Octal;
+            if (c == 'b' || c == 'B')
+                return NumberBase.Binary;
+        }
+
+        return NumberBase.Decimal;
     }
 
     public long ToInt64()
     {
         if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
             throw new FormatException($"Value '{RawValue}' is not a valid Integer.");
-        var (magnitudeString, radix, isNegative) = Sanitise(RawValue, Base);
+        var (sanitised, radix, isNegative) = Sanitise(RawValue, GetBase());
 
         try
         {
-            // 1. Parse as Unsigned first (Handles full 64-bit magnitude)
-            ulong magnitude = Convert.ToUInt64(magnitudeString, radix);
+            ulong magnitude = Convert.ToUInt64(sanitised, radix);
 
-            // 2. Apply Sign and Check Bounds manually
             if (isNegative)
             {
-                // Edge case: Int64.MinValue (9223372036854775808)
-                // fits in ulong, but is > long.MaxValue.
                 if (magnitude == (ulong)long.MaxValue + 1)
                 {
                     return long.MinValue;
                 }
 
-                if (magnitude > (ulong)long.MaxValue)
+                if (magnitude > long.MaxValue)
                 {
                     throw new OverflowException();
                 }
@@ -79,31 +69,22 @@ public sealed record KdlNumber(string RawValue) : KdlValue
         }
         catch (FormatException)
         {
-            throw new FormatException($"Value '{RawValue}' is not a valid {Base} integer.");
+            throw new FormatException($"Value '{RawValue}' is not a valid {GetBase()} integer.");
         }
     }
 
-    public int ToInt32()
-    {
-        return checked((int)ToInt64());
-    }
+    public int ToInt32() => checked((int)ToInt64());
 
-    public short ToInt16()
-    {
-        return checked((short)ToInt64());
-    }
+    public short ToInt16() => checked((short)ToInt64());
 
-    public sbyte ToSByte()
-    {
-        return checked((sbyte)ToInt64());
-    }
+    public sbyte ToSByte() => checked((sbyte)ToInt64());
 
     public ulong ToUInt64()
     {
         if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
             throw new FormatException($"Value '{RawValue}' is not a valid Integer.");
 
-        var (magnitudeString, radix, isNegative) = Sanitise(RawValue, Base);
+        var (magnitudeString, radix, isNegative) = Sanitise(RawValue, GetBase());
 
         if (isNegative)
             throw new OverflowException("Cannot convert negative value to UInt64.");
@@ -111,23 +92,16 @@ public sealed record KdlNumber(string RawValue) : KdlValue
         return Convert.ToUInt64(magnitudeString, radix);
     }
 
-    public uint ToUInt32()
-    {
-        return checked((uint)ToUInt64());
-    }
+    public uint ToUInt32() => checked((uint)ToUInt64());
 
-    public ushort ToUInt16()
-    {
-        return checked((ushort)ToUInt64());
-    }
+    public ushort ToUInt16() => checked((ushort)ToUInt64());
 
-    public byte ToByte()
-    {
-        return checked((byte)ToUInt64());
-    }
+    public byte ToByte() => checked((byte)ToUInt64());
 
     public double ToDouble()
     {
+        var numberBase = GetBase();
+
         if (RawValue.StartsWith('#'))
         {
             return (double)(
@@ -140,22 +114,41 @@ public sealed record KdlNumber(string RawValue) : KdlValue
                 }
             );
         }
-        var (magnitudeString, radix, isNegative) = Sanitise(RawValue, Base);
+        var (sanitised, radix, isNegative) = Sanitise(RawValue, numberBase);
 
-        return (double)Convert.ToDouble(magnitudeString);
+        double result;
+        if (radix != 10)
+        {
+            result = Convert.ToUInt64(sanitised, radix);
+        }
+        else
+        {
+            result = Convert.ToDouble(sanitised);
+        }
+        return isNegative ? result * -1 : result;
     }
 
-    public float ToFloat()
-    {
-        return checked((float)ToDouble());
-    }
+    public float ToFloat() => checked((float)ToDouble());
 
     public decimal ToDecimal()
     {
-        var (cleaned, radix, isNegative) = Sanitise(RawValue, Base);
-        return RawValue.StartsWith('#')
-            ? throw new NotSupportedException()
-            : Decimal.Parse(cleaned, System.Globalization.NumberStyles.Float);
+        var numberBase = GetBase();
+        if (RawValue.StartsWith('#'))
+        {
+            throw new NotSupportedException();
+        }
+        var (sanitised, radix, isNegative) = Sanitise(RawValue, numberBase);
+
+        decimal result;
+        if (radix != 10)
+        {
+            result = Convert.ToUInt64(sanitised, radix);
+        }
+        else
+        {
+            result = decimal.Parse(sanitised, NumberStyles.Float, CultureInfo.InvariantCulture);
+        }
+        return isNegative ? result * -1 : result;
     }
 
     // public BigInteger ToBigInteger()
@@ -180,30 +173,28 @@ public sealed record KdlNumber(string RawValue) : KdlValue
         bool isNegative = s.StartsWith('-');
         bool isPositive = s.StartsWith('+');
 
-        // Strip Sign
-        string unsigned = (isNegative || isPositive) ? s.Substring(1) : s;
+        string sanitised = (isNegative || isPositive) ? s.Substring(1) : s;
 
-        // Strip Prefix (0x, 0b, 0o)
         int radix = 10;
         if (baseKind == NumberBase.Hex)
         {
             radix = 16;
-            if (unsigned.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                unsigned = unsigned.Substring(2);
+            if (sanitised.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                sanitised = sanitised.Substring(2);
         }
         else if (baseKind == NumberBase.Octal)
         {
             radix = 8;
-            if (unsigned.StartsWith("0o", StringComparison.OrdinalIgnoreCase))
-                unsigned = unsigned.Substring(2);
+            if (sanitised.StartsWith("0o", StringComparison.OrdinalIgnoreCase))
+                sanitised = sanitised.Substring(2);
         }
         else if (baseKind == NumberBase.Binary)
         {
             radix = 2;
-            if (unsigned.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
-                unsigned = unsigned.Substring(2);
+            if (sanitised.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
+                sanitised = sanitised.Substring(2);
         }
 
-        return (unsigned, radix, isNegative);
+        return (sanitised, radix, isNegative);
     }
 }

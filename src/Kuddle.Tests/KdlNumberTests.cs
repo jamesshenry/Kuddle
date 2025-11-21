@@ -1,5 +1,3 @@
-using System;
-using System.Numerics;
 using Kuddle.AST;
 
 namespace Kuddle.Tests;
@@ -9,14 +7,14 @@ public class KdlNumberTests
     #region Successful Conversions - All Number Bases
 
     [Test]
-    [Arguments("42", 42)] // Decimal
-    [Arguments("0x2A", 42)] // Hex
-    [Arguments("0o52", 42)] // Octal
-    [Arguments("0b101010", 42)] // Binary
-    [Arguments("-42", -42)] // Negative Decimal
-    [Arguments("-0x2A", -42)] // Negative Hex
-    [Arguments("-0o52", -42)] // Negative Octal
-    [Arguments("-0b101010", -42)] // Negative Binary
+    [Arguments("42", 42)]
+    [Arguments("0x2A", 42)]
+    [Arguments("0o52", 42)]
+    [Arguments("0b101010", 42)]
+    [Arguments("-42", -42)]
+    [Arguments("-0x2A", -42)]
+    [Arguments("-0o52", -42)]
+    [Arguments("-0b101010", -42)]
     public async Task ToInt32_ConvertsAllBases(string input, int expected)
     {
         var sut = new KdlNumber(input);
@@ -25,10 +23,10 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (uint)42)] // Decimal
-    [Arguments("0x2A", (uint)42)] // Hex
-    [Arguments("0o52", (uint)42)] // Octal
-    [Arguments("0b101010", (uint)42)] // Binary
+    [Arguments("42", (uint)42)]
+    [Arguments("0x2A", (uint)42)]
+    [Arguments("0o52", (uint)42)]
+    [Arguments("0b101010", (uint)42)]
     public async Task ToUInt32_ConvertsAllBases(string input, uint expected)
     {
         var sut = new KdlNumber(input);
@@ -37,14 +35,14 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (long)42)] // Decimal
-    [Arguments("0x2A", (long)42)] // Hex
-    [Arguments("0o52", (long)42)] // Octal
-    [Arguments("0b101010", (long)42)] // Binary
-    [Arguments("-42", (long)-42)] // Negative Decimal
-    [Arguments("-0x2A", (long)-42)] // Negative Hex
-    [Arguments("-0o52", (long)-42)] // Negative Octal
-    [Arguments("-0b101010", (long)-42)] // Negative Binary
+    [Arguments("42", (long)42)]
+    [Arguments("0x2A", (long)42)]
+    [Arguments("0o52", (long)42)]
+    [Arguments("0b101010", (long)42)]
+    [Arguments("-42", (long)-42)]
+    [Arguments("-0x2A", (long)-42)]
+    [Arguments("-0o52", (long)-42)]
+    [Arguments("-0b101010", (long)-42)]
     public async Task ToInt64_ConvertsAllBases(string input, long expected)
     {
         var sut = new KdlNumber(input);
@@ -53,10 +51,10 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (ulong)42)] // Decimal
-    [Arguments("0x2A", (ulong)42)] // Hex
-    [Arguments("0o52", (ulong)42)] // Octal
-    [Arguments("0b101010", (ulong)42)] // Binary
+    [Arguments("42", (ulong)42)]
+    [Arguments("0x2A", (ulong)42)]
+    [Arguments("0o52", (ulong)42)]
+    [Arguments("0b101010", (ulong)42)]
     public async Task ToUInt64_ConvertsAllBases(string input, ulong expected)
     {
         var sut = new KdlNumber(input);
@@ -65,14 +63,14 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (short)42)] // Decimal
-    [Arguments("0x2A", (short)42)] // Hex
-    [Arguments("0o52", (short)42)] // Octal
-    [Arguments("0b101010", (short)42)] // Binary
-    [Arguments("-42", (short)-42)] // Negative Decimal
-    [Arguments("-0x2A", (short)-42)] // Negative Hex
-    [Arguments("-0o52", (short)-42)] // Negative Octal
-    [Arguments("-0b101010", (short)-42)] // Negative Binary
+    [Arguments("42", (short)42)]
+    [Arguments("0x2A", (short)42)]
+    [Arguments("0o52", (short)42)]
+    [Arguments("0b101010", (short)42)]
+    [Arguments("-42", (short)-42)]
+    [Arguments("-0x2A", (short)-42)]
+    [Arguments("-0o52", (short)-42)]
+    [Arguments("-0b101010", (short)-42)]
     public async Task ToInt16_ConvertsAllBases(string input, short expected)
     {
         var sut = new KdlNumber(input);
@@ -81,10 +79,10 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (ushort)42)] // Decimal
-    [Arguments("0x2A", (ushort)42)] // Hex
-    [Arguments("0o52", (ushort)42)] // Octal
-    [Arguments("0b101010", (ushort)42)] // Binary
+    [Arguments("42", (ushort)42)]
+    [Arguments("0x2A", (ushort)42)]
+    [Arguments("0o52", (ushort)42)]
+    [Arguments("0b101010", (ushort)42)]
     public async Task ToUInt16_ConvertsAllBases(string input, ushort expected)
     {
         var sut = new KdlNumber(input);
@@ -93,10 +91,10 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (byte)42)] // Decimal
-    [Arguments("0x2A", (byte)42)] // Hex
-    [Arguments("0o52", (byte)42)] // Octal
-    [Arguments("0b101010", (byte)42)] // Binary
+    [Arguments("42", (byte)42)]
+    [Arguments("0x2A", (byte)42)]
+    [Arguments("0o52", (byte)42)]
+    [Arguments("0b101010", (byte)42)]
     public async Task ToByte_ConvertsAllBases(string input, byte expected)
     {
         var sut = new KdlNumber(input);
@@ -105,14 +103,14 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("42", (sbyte)42)] // Decimal
-    [Arguments("0x2A", (sbyte)42)] // Hex
-    [Arguments("0o52", (sbyte)42)] // Octal
-    [Arguments("0b101010", (sbyte)42)] // Binary
-    [Arguments("-42", (sbyte)-42)] // Negative Decimal
-    [Arguments("-0x2A", (sbyte)-42)] // Negative Hex
-    [Arguments("-0o52", (sbyte)-42)] // Negative Octal
-    [Arguments("-0b101010", (sbyte)-42)] // Negative Binary
+    [Arguments("42", (sbyte)42)]
+    [Arguments("0x2A", (sbyte)42)]
+    [Arguments("0o52", (sbyte)42)]
+    [Arguments("0b101010", (sbyte)42)]
+    [Arguments("-42", (sbyte)-42)]
+    [Arguments("-0x2A", (sbyte)-42)]
+    [Arguments("-0o52", (sbyte)-42)]
+    [Arguments("-0b101010", (sbyte)-42)]
     public async Task ToSByte_ConvertsAllBases(string input, sbyte expected)
     {
         var sut = new KdlNumber(input);
@@ -120,25 +118,13 @@ public class KdlNumberTests
         await Assert.That(result).IsEqualTo(expected);
     }
 
-    // [Test]
-    // [Arguments("42", 42)] // Decimal
-    // [Arguments("0x2A", 42)] // Hex
-    // [Arguments("0o52", 42)] // Octal
-    // [Arguments("0b101010", 42)] // Binary
-    // public async Task ToBigInteger_ConvertsAllBases(string input, BigInteger expected)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     var result = sut.ToBigInteger();
-    //     await Assert.That(result).IsEqualTo(expected);
-    // }
-
     #endregion
 
     #region Overflow and Invalid Conversion Tests
 
     [Test]
-    [Arguments("256")] // Too large for byte (boundary)
-    [Arguments("-1")] // Too small for byte
+    [Arguments("256")]
+    [Arguments("-1")]
     public async Task ToByte_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -146,8 +132,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("65536")] // Too large for ushort (boundary)
-    [Arguments("-1")] // Too small for ushort (boundary)
+    [Arguments("65536")]
+    [Arguments("-1")]
     public async Task ToUInt16_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -155,10 +141,10 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("50000")] // Too large for short
-    [Arguments("-50000")] // Too small for short
-    [Arguments("32768")] // Too large for short (boundary)
-    [Arguments("-32769")] // Too small for short (boundary)
+    [Arguments("50000")]
+    [Arguments("-50000")]
+    [Arguments("32768")]
+    [Arguments("-32769")]
     public async Task ToInt16_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -166,9 +152,9 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("-42")] // Negative to unsigned
-    [Arguments("4294967296")] // Larger than uint.MaxValue
-    [Arguments("-1")] // Negative to unsigned
+    [Arguments("-42")]
+    [Arguments("4294967296")]
+    [Arguments("-1")]
     public async Task ToUInt32_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -176,9 +162,9 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("-42")] // Negative to unsigned
-    [Arguments("18446744073709551616")] // Larger than ulong.MaxValue
-    [Arguments("-1")] // Negative to unsigned
+    [Arguments("-42")]
+    [Arguments("18446744073709551616")]
+    [Arguments("-1")]
     public async Task ToUInt64_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -186,8 +172,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("2147483648")] // Larger than int.MaxValue
-    [Arguments("-2147483649")] // Smaller than int.MinValue
+    [Arguments("2147483648")]
+    [Arguments("-2147483649")]
     public async Task ToInt32_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -195,8 +181,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("9_223_372_036_854_775_808")] // Larger than long.MaxValue
-    [Arguments("-9_223_372_036_854_775_809")] // Smaller than long.MinValue
+    [Arguments("9_223_372_036_854_775_808")]
+    [Arguments("-9_223_372_036_854_775_809")]
     public async Task ToInt64_ThrowsOnInvalidValues(string input)
     {
         var sut = new KdlNumber(input);
@@ -287,16 +273,6 @@ public class KdlNumberTests
         await Assert.That(() => sut.ToSByte()).Throws<FormatException>();
     }
 
-    // [Test]
-    // [Arguments("#inf")]
-    // [Arguments("#-inf")]
-    // [Arguments("#nan")]
-    // public async Task ToBigInteger_ThrowsOnSpecialNumbers(string input)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     await Assert.That(() => sut.ToBigInteger()).Throws<InvalidOperationException>();
-    // }
-
     [Test]
     public async Task ToDouble_HandlesInfinity()
     {
@@ -338,8 +314,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("2147483647")] // int.MaxValue
-    [Arguments("-2147483648")] // int.MinValue
+    [Arguments("2147483647")]
+    [Arguments("-2147483648")]
     public async Task ToInt32_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input);
@@ -348,7 +324,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("4294967295")] // uint.MaxValue
+    [Arguments("4294967295")]
     public async Task ToUInt32_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input);
@@ -357,8 +333,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("9223372036854775807")] // long.MaxValue
-    [Arguments("-9223372036854775808")] // long.MinValue
+    [Arguments("9223372036854775807")]
+    [Arguments("-9223372036854775808")]
     public async Task ToInt64_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input);
@@ -367,7 +343,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("18446744073709551615")] // ulong.MaxValue
+    [Arguments("18446744073709551615")]
     public async Task ToUInt64_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input);
@@ -376,8 +352,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("32767")] // short.MaxValue
-    [Arguments("-32768")] // short.MinValue
+    [Arguments("32767")]
+    [Arguments("-32768")]
     public async Task ToInt16_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input);
@@ -386,7 +362,7 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("65535")] // ushort.MaxValue
+    [Arguments("65535")]
     public async Task ToUInt16_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input);
@@ -395,8 +371,8 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("127")] // sbyte.MaxValue
-    [Arguments("-128")] // sbyte.MinValue
+    [Arguments("127")]
+    [Arguments("-128")]
     public async Task ToSByte_HandlesBoundaries(string input)
     {
         var sut = new KdlNumber(input);
@@ -405,22 +381,13 @@ public class KdlNumberTests
     }
 
     [Test]
-    [Arguments("255")] // byte.MaxValue
+    [Arguments("255")]
     public async Task ToByte_HandlesMaxBoundary(string input)
     {
         var sut = new KdlNumber(input);
         var result = sut.ToByte();
         await Assert.That(result).IsEqualTo(byte.MaxValue);
     }
-
-    // [Test]
-    // [Arguments("123456789012345678901234567890")] // Very large number
-    // public async Task ToBigInteger_HandlesVeryLargeNumbers(string input)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     var result = sut.ToBigInteger();
-    //     await Assert.That(result.ToString()).IsEqualTo(input);
-    // }
 
     #endregion
 
@@ -447,19 +414,6 @@ public class KdlNumberTests
         var result = sut.ToInt64();
         await Assert.That(result).IsEqualTo(expected);
     }
-
-    // [Test]
-    // [Arguments("1_234_567_890_123_456_789", BigInteger.Parse("1234567890123456789"))]
-    // [Arguments(
-    //     "0xDE_AD_BE_EF",
-    //     BigInteger.Parse("0xDEADBEEF", System.Globalization.NumberStyles.HexNumber)
-    // )]
-    // public async Task ToBigInteger_HandlesUnderscores(string input, BigInteger expected)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     var result = sut.ToBigInteger();
-    //     await Assert.That(result).IsEqualTo(expected);
-    // }
 
     #endregion
 
@@ -504,38 +458,53 @@ public class KdlNumberTests
         await Assert.That(result).IsEqualTo(expected);
     }
 
-    // [Test]
-    // [Arguments("42")] // Integer format
-    // [Arguments("0xFF")] // Hex format
-    // [Arguments("0o52")] // Octal format
-    // [Arguments("0b101010")] // Binary format
-    // public async Task ToDouble_ThrowsOnIntegerFormat(string input)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     await Assert.That(() => sut.ToDouble()).Throws<InvalidOperationException>();
-    // }
+    [Test]
+    [Arguments("42", (double)42)]
+    [Arguments("0x2A", (double)42)]
+    [Arguments("0o52", (double)42)]
+    [Arguments("0b101010", (double)42)]
+    [Arguments("-42", (double)-42)]
+    [Arguments("-0x2A", (double)-42)]
+    [Arguments("-0o52", (double)-42)]
+    [Arguments("-0b101010", (double)-42)]
+    public async Task ToDouble_ConvertsAllBases(string input, double expected)
+    {
+        var sut = new KdlNumber(input);
+        double result = sut.ToDouble();
+        await Assert.That(result).IsEqualTo(expected);
+    }
 
-    // [Test]
-    // [Arguments("42")] // Integer format
-    // [Arguments("0xFF")] // Hex format
-    // [Arguments("0o52")] // Octal format
-    // [Arguments("0b101010")] // Binary format
-    // public async Task ToFloat_ThrowsOnIntegerFormat(string input)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     await Assert.That(() => sut.ToFloat()).Throws<InvalidOperationException>();
-    // }
+    [Test]
+    [Arguments("42", (float)42)]
+    [Arguments("0x2A", (float)42)]
+    [Arguments("0o52", (float)42)]
+    [Arguments("0b101010", (float)42)]
+    [Arguments("-42", (float)-42)]
+    [Arguments("-0x2A", (float)-42)]
+    [Arguments("-0o52", (float)-42)]
+    [Arguments("-0b101010", (float)-42)]
+    public async Task ToFloat_ConvertsAllBases(string input, float expected)
+    {
+        var sut = new KdlNumber(input);
+        double result = sut.ToFloat();
+        await Assert.That(result).IsEqualTo(expected);
+    }
 
-    // [Test]
-    // [Arguments("42")] // Integer format
-    // [Arguments("0xFF")] // Hex format
-    // [Arguments("0o52")] // Octal format
-    // [Arguments("0b101010")] // Binary format
-    // public async Task ToDecimal_ThrowsOnIntegerFormat(string input)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     await Assert.That(() => sut.ToDecimal()).Throws<InvalidOperationException>();
-    // }
+    [Test]
+    [Arguments("42", 42)]
+    [Arguments("0x2A", 42)]
+    [Arguments("0o52", 42)]
+    [Arguments("0b101010", 42)]
+    [Arguments("-42", -42)]
+    [Arguments("-0x2A", -42)]
+    [Arguments("-0o52", -42)]
+    [Arguments("-0b101010", -42)]
+    public async Task ToDecimal_ConvertsAllBases(string input, decimal expected)
+    {
+        var sut = new KdlNumber(input);
+        decimal result = sut.ToDecimal();
+        await Assert.That(result).IsEqualTo(expected);
+    }
 
     #endregion
 
@@ -562,17 +531,6 @@ public class KdlNumberTests
         var sut = new KdlNumber(input);
         await Assert.That(() => sut.ToInt64()).Throws<FormatException>();
     }
-
-    // [Test]
-    // [Arguments("3.14159")]
-    // [Arguments("1.23e-4")]
-    // [Arguments("6.02E23")]
-    // [Arguments("-2.5")]
-    // public async Task ToBigInteger_ThrowsOnFloatNumbers(string input)
-    // {
-    //     var sut = new KdlNumber(input);
-    //     await Assert.That(() => sut.ToBigInteger()).Throws<InvalidOperationException>();
-    // }
 
     #endregion
 }

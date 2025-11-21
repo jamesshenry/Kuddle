@@ -11,13 +11,6 @@ public sealed record KdlBoolean(bool Value) : KdlValue;
 
 public sealed record KdlNull() : KdlValue;
 
-// public enum NumberKind
-// {
-//     Integer,
-//     Decimal,
-//     Special,
-// }
-
 public enum NumberBase
 {
     Decimal,
