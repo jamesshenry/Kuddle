@@ -233,7 +233,6 @@ canis canem edit
     {
         var sut = KuddleGrammar.MultiLineQuoted;
         bool success = sut.TryParse(input, out var value, out var error);
-        Debug.WriteLine(input);
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(expected);
     }
