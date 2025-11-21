@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace Kuddle.AST;
 
-public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
+public sealed record KdlNumber(string RawValue) : KdlValue
 {
     private const StringComparison IgnoreCase = StringComparison.OrdinalIgnoreCase;
 
@@ -28,7 +28,7 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
 
     public long ToInt64()
     {
-        if (Kind != NumberKind.Integer)
+        if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
             throw new InvalidOperationException();
         var cleaned = Sanitise(RawValue, Base);
         return Convert.ToInt64(cleaned.sanitised, cleaned.radix);
@@ -51,7 +51,7 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
 
     public ulong ToUInt64()
     {
-        if (Kind != NumberKind.Integer)
+        if (RawValue.StartsWith('#'))
             throw new InvalidOperationException();
         var (sanitised, radix) = Sanitise(RawValue, Base);
         return Convert.ToUInt64(sanitised, radix);
@@ -74,10 +74,7 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
 
     public double ToDouble()
     {
-        if (Kind != NumberKind.Decimal && Kind != NumberKind.Special)
-            throw new InvalidOperationException();
-
-        return Kind == NumberKind.Special
+        return RawValue.StartsWith('#')
             ? RawValue switch
             {
                 "#inf" => double.PositiveInfinity,
@@ -95,17 +92,19 @@ public sealed record KdlNumber(string RawValue, NumberKind Kind) : KdlValue
 
     public decimal ToDecimal()
     {
-        if (Kind != NumberKind.Decimal && Kind != NumberKind.Special)
-            throw new InvalidOperationException();
-        throw new NotImplementedException();
+        var cleaned = Sanitise(RawValue, Base);
+        return RawValue.StartsWith('#')
+            ? throw new NotSupportedException()
+            : Decimal.Parse(cleaned.sanitised, System.Globalization.NumberStyles.Float);
     }
 
     public BigInteger ToBigInteger()
     {
-        if (Kind != NumberKind.Integer)
+        if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
             throw new InvalidOperationException();
         var cleaned = Sanitise(RawValue, Base);
-
-        return BigInteger.Parse(cleaned.sanitised);
+        var actualInt = Convert.ToInt64(cleaned.sanitised, 2);
+        var test = cleaned.sanitised.Aggregate(BigInteger.Zero, (s, a) => (s << 1) + a - '0');
+        return BigInteger.Parse(cleaned.sanitised, System.Globalization.NumberStyles.BinaryNumber);
     }
 }

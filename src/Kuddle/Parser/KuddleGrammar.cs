@@ -243,13 +243,13 @@ nrt"\bfs
                     .And(ZeroOrOne(Literals.Char('.').And(Integer)))
                     .And(Exponent.Optional())
             )
-            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Decimal));
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString()));
         Hex = Capture(
                 Sign.Optional()
                     .And(Literals.Text("0x"))
                     .And(Literals.Pattern(c => c == '_' || IsHexChar(c)))
             )
-            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Integer));
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString()));
         Octal = Capture(
                 Sign.Optional()
                     .AndSkip(Literals.Text("0o"))
@@ -259,7 +259,7 @@ nrt"\bfs
                             .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsOctalChar(c))))
                     )
             )
-            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Integer));
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString()));
 
         Binary = Capture(
                 Sign.Optional()
@@ -267,11 +267,11 @@ nrt"\bfs
                     .And(Literals.Char('0').Or(Literals.Char('1')))
                     .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
             )
-            .Then((context, ts) => new KdlNumber(ts.Span.ToString(), NumberKind.Integer));
+            .Then((context, ts) => new KdlNumber(ts.Span.ToString()));
         Boolean = Literals.Text("#true").Or(Literals.Text("#false"));
         Keyword = Boolean.Or(Literals.Text("#null"));
         KeywordNumber = OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"))
-            .Then((context, ts) => new KdlNumber(ts, NumberKind.Decimal));
+            .Then((context, ts) => new KdlNumber(ts));
 
         Number = OneOf(KeywordNumber, Hex, Octal, Binary, Decimal)
             .Then((context, value) => value as KdlValue);
@@ -289,10 +289,10 @@ nrt"\bfs
         //                 when s.Length > 2
         //                     && s[0] == '0'
         //                     && (s[1] is 'x' or 'X' or 'o' or 'O' or 'b' or 'B') =>
-        //                 new KdlNumber(s.ToString(), NumberKind.Integer),
+        //                 new KdlNumber(s.ToString()),
         //             var s when s.Contains('.') || s.IndexOfAny("eE".AsSpan()) >= 0 =>
-        //                 new KdlNumber(s.ToString(), NumberKind.Float),
-        //             var s => new KdlNumber(s.ToString(), NumberKind.Integer),
+        //                 new KdlNumber(s.ToString()),
+        //             var s => new KdlNumber(s.ToString()),
         //         };
         //     }
         // );
