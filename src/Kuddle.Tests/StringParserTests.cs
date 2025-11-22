@@ -280,41 +280,72 @@ World
         await Assert.That(value.ToString()).IsEqualTo(expected);
     }
 
-    // [Test]
-    // public async Task RawString_ParsesSimpleRawString()
-    // {
-    //     var sut = KuddleGrammar.RawString;
+    [Test]
+    public async Task RawString_ParsesSimpleRawString()
+    {
+        var sut = KuddleGrammar.RawString;
 
-    //     var input = "#\"hello world\"#";
-    //     bool success = sut.TryParse(input, out var value);
+        var input = """
+#"\n will be literal"#
+""";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo(@"\n will be literal");
+    }
 
-    // [Test]
-    // public async Task RawString_ParsesRawStringWithQuotes()
-    // {
-    //     var sut = KuddleGrammar.RawString;
+    [Test]
+    public async Task RawString_ParsesRawStringWithQuotes()
+    {
+        var sut = KuddleGrammar.RawString;
 
-    //     var input = "#\"content with \"quotes\"\"#";
-    //     bool success = sut.TryParse(input, out var value);
+        var input = "#\"content with \"quotes\"\"#";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.ToString()).IsEqualTo("content with \"quotes\"");
+    }
 
-    // [Test]
-    // public async Task RawString_HandlesMultipleHashDelimiters()
-    // {
-    //     var sut = KuddleGrammar.RawString;
+    [Test]
+    public async Task RawString_HandlesMultipleHashDelimiters()
+    {
+        var sut = KuddleGrammar.RawString;
 
-    //     var input = "##\"content with \" quotes\"##";
-    //     bool success = sut.TryParse(input, out var value);
+        var input = """
+##"hello\n\r\asd"#world"##
+""";
+        bool success = sut.TryParse(input, out var value);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert
+            .That(value.ToString())
+            .IsEqualTo(
+                """
+hello\n\r\asd"#world
+"""
+            );
+    }
+
+    [Test]
+    public async Task RawString_ParsesMultiLineRawString()
+    {
+        var sut = KuddleGrammar.RawString;
+
+        var input = """""
+#"""
+    Here's a """
+        multiline string
+        """
+    without escapes.
+    """#
+""""";
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert
+            .That(value.ToString())
+            .IsEqualTo("Here's a \"\"\"\n    multiline string\n    \"\"\"\nwithout escapes.");
+    }
 
     // [Test]
     // public async Task String_ParsesIdentifierString()

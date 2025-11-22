@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
@@ -19,15 +20,9 @@ public static class KuddleGrammar
     static KuddleGrammar()
     {
         var nodeSpace = Deferred<TextSpan>();
-        var @string = Deferred<TextSpan>();
 
         var singleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")));
 
-        Type = Between(
-            Literals.Char('('),
-            ZeroOrMany(nodeSpace).SkipAnd(@string).AndSkip(ZeroOrMany(nodeSpace)),
-            Literals.Char(')')
-        );
         Sign = Literals.AnyOf(['+', '-'], 1, 1);
 
         //Strings
@@ -52,7 +47,11 @@ public static class KuddleGrammar
                     var singleRaw = Between(singleQuote, BodyUntil(closeSingle), closeSingle);
 
                     var closeTriple = Capture(tripleQuote.And(Literals.Text(delimiter)));
-                    var tripleRaw = Between(tripleQuote, BodyUntil(closeTriple), closeTriple)
+                    var tripleRaw = Between(
+                            tripleQuote.And(singleNewLine),
+                            BodyUntil(closeTriple),
+                            closeTriple
+                        )
                         .Then(ts => new TextSpan(Dedent(ts.ToString())));
 
                     return tripleRaw.Or(singleRaw);
@@ -210,7 +209,7 @@ nrt"\bfs
             .ElseError("Failed to parse identifier string");
         String = OneOf(IdentifierString, RawString, QuotedString)
             .ElseError("Failed to parse string")
-            .Then((context, ks) => ks as KdlValue);
+            .Then((context, ks) => ks);
 
         Integer = Literals
             .Pattern(c => char.IsDigit(c) || c == '_')
@@ -247,16 +246,28 @@ nrt"\bfs
                     .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
             )
             .When((context, x) => x.Span[^1] != '_');
-        Boolean = Literals.Text("#true").Or(Literals.Text("#false"));
-        Keyword = Boolean.Or(Literals.Text("#null"));
+        Boolean = Literals
+            .Text("#true")
+            .Or(Literals.Text("#false"))
+            .Then(value =>
+                value switch
+                {
+                    "#true'" => new KdlBoolean(true),
+                    "#false'" => new KdlBoolean(false),
+                    _ => throw new NotSupportedException(),
+                }
+            );
+        Keyword = Boolean.Or<KdlBoolean, KdlNull, KdlValue>(
+            Literals.Text("#null").Then(_ => new KdlNull())
+        );
         KeywordNumber = Capture(
             OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"))
         );
 
         Number = OneOf(KeywordNumber, Hex, Octal, Binary, Decimal)
-            .Then((context, value) => new KdlNumber(value.Span.ToString()) as KdlValue);
+            .Then((context, value) => new KdlNumber(value.Span.ToString()));
 
-        var lineSpace = Deferred<TextSpan>();
+        // Comments
         var multiLineComment = Deferred<TextSpan>();
 
         var openComment = Literals.Text("/*");
@@ -274,8 +285,10 @@ nrt"\bfs
             return Capture(fullCommentParser);
         });
 
+        var lineSpace = Deferred<TextSpan>();
         SlashDash = Capture(Literals.Text("/-").And(lineSpace));
 
+        // Whitespace
         Ws = Literals
             .Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1, maxSize: 1)
             .Or(MultiLineComment);
@@ -297,6 +310,32 @@ nrt"\bfs
         NodeSpace = nodeSpace;
         lineSpace.Parser = NodeSpace.Or(singleNewLine).Or(SingleLineComment);
         LineSpace = lineSpace;
+
+        // Entries
+
+        Type = Between(
+            Literals.Char('('),
+            ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
+            Literals.Char(')')
+        );
+
+        Value = Type.Optional()
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .And(String.Or<KdlString, KdlNumber, KdlValue>(Number).Or(Keyword))
+            .Then(x =>
+            {
+                if (x.Item1.HasValue)
+                {
+                    return x.Item2 with { TypeAnnotation = x.Item1.Value.Value };
+                }
+                return x.Item2;
+            });
+
+        Property = String
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .AndSkip(Literals.Char('='))
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .And(Value);
     }
 
     #region Numbers
@@ -306,13 +345,13 @@ nrt"\bfs
     public static readonly Parser<TextSpan> Hex;
     public static readonly Parser<TextSpan> Octal;
     public static readonly Parser<TextSpan> Binary;
-    public static readonly Parser<KdlValue> Number;
+    public static readonly Parser<KdlNumber> Number;
     #endregion
 
     #region Keywords and booleans
-    public static readonly Parser<string> Boolean;
+    public static readonly Parser<KdlBoolean> Boolean;
     public static readonly Parser<TextSpan> KeywordNumber;
-    public static readonly Parser<string> Keyword;
+    public static readonly Parser<KdlValue> Keyword;
     #endregion
 
     #region Specific code points
@@ -330,7 +369,8 @@ nrt"\bfs
     internal static readonly Parser<TextSpan> EscLine;
     internal static readonly Parser<TextSpan> NodeSpace;
     internal static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
-    internal static readonly Parser<TextSpan> Type;
+    internal static readonly Parser<KdlString> Type;
+    private static readonly Parser<KdlValue> Value;
 
     // internal static readonly Parser<TextSpan> IdentifierChar;
     internal static readonly Parser<TextSpan> UnambiguousIdent;
@@ -344,7 +384,7 @@ nrt"\bfs
     internal static readonly Parser<KdlString> RawString;
     internal static readonly Parser<KdlString> IdentifierString;
     internal static readonly Parser<KdlString> QuotedString;
-    internal static readonly Parser<KdlValue> String;
+    internal static readonly Parser<KdlString> String;
     #endregion
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';
