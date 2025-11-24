@@ -252,12 +252,12 @@ nrt"\bfs
             .Then(value =>
                 value switch
                 {
-                    "#true'" => new KdlBoolean(true),
-                    "#false'" => new KdlBoolean(false),
+                    "#true'" => new KdlBool(true),
+                    "#false'" => new KdlBool(false),
                     _ => throw new NotSupportedException(),
                 }
             );
-        Keyword = Boolean.Or<KdlBoolean, KdlNull, KdlValue>(
+        Keyword = Boolean.Or<KdlBool, KdlNull, KdlValue>(
             Literals.Text("#null").Then(_ => new KdlNull())
         );
         KeywordNumber = Capture(
@@ -314,7 +314,6 @@ nrt"\bfs
         // Entries
 
         Type = Between(
-            Literals.Char('('),
             ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
             Literals.Char(')')
         );
@@ -349,7 +348,7 @@ nrt"\bfs
     #endregion
 
     #region Keywords and booleans
-    public static readonly Parser<KdlBoolean> Boolean;
+    public static readonly Parser<KdlBool> Boolean;
     public static readonly Parser<TextSpan> KeywordNumber;
     public static readonly Parser<KdlValue> Keyword;
     #endregion
