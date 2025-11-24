@@ -314,6 +314,7 @@ nrt"\bfs
         // Entries
 
         Type = Between(
+            Literals.Char('('),
             ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
             Literals.Char(')')
         );
@@ -330,7 +331,7 @@ nrt"\bfs
                 return x.Item2;
             });
 
-        Property = String
+        var Property = String
             .AndSkip(ZeroOrMany(NodeSpace))
             .AndSkip(Literals.Char('='))
             .AndSkip(ZeroOrMany(NodeSpace))

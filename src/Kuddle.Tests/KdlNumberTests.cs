@@ -533,4 +533,63 @@ public class KdlNumberTests
     }
 
     #endregion
+
+    #region Additional KdlNumber Parsing Logic Tests
+
+    [Test]
+    [Arguments("123", NumberBase.Decimal)]
+    [Arguments("-100", NumberBase.Decimal)]
+    [Arguments("10.5", NumberBase.Decimal)]
+    [Arguments("0xFF", NumberBase.Hex)]
+    [Arguments("0x1A", NumberBase.Hex)]
+    [Arguments("0o77", NumberBase.Octal)]
+    [Arguments("0b1010", NumberBase.Binary)]
+    public async Task GetBase_ReturnsCorrectBase(string input, NumberBase expected)
+    {
+        var sut = new KdlNumber(input);
+        var result = sut.GetBase();
+        await Assert.That(result).IsEqualTo(expected);
+    }
+
+    [Test]
+    [Arguments("0xFF", 255)]
+    [Arguments("0x1A", 26)]
+    [Arguments("0o77", 63)]
+    [Arguments("0b1010", 10)]
+    public async Task Given_HexString_When_ToInt32_Then_ReturnsCorrectValue(string raw, int expected)
+    {
+        var number = new KdlNumber(raw);
+        var result = number.ToInt32();
+        await Assert.That(result).IsEqualTo(expected);
+    }
+
+    [Test]
+    [Arguments("1_000", 1000)]
+    [Arguments("0xFF_FF", 65535)]
+    [Arguments("0o777_777", 262143)]
+    [Arguments("0b1111_0000", 240)]
+    public async Task Given_UnderscoreFormatted_When_ToInt32_Then_UnderscoresIgnored(string raw, int expected)
+    {
+        var number = new KdlNumber(raw);
+        var result = number.ToInt32();
+        await Assert.That(result).IsEqualTo(expected);
+    }
+
+    [Test]
+    public async Task Given_LargeNumber_When_ToInt32_Then_ThrowsOverflow()
+    {
+        var number = new KdlNumber("9999999999");
+        await Assert.That(() => number.ToInt32()).Throws<OverflowException>();
+    }
+
+    [Test]
+    [Arguments("10.5")]
+    [Arguments("1.23e4")]
+    public async Task Given_FloatString_When_ToInt64_Then_ThrowsFormatException(string raw)
+    {
+        var number = new KdlNumber(raw);
+        await Assert.That(() => number.ToInt64()).Throws<FormatException>();
+    }
+
+    #endregion
 }

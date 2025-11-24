@@ -55,6 +55,7 @@ public enum StringKind
     Quoted,
     Raw,
     MultiLine,
+    Identifier,
 }
 
 public sealed record KdlString(string Value, StringKind Kind) : KdlValue
