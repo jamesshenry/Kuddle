@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
@@ -17,6 +13,54 @@ namespace Kuddle.Parser;
 
 public static class KuddleGrammar
 {
+    #region Numbers
+    public static readonly Parser<TextSpan> Decimal;
+    internal static readonly Parser<TextSpan> Integer;
+    public static readonly Parser<TextSpan> Sign;
+    public static readonly Parser<TextSpan> Hex;
+    public static readonly Parser<TextSpan> Octal;
+    public static readonly Parser<TextSpan> Binary;
+    public static readonly Parser<KdlNumber> Number;
+    #endregion
+
+    #region Keywords and booleans
+    public static readonly Parser<KdlBool> Boolean;
+    public static readonly Parser<TextSpan> KeywordNumber;
+    public static readonly Parser<KdlValue> Keyword;
+    #endregion
+
+    #region Specific code points
+    public static readonly Parser<char> Bom = Literals.Char('\uFEFF');
+    #endregion
+
+    #region Comments
+    public static readonly Parser<TextSpan> SingleLineComment;
+    public static readonly Parser<TextSpan> MultiLineComment;
+    public static readonly Parser<TextSpan> SlashDash;
+    #endregion
+
+    #region WhiteSpace
+    internal static readonly Parser<TextSpan> Ws;
+    internal static readonly Parser<TextSpan> EscLine;
+    internal static readonly Parser<TextSpan> NodeSpace;
+    internal static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
+    internal static readonly Parser<KdlString> Type;
+    private static readonly Parser<KdlValue> Value;
+
+    // internal static readonly Parser<TextSpan> IdentifierChar;
+    internal static readonly Parser<TextSpan> UnambiguousIdent;
+    internal static readonly Parser<TextSpan> SignedIdent;
+    internal static readonly Parser<TextSpan> DottedIdent;
+    internal static readonly Parser<TextSpan> HexUnicode;
+    internal static readonly Parser<TextSpan> WsEscape;
+    internal static readonly Parser<TextSpan> StringCharacter;
+    internal static readonly Parser<KdlString> MultiLineQuoted;
+    internal static readonly Parser<KdlString> SingleLineQuoted;
+    internal static readonly Parser<KdlString> RawString;
+    internal static readonly Parser<KdlString> IdentifierString;
+    internal static readonly Parser<KdlString> QuotedString;
+    internal static readonly Parser<KdlString> String;
+    #endregion
     static KuddleGrammar()
     {
         var nodeSpace = Deferred<TextSpan>();
@@ -33,31 +77,31 @@ public static class KuddleGrammar
 
         var openingHashes = Capture(OneOrMany(hash));
 
-        RawString = openingHashes
-            .Switch(
-                (context, hashes) =>
-                {
-                    string delimiter = hashes.ToString();
+        // RawString = openingHashes
+        //     .Switch(
+        //         (context, hashes) =>
+        //         {
+        //             string delimiter = hashes.ToString();
 
-                    static Parser<TextSpan> BodyUntil(Parser<TextSpan> closer) =>
-                        AnyCharBefore(closer)
-                            .When((_, span) => !span.Span.Any(IsDisallowedLiteralCodePoint));
+        //             static Parser<TextSpan> BodyUntil(Parser<TextSpan> closer) =>
+        //                 AnyCharBefore(closer)
+        //                     .When((_, span) => !span.Span.Any(IsDisallowedLiteralCodePoint));
 
-                    var closeSingle = Capture(singleQuote.And(Literals.Text(delimiter)));
-                    var singleRaw = Between(singleQuote, BodyUntil(closeSingle), closeSingle);
+        //             var closeSingle = Capture(singleQuote.And(Literals.Text(delimiter)));
+        //             var singleRaw = Between(singleQuote, BodyUntil(closeSingle), closeSingle);
 
-                    var closeTriple = Capture(tripleQuote.And(Literals.Text(delimiter)));
-                    var tripleRaw = Between(
-                            tripleQuote.And(singleNewLine),
-                            BodyUntil(closeTriple),
-                            closeTriple
-                        )
-                        .Then(ts => new TextSpan(Dedent(ts.ToString())));
+        //             var closeTriple = Capture(tripleQuote.And(Literals.Text(delimiter)));
+        //             var tripleRaw = Between(
+        //                     tripleQuote.And(singleNewLine),
+        //                     BodyUntil(closeTriple),
+        //                     closeTriple
+        //                 )
+        //                 .Then(ts => new TextSpan(Dedent(ts.ToString())));
 
-                    return tripleRaw.Or(singleRaw);
-                }
-            )
-            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Raw));
+        //             return tripleRaw.Or(singleRaw);
+        //         }
+        //     )
+        //     .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Raw));
 
         var identifierChar = Literals.Pattern(
             c =>
@@ -111,15 +155,26 @@ nrt"\bfs
                     _ => throw new Exception(),
                 }
             );
+        var escapeSequence = Literals
+            .Char('\\')
+            .SkipAnd(
+                OneOf(
+                        Literals.Char('n').Then(_ => "\n"),
+                        Literals.Char('r').Then(_ => "\r"),
+                        Literals.Char('t').Then(_ => "\t"),
+                        Literals.Char('\\').Then(_ => "\\"),
+                        Literals.Char('"').Then(_ => "\""),
+                        Literals.Char('b').Then(_ => "\b"),
+                        Literals.Char('f').Then(_ => "\f"),
+                        Literals
+                            .Text("u{")
+                            .SkipAnd(HexUnicode)
+                            .AndSkip(Literals.Char('}'))
+                            .Then(ts => char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer, 16)))
+                    )
+                    .Then(s => new TextSpan(s))
+            );
 
-        var escapeSequence = OneOf(
-            Literals.Text(@"\").SkipAnd(stringEscapeChars),
-            Literals
-                .Text("\\u{")
-                .SkipAnd(HexUnicode)
-                .AndSkip(Literals.Char('}'))
-                .Then(ts => new TextSpan(char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer, 16))))
-        );
         var plainCharacter = Literals
             .Pattern(c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c), 1, 1)
             .Then(
@@ -207,6 +262,7 @@ nrt"\bfs
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
             .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier))
             .ElseError("Failed to parse identifier string");
+        RawString = new RawStringParser();
         String = OneOf(IdentifierString, RawString, QuotedString)
             .ElseError("Failed to parse string")
             .Then((context, ks) => ks);
@@ -338,55 +394,6 @@ nrt"\bfs
             .And(Value);
     }
 
-    #region Numbers
-    public static readonly Parser<TextSpan> Decimal;
-    internal static readonly Parser<TextSpan> Integer;
-    public static readonly Parser<TextSpan> Sign;
-    public static readonly Parser<TextSpan> Hex;
-    public static readonly Parser<TextSpan> Octal;
-    public static readonly Parser<TextSpan> Binary;
-    public static readonly Parser<KdlNumber> Number;
-    #endregion
-
-    #region Keywords and booleans
-    public static readonly Parser<KdlBool> Boolean;
-    public static readonly Parser<TextSpan> KeywordNumber;
-    public static readonly Parser<KdlValue> Keyword;
-    #endregion
-
-    #region Specific code points
-    public static readonly Parser<char> Bom = Literals.Char('\uFEFF');
-    #endregion
-
-    #region Comments
-    public static readonly Parser<TextSpan> SingleLineComment;
-    public static readonly Parser<TextSpan> MultiLineComment;
-    public static readonly Parser<TextSpan> SlashDash;
-    #endregion
-
-    #region WhiteSpace
-    internal static readonly Parser<TextSpan> Ws;
-    internal static readonly Parser<TextSpan> EscLine;
-    internal static readonly Parser<TextSpan> NodeSpace;
-    internal static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
-    internal static readonly Parser<KdlString> Type;
-    private static readonly Parser<KdlValue> Value;
-
-    // internal static readonly Parser<TextSpan> IdentifierChar;
-    internal static readonly Parser<TextSpan> UnambiguousIdent;
-    internal static readonly Parser<TextSpan> SignedIdent;
-    internal static readonly Parser<TextSpan> DottedIdent;
-    internal static readonly Parser<TextSpan> HexUnicode;
-    internal static readonly Parser<TextSpan> WsEscape;
-    internal static readonly Parser<TextSpan> StringCharacter;
-    internal static readonly Parser<KdlString> MultiLineQuoted;
-    internal static readonly Parser<KdlString> SingleLineQuoted;
-    internal static readonly Parser<KdlString> RawString;
-    internal static readonly Parser<KdlString> IdentifierString;
-    internal static readonly Parser<KdlString> QuotedString;
-    internal static readonly Parser<KdlString> String;
-    #endregion
-
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';
 
     private static bool IsOctalChar(char c) => c >= '0' && c <= '7';
@@ -434,7 +441,7 @@ nrt"\bfs
         return input;
     }
 
-    static string Dedent(string raw)
+    public static string Dedent(string raw)
     {
         if (string.IsNullOrEmpty(raw))
             return "";
@@ -472,5 +479,77 @@ nrt"\bfs
         }
 
         return sb.ToString();
+    }
+}
+
+public class RawStringParser : Parser<KdlString>
+{
+    public override bool Parse(ParseContext context, ref ParseResult<KdlString> result)
+    {
+        var cursor = context.Scanner.Cursor;
+        var buffer = context.Scanner.Buffer;
+
+        // 1. Must start with 'r' or '#'
+        // Spec 2.0: just '#' or 'r#'? Spec says `raw-string := '#' ...`
+        if (cursor.Current != '#')
+            return false;
+
+        // 2. Count opening hashes
+        int hashCount = 0;
+        while (cursor.Current == '#')
+        {
+            hashCount++;
+            cursor.Advance();
+        }
+
+        // 3. Must be followed by quote
+        if (cursor.Current != '"')
+        {
+            // Backtrack if not a raw string
+
+            return false;
+        }
+        cursor.Advance(); // Skip open quote
+
+        // 4. Read until quote + hashCount
+        var start = cursor.Position;
+
+        while (!cursor.Eof)
+        {
+            if (cursor.Current == '"')
+            {
+                // Potential end
+                cursor.Advance();
+                int closingHashes = 0;
+                while (cursor.Current == '#' && closingHashes < hashCount)
+                {
+                    closingHashes++;
+                    cursor.Advance();
+                }
+
+                if (closingHashes == hashCount)
+                {
+                    // Match found!
+                    // Extract content (excluding the surrounding quotes/hashes)
+                    var length = (cursor.Position.Offset - hashCount - 1) - start.Offset;
+                    var content = buffer.Substring(start.Offset, length);
+                    content = KuddleGrammar.Dedent(content);
+                    result.Set(
+                        start.Offset,
+                        cursor.Position.Offset,
+                        new KdlString(content, StringKind.Raw)
+                    );
+                    return true;
+                }
+
+                // If we didn't match enough hashes, we continue loop (it was part of the content)
+            }
+            else
+            {
+                cursor.Advance();
+            }
+        }
+
+        return false;
     }
 }

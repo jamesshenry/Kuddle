@@ -272,10 +272,7 @@ canis canem edit
 
         bool success = sut.TryParse(input, out var value, out var error);
 
-        var expected = """
-Hello
-World
-""";
+        var expected = "Hello\nWorld";
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(expected);
     }
@@ -340,11 +337,9 @@ hello\n\r\asd"#world
     """#
 """"";
         bool success = sut.TryParse(input, out var value);
-
+        var expected = "Here's a \"\"\"\n    multiline string\n    \"\"\"\nwithout escapes.";
         await Assert.That(success).IsTrue();
-        await Assert
-            .That(value.ToString())
-            .IsEqualTo("Here's a \"\"\"\n    multiline string\n    \"\"\"\nwithout escapes.");
+        await Assert.That(value.ToString()).IsEqualTo(expected);
     }
 
     // [Test]
