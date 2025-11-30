@@ -133,28 +133,28 @@ public static class KuddleGrammar
                 )
             )
             .Then(x => new TextSpan());
-        var stringEscapeChars = Literals
-            .AnyOf(
-                """
-nrt"\bfs
-""",
-                minSize: 1,
-                maxSize: 1
-            )
-            .Then(ts =>
-                ts.Span[0] switch
-                {
-                    'n' => new TextSpan(Environment.NewLine),
-                    'r' => new TextSpan("\r"),
-                    't' => new TextSpan("\t"),
-                    '"' => new TextSpan("\""),
-                    '\\' => new TextSpan(@"\"),
-                    'b' => new TextSpan("\b"),
-                    'f' => new TextSpan("\f"),
-                    's' => new TextSpan(" "),
-                    _ => throw new Exception(),
-                }
-            );
+        //         var stringEscapeChars = Literals
+        //             .AnyOf(
+        //                 """
+        // nrt"\bfs
+        // """,
+        //                 minSize: 1,
+        //                 maxSize: 1
+        //             )
+        //             .Then(ts =>
+        //                 ts.Span[0] switch
+        //                 {
+        //                     'n' => new TextSpan(Environment.NewLine),
+        //                     'r' => new TextSpan("\r"),
+        //                     't' => new TextSpan("\t"),
+        //                     '"' => new TextSpan("\""),
+        //                     '\\' => new TextSpan(@"\"),
+        //                     'b' => new TextSpan("\b"),
+        //                     'f' => new TextSpan("\f"),
+        //                     's' => new TextSpan(" "),
+        //                     _ => throw new Exception(),
+        //                 }
+        //             );
         var escapeSequence = Literals
             .Char('\\')
             .SkipAnd(
