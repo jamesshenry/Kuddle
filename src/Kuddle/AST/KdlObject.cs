@@ -31,7 +31,7 @@ public abstract record KdlEntry : KdlObject;
 
 public sealed record KdlArgument(KdlValue Value) : KdlEntry;
 
-public sealed record KdlProperty(KdlIdentifier Key, KdlValue Value) : KdlEntry
+public sealed record KdlProperty(KdlString Key, KdlValue Value) : KdlEntry
 {
     public string EqualsTrivia { get; init; } = "=";
 }

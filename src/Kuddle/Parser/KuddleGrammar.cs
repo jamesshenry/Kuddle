@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
@@ -66,7 +67,7 @@ public static class KuddleGrammar
         var nodeSpace = Deferred<TextSpan>();
 
         var singleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")));
-
+        var eof = Capture(Always().Eof());
         Sign = Literals.AnyOf(['+', '-'], 1, 1);
 
         //Strings
@@ -356,7 +357,7 @@ public static class KuddleGrammar
                     OneOf(
                         SingleLineComment,
                         Literals.Pattern(CharacterSets.IsNewline, maxSize: 1),
-                        Capture(Always().Eof())
+                        eof
                     )
                 )
         );
@@ -380,18 +381,31 @@ public static class KuddleGrammar
             .And(String.Or<KdlString, KdlNumber, KdlValue>(Number).Or(Keyword))
             .Then(x =>
             {
-                if (x.Item1.HasValue)
-                {
-                    return x.Item2 with { TypeAnnotation = x.Item1.Value.Value };
-                }
-                return x.Item2;
+                return x.Item1.HasValue
+                    ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value })
+                    : x.Item2;
             });
 
         var Property = String
             .AndSkip(ZeroOrMany(NodeSpace))
             .AndSkip(Literals.Char('='))
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(Value);
+            .And(Value)
+            .Then(x => new KdlProperty(x.Item1, x.Item2));
+
+        var nodeTerminator = OneOf(
+            SingleLineComment,
+            singleNewLine,
+            Capture(Literals.AnyOf(";")),
+            eof
+        );
+
+        var nodeChildren = Between(Literals.Char('{'), nodes, Literals.Char('}'));
+
+        var nodePropOrArg = OneOf(
+            Property.Then(x => x as KdlEntry),
+            Value.Then(x => new KdlArgument(x) as KdlEntry)
+        );
     }
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';

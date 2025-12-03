@@ -83,12 +83,12 @@ public class KdlNodeTests
         var node = new KdlNode(new KdlIdentifier("test"));
         var arg1 = new KdlArgument(new KdlString("arg1", StringKind.Quoted));
         var prop1 = new KdlProperty(
-            new KdlIdentifier("key1"),
+            new KdlString("key1", StringKind.Identifier),
             new KdlString("value1", StringKind.Quoted)
         );
         var arg2 = new KdlArgument(new KdlString("arg2", StringKind.Quoted));
         var prop2 = new KdlProperty(
-            new KdlIdentifier("key2"),
+            new KdlString("key2", StringKind.Identifier),
             new KdlString("value2", StringKind.Quoted)
         );
 
