@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using Kuddle.AST;
+using Kuddle.Parser;
 using Parlot.Fluent;
 using static Parlot.Fluent.Parsers;
 
@@ -10,7 +13,7 @@ public class KdlParser
 
     public KdlDocument Parse(string text)
     {
-        return new KdlDocument();
+        return KuddleGrammar.Document.Parse(text)!;
     }
 
     public static KdlParser V2()
@@ -37,4 +40,7 @@ public class V2Parser
     }
 }
 
-public record KdlDocument;
+public record KdlDocument
+{
+    public List<KdlNode> Nodes { get; init; } = [];
+}

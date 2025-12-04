@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
-using Kuddle.Extensions;
 using Parlot;
 using Parlot.Fluent;
 using static Parlot.Fluent.Parsers;
@@ -14,30 +12,32 @@ namespace Kuddle.Parser;
 
 public static class KuddleGrammar
 {
+    internal static readonly Parser<KdlDocument> Document;
+
     #region Numbers
-    public static readonly Parser<TextSpan> Decimal;
+    internal static readonly Parser<TextSpan> Decimal;
     internal static readonly Parser<TextSpan> Integer;
-    public static readonly Parser<TextSpan> Sign;
-    public static readonly Parser<TextSpan> Hex;
-    public static readonly Parser<TextSpan> Octal;
-    public static readonly Parser<TextSpan> Binary;
-    public static readonly Parser<KdlNumber> Number;
+    internal static readonly Parser<TextSpan> Sign;
+    internal static readonly Parser<TextSpan> Hex;
+    internal static readonly Parser<TextSpan> Octal;
+    internal static readonly Parser<TextSpan> Binary;
+    internal static readonly Parser<KdlNumber> Number;
     #endregion
 
     #region Keywords and booleans
-    public static readonly Parser<KdlBool> Boolean;
-    public static readonly Parser<TextSpan> KeywordNumber;
-    public static readonly Parser<KdlValue> Keyword;
+    internal static readonly Parser<KdlBool> Boolean;
+    internal static readonly Parser<TextSpan> KeywordNumber;
+    internal static readonly Parser<KdlValue> Keyword;
     #endregion
 
     #region Specific code points
-    public static readonly Parser<char> Bom = Literals.Char('\uFEFF');
+    internal static readonly Parser<char> Bom = Literals.Char('\uFEFF');
     #endregion
 
     #region Comments
-    public static readonly Parser<TextSpan> SingleLineComment;
-    public static readonly Parser<TextSpan> MultiLineComment;
-    public static readonly Parser<TextSpan> SlashDash;
+    internal static readonly Parser<TextSpan> SingleLineComment;
+    internal static readonly Parser<TextSpan> MultiLineComment;
+    internal static readonly Parser<TextSpan> SlashDash;
     #endregion
 
     #region WhiteSpace
@@ -370,6 +370,9 @@ public static class KuddleGrammar
 
         // Entries
 
+        var nodesRef = Deferred<List<KdlNode>>();
+        var finalNodeRef = Deferred<KdlNode?>();
+
         Type = Between(
             Literals.Char('('),
             ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
@@ -386,12 +389,14 @@ public static class KuddleGrammar
                     : x.Item2;
             });
 
-        var Property = String
+        var prop = String
             .AndSkip(ZeroOrMany(NodeSpace))
             .AndSkip(Literals.Char('='))
             .AndSkip(ZeroOrMany(NodeSpace))
             .And(Value)
-            .Then(x => new KdlProperty(x.Item1, x.Item2));
+            .Then(x => new KdlProperty(x.Item1, x.Item2) as KdlEntry);
+        var arg = Value.Then(v => new KdlArgument(v) as KdlEntry);
+        var nodePropOrArg = OneOf(prop, arg);
 
         var nodeTerminator = OneOf(
             SingleLineComment,
@@ -400,12 +405,78 @@ public static class KuddleGrammar
             eof
         );
 
-        var nodeChildren = Between(Literals.Char('{'), nodes, Literals.Char('}'));
+        var skippedEntry = SlashDash
+            .And(Capture(nodePropOrArg))
+            .Then(x => (KdlEntry)new KdlSkippedEntry(x.Item2.ToString()));
 
-        var nodePropOrArg = OneOf(
-            Property.Then(x => x as KdlEntry),
-            Value.Then(x => new KdlArgument(x) as KdlEntry)
-        );
+        var entryParser = OneOrMany(NodeSpace).SkipAnd(OneOf(skippedEntry, nodePropOrArg));
+
+        var nodeChildren = Between(Literals.Char('{'), nodesRef, Literals.Char('}'))
+            .And(finalNodeRef.Optional())
+            .Then(x =>
+            {
+                var block = new KdlBlock { Nodes = x.Item1 };
+                if (x.Item2.HasValue)
+                    block.Nodes.Add(x.Item2.Value!);
+                return block;
+            });
+
+        var baseNode = SlashDash
+            .Optional()
+            .And(Type.Optional())
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .And(String)
+            .And(ZeroOrMany(entryParser))
+            .And(
+                ZeroOrMany(
+                    OneOrMany(NodeSpace)
+                        .SkipAnd(
+                            OneOf(
+                                SlashDash.And(nodeChildren).Then(_ => (KdlBlock?)null),
+                                nodeChildren.Then(b => (KdlBlock?)b)
+                            )
+                        )
+                )
+            )
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .Then(result =>
+            {
+                if (result.Item1.HasValue)
+                    return null;
+
+                var children = result.Item5.FirstOrDefault(b => b != null);
+
+                return new KdlNode(result.Item3)
+                {
+                    Entries = [.. result.Item4],
+                    Children = children,
+                    TerminatedBySemicolon = false,
+                };
+            });
+
+        var node = baseNode
+            .And(nodeTerminator)
+            .Then(x =>
+            {
+                if (x.Item1 == null)
+                    return null;
+
+                return x.Item1 with
+                {
+                    TerminatedBySemicolon = x.Item2.Span.Contains(';'),
+                };
+            });
+
+        finalNodeRef.Parser = baseNode.AndSkip(nodeTerminator.Optional());
+
+        nodesRef.Parser = ZeroOrMany(ZeroOrMany(LineSpace).SkipAnd(node))
+            .Then(list => list.OfType<KdlNode>().ToList()!);
+
+        Document = Literals
+            .Char('\uFEFF')
+            .Optional()
+            .SkipAnd(nodesRef)
+            .Then(nodes => new KdlDocument { Nodes = nodes });
     }
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';

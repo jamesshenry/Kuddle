@@ -18,7 +18,7 @@ public sealed record KdlBlock : KdlObject
     public List<KdlNode> Nodes { get; init; } = [];
 }
 
-public sealed record KdlNode(KdlIdentifier Name) : KdlObject
+public sealed record KdlNode(KdlString Name) : KdlObject
 {
     public List<KdlEntry> Entries { get; init; } = [];
 
@@ -38,12 +38,12 @@ public sealed record KdlProperty(KdlString Key, KdlValue Value) : KdlEntry
 
 public sealed record KdlSkippedEntry(string RawText) : KdlEntry;
 
-public sealed record KdlIdentifier(string Name) : KdlObject
-{
-    public string RawText { get; init; } = Name;
+// public sealed record KdlIdentifier(string Name) : KdlObject
+// {
+//     public string RawText { get; init; } = Name;
 
-    public string? TypeAnnotation { get; init; }
-}
+//     public string? TypeAnnotation { get; init; }
+// }
 
 public abstract record KdlValue : KdlObject
 {
