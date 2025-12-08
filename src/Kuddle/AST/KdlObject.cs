@@ -25,6 +25,7 @@ public sealed record KdlNode(KdlString Name) : KdlObject
     public KdlBlock? Children { get; init; }
 
     public bool TerminatedBySemicolon { get; init; }
+    public string? TypeAnnotation { get; init; }
 }
 
 public abstract record KdlEntry : KdlObject;

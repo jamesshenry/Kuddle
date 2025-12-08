@@ -1,46 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
 using Kuddle.AST;
+using Kuddle.Exceptions;
 using Kuddle.Parser;
 using Parlot.Fluent;
-using static Parlot.Fluent.Parsers;
 
 namespace Kuddle;
 
 public class KdlParser
 {
-    private static readonly KdlParser v2 = new();
+    private readonly Parser<KdlDocument> V2 = KuddleGrammar.Document.Compile();
 
-    public KdlDocument Parse(string text)
+    public KdlDocument Parse(string text, KuddleOptions? options = null)
     {
-        return KuddleGrammar.Document.Parse(text)!;
-    }
-
-    public static KdlParser V2()
-    {
-        return v2;
-    }
-}
-
-public class V2Parser
-{
-    public V2Parser()
-    {
-        var document = Deferred<KdlDocument>();
-        Parser = document.Compile();
-    }
-
-    private readonly Parser<KdlDocument> Parser;
-
-    public KdlDocument Parse(string text)
-    {
-        var result = Parser.TryParse(text, out var document);
-
-        return document ?? throw new Exception();
+        options ??= KuddleOptions.Default;
+        try
+        {
+            return V2.Parse(text)!;
+        }
+        catch (Exception ex)
+        {
+            throw new KdlParseException(ex);
+        }
     }
 }
 
-public record KdlDocument
+public record KuddleOptions
 {
-    public List<KdlNode> Nodes { get; init; } = [];
+    public static KuddleOptions Default => new() { ValidateReservedTypes = true };
+    public bool ValidateReservedTypes { get; init; } = true;
 }

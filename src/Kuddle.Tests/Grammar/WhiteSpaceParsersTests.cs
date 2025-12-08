@@ -1,6 +1,6 @@
 using Kuddle.Parser;
 
-namespace Kuddle.Tests;
+namespace Kuddle.Tests.Grammar;
 
 public class WhiteSpaceParsersTests
 {

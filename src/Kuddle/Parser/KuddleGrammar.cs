@@ -62,6 +62,10 @@ public static class KuddleGrammar
     internal static readonly Parser<KdlString> QuotedString;
     internal static readonly Parser<KdlString> String;
     #endregion
+
+    internal static readonly Parser<KdlNode> FinalNode = Deferred<KdlNode>();
+    internal static readonly Parser<KdlNode> Node;
+
     static KuddleGrammar()
     {
         var nodeSpace = Deferred<TextSpan>();
@@ -371,7 +375,7 @@ public static class KuddleGrammar
         // Entries
 
         var nodesRef = Deferred<List<KdlNode>>();
-        var finalNodeRef = Deferred<KdlNode?>();
+        // finalNodeRef = Deferred<KdlNode?>();
 
         Type = Between(
             Literals.Char('('),
@@ -412,7 +416,7 @@ public static class KuddleGrammar
         var entryParser = OneOrMany(NodeSpace).SkipAnd(OneOf(skippedEntry, nodePropOrArg));
 
         var nodeChildren = Between(Literals.Char('{'), nodesRef, Literals.Char('}'))
-            .And(finalNodeRef.Optional())
+            .And(FinalNode.Optional())
             .Then(x =>
             {
                 var block = new KdlBlock { Nodes = x.Item1 };
@@ -441,8 +445,8 @@ public static class KuddleGrammar
             .AndSkip(ZeroOrMany(NodeSpace))
             .Then(result =>
             {
-                if (result.Item1.HasValue)
-                    return null;
+                // if (result.Item1.HasValue)
+                //     return null;
 
                 var children = result.Item5.FirstOrDefault(b => b != null);
 
@@ -451,25 +455,23 @@ public static class KuddleGrammar
                     Entries = [.. result.Item4],
                     Children = children,
                     TerminatedBySemicolon = false,
+                    TypeAnnotation = result.Item1.HasValue ? result.Item1.Value.ToString() : null,
                 };
             });
 
-        var node = baseNode
+        Node = baseNode
             .And(nodeTerminator)
             .Then(x =>
             {
-                if (x.Item1 == null)
-                    return null;
+                // if (x.Item1 == null)
+                //     return null;
 
-                return x.Item1 with
-                {
-                    TerminatedBySemicolon = x.Item2.Span.Contains(';'),
-                };
+                return x.Item1 with { TerminatedBySemicolon = x.Item2.Span.Contains(';') };
             });
 
-        finalNodeRef.Parser = baseNode.AndSkip(nodeTerminator.Optional());
+        (FinalNode as Deferred<KdlNode>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());
 
-        nodesRef.Parser = ZeroOrMany(ZeroOrMany(LineSpace).SkipAnd(node))
+        nodesRef.Parser = ZeroOrMany(ZeroOrMany(LineSpace).SkipAnd(Node))
             .Then(list => list.OfType<KdlNode>().ToList()!);
 
         Document = Literals
