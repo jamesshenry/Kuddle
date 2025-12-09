@@ -4,6 +4,8 @@
 
 // public class KdlParsingTests
 // {
+//     KdlParser parser = new KdlParser();
+
 //     [Test]
 //     [MethodDataSource(
 //         typeof(ParsingTestDataSources),
@@ -14,14 +16,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -35,14 +37,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -56,14 +58,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -77,14 +79,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -95,14 +97,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString(); // Assumes KdlDocument has ToString() for serialization
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -116,14 +118,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -137,14 +139,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -155,14 +157,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -176,14 +178,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -194,14 +196,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -215,14 +217,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -236,14 +238,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -254,14 +256,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -272,14 +274,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -290,14 +292,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -311,14 +313,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -332,14 +334,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -350,14 +352,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -371,14 +373,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -392,14 +394,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -413,14 +415,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -431,14 +433,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -449,14 +451,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -467,14 +469,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -485,14 +487,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -503,14 +505,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -521,14 +523,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -539,14 +541,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -560,14 +562,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -578,14 +580,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -599,14 +601,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -617,14 +619,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 
@@ -635,14 +637,14 @@
 //         if (File.Exists(testData.ExpectedFile))
 //         {
 //             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-//             var doc = KdlParser.V2().Parse(inputKdl);
+//             var doc = parser.Parse(inputKdl);
 //             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
 //             var serialized = doc.ToString();
 //             await Assert.That(serialized).IsEqualTo(expected);
 //         }
 //         else
 //         {
-//             Assert.Throws<Exception>(() => KdlParser.V2().Parse(testData.InputFile));
+//             Assert.Throws<Exception>(() => parser.Parse(testData.InputFile));
 //         }
 //     }
 // }

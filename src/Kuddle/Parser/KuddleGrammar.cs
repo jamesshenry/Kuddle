@@ -64,7 +64,7 @@ public static class KuddleGrammar
     #endregion
 
     internal static readonly Parser<KdlNode> FinalNode = Deferred<KdlNode>();
-    internal static readonly Parser<KdlNode> Node;
+    internal static readonly Parser<KdlNode?> Node;
     internal static readonly Parser<IReadOnlyList<KdlNode>> Nodes = Deferred<
         IReadOnlyList<KdlNode>
     >();
@@ -201,12 +201,24 @@ public static class KuddleGrammar
         );
 
         UnambiguousIdent = Capture(
-            identifierChar
-                .When((a, b) => !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.')
-                .And(ZeroOrMany(identifierChar))
-        );
-        // .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
-        // .ElseError("Something went wrong in parsing an unambiguous indentifier");
+                identifierChar
+                    .When(
+                        (a, b) =>
+                            !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.'
+                    )
+                    .And(ZeroOrMany(identifierChar))
+            )
+            .Then(
+                (context, span) =>
+                {
+                    return ReservedKeywords.Contains(span.ToString())
+                        ? throw new ParseException(
+                            $"The keyword '{span}' cannot be used as an unquoted identifier. Wrap it in quotes: \"{span}\".",
+                            context.Scanner.Cursor.Position
+                        )
+                        : span;
+                }
+            );
 
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
             .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier));
@@ -257,8 +269,8 @@ public static class KuddleGrammar
             .Then(value =>
                 value switch
                 {
-                    "#true'" => new KdlBool(true),
-                    "#false'" => new KdlBool(false),
+                    "#true" => new KdlBool(true),
+                    "#false" => new KdlBool(false),
                     _ => throw new NotSupportedException(),
                 }
             );
@@ -326,7 +338,7 @@ public static class KuddleGrammar
 
         Value = Type.Optional()
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(Number.Or<KdlNumber, KdlString, KdlValue>(String).Or(Keyword))
+            .And(OneOf(Keyword, Number, String))
             .Then(x =>
                 x.Item1.HasValue ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value }) : x.Item2
             );
@@ -353,8 +365,18 @@ public static class KuddleGrammar
 
         var entryParser = OneOrMany(NodeSpace).SkipAnd(OneOf(skippedEntry, nodePropOrArg));
 
-        var nodeChildren = Between(Literals.Char('{'), Nodes, Literals.Char('}'))
-            .And(FinalNode.Optional())
+        var nodeChildren = /*  Between(
+                Literals.Char('{'),
+                Nodes.And(FinalNode.Optional()),
+                Literals.Char('}')
+            ) */
+        Literals
+            .Char('{')
+            .SkipAnd(ZeroOrMany(LineSpace))
+            .SkipAnd(Nodes.And(FinalNode.Optional()))
+            .AndSkip(
+                Literals.Char('}').ElseError("Expected closing brace '}' for node children block.") // <--- COMMITMENT
+            )
             .Then(x =>
             {
                 var block = new KdlBlock { Nodes = [.. x.Item1] };
@@ -383,29 +405,46 @@ public static class KuddleGrammar
             .AndSkip(ZeroOrMany(NodeSpace))
             .Then(result =>
             {
+                if (result.Item1.HasValue)
+                    return null;
                 return new KdlNode(result.Item3)
                 {
-                    Entries = [.. result.Item4],
+                    Entries = result.Item4.Where(e => e is not KdlSkippedEntry).ToList(),
                     Children = result.Item5.FirstOrDefault(b => b != null),
                     TerminatedBySemicolon = false,
-                    TypeAnnotation = result.Item1.HasValue ? result.Item1.Value.ToString() : null,
+                    TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.ToString() : null,
                 };
             });
 
         Node = baseNode
             .And(nodeTerminator)
-            .Then(x => x.Item1 with { TerminatedBySemicolon = x.Item2.Span.Contains(';') });
+            .Then(x =>
+                x.Item1 is null
+                    ? null
+                    : x.Item1 with
+                    {
+                        TerminatedBySemicolon = x.Item2.Span.Contains(';'),
+                    }
+            );
 
-        (FinalNode as Deferred<KdlNode>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());
+        (FinalNode as Deferred<KdlNode?>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());
 
-        (Nodes as Deferred<IReadOnlyList<KdlNode>>)!.Parser = Separated(LineSpace, Node);
-        ZeroOrMany(ZeroOrMany(LineSpace).SkipAnd(Node))
-            .Then(list => list.OfType<KdlNode>().ToList()!);
+        (Nodes as Deferred<IReadOnlyList<KdlNode>>)!.Parser = ZeroOrMany(
+                ZeroOrMany(LineSpace).SkipAnd(Node)
+            )
+            .AndSkip(ZeroOrMany(LineSpace))
+            .Then(list =>
+                list.Where(x => x != null).Select(n => n!).ToList() as IReadOnlyList<KdlNode>
+            );
 
         Document = Literals
             .Char('\uFEFF')
             .Optional()
             .SkipAnd(Nodes)
+            .AndSkip(Always().Eof())
+            .ElseError(
+                "Unconsumed content at end of file. Syntax error likely occurred before this point."
+            )
             .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
     }
 

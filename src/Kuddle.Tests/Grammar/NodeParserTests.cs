@@ -1,277 +1,204 @@
+using Kuddle.AST;
 using Kuddle.Parser;
 
 namespace Kuddle.Tests.Grammar;
 
 public class NodeParsersTests
 {
-    // Note: These tests are stubs until NodeParsers is implemented
-    // They represent the node parsing rules from the KDL grammar:
-    // base-node := slashdash? type? node-space* string (node-space+ slashdash? node-prop-or-arg)* (node-space+ slashdash node-children)* (node-space+ node-children)? (node-space+ slashdash node-children)* node-space*
-    // node := base-node node-terminator
-    // node-prop-or-arg := prop | value
-    // node-children := '{' nodes final-node? '}'
-    // node-terminator := single-line-comment | newline | ';' | eof
-    // prop := string node-space* '=' node-space* value
-    // value := type? node-space* (string | number | keyword)
-    // type := '(' node-space* string node-space* ')'
+    // Helper to force static initialization if needed, though usually accessing the field is enough
+    private void InitGrammar()
+    {
+        _ = KuddleGrammar.Document;
+    }
 
-    // [Test]
-    // public async Task Type_ParsesSimpleType()
-    // {
-    //     var sut = NodeParsers.Type;
+    [Test]
+    public async Task Type_ParsesSimpleType()
+    {
+        var sut = KuddleGrammar.Type;
+        var input = "(string)";
 
-    //     var input = "(string)";
-    //     bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var result);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo("string");
-    // }
-
-    // [Test]
-    // public async Task Type_ParsesTypeWithSpaces()
-    // {
-    //     var sut = NodeParsers.Type;
-
-    //     var input = "( int )";
-    //     bool success = sut.TryParse(input, out var value, out var error);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo("int");
-    // }
-
-    // [Test]
-    // public async Task Value_ParsesStringValue()
-    // {
-    //     var sut = KuddleGrammar.String;
-
-    //     var input = "\"hello\"";
-    //     bool success = sut.TryParse(input, out var value, out var error);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo("hello");
-    // }
-
-    // [Test]
-    // public async Task Value_ParsesNumberValue()
-    // {
-    //     var sut = NodeParsers.Value;
-
-    //     var input = "42";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
-
-    // [Test]
-    // public async Task Value_ParsesKeywordValue()
-    // {
-    //     var sut = NodeParsers.Value;
-
-    //     var input = "#true";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
-
-    // [Test]
-    // public async Task Value_ParsesTypedValue()
-    // {
-    //     var sut = NodeParsers.Value;
-
-    //     var input = "(string) \"hello\"";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(result.Value).IsEqualTo("string");
+    }
 
     [Test]
     public async Task Prop_ParsesSimpleProperty()
     {
-        var sut = KuddleGrammar.Document;
+        // Internal grammar parts usually require accessing the specific parser instance
+        // We might need to expose 'Prop' in KuddleGrammar as internal for this to work
+        // Assuming you make 'Prop' internal static in KuddleGrammar:
+        // internal static readonly Parser<KdlEntry> Prop;
 
-        var input = "test a 6 key=34 b c prop=20";
-        bool success = sut.TryParse(input, out var value, out var error);
+        // For now, let's test a Node with a property since Node is exposed
+        var sut = KuddleGrammar.Node;
+        var input = "node key=value";
+
+        bool success = sut.TryParse(input, out var node);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.ToString()).IsEqualTo(input);
+        await Assert.That(node.Entries).HasCount(1);
+
+        var prop = node.Entries[0] as KdlProperty;
+        await Assert.That(prop).IsNotNull();
+        await Assert.That(prop!.Key.Value).IsEqualTo("key");
+        await Assert.That(((KdlString)prop.Value).Value).IsEqualTo("value");
     }
 
-    // [Test]
-    // public async Task Prop_ParsesPropertyWithSpaces()
-    // {
-    //     var sut = NodeParsers.Prop;
+    [Test]
+    public async Task Node_ParsesComplexLine()
+    {
+        var sut = KuddleGrammar.Node;
+        // Test: Name, Arg, Prop, Type Annotation
+        var input = "(my-type)node 123 key=\"value\";";
 
-    //     var input = "key = value";
-    //     bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var node);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        await Assert.That(success).IsTrue();
 
-    // [Test]
-    // public async Task NodeChildren_ParsesSimpleChildren()
-    // {
-    //     var sut = NodeParsers.NodeChildren;
+        // Check Name & Type
+        await Assert.That(node.Name.Value).IsEqualTo("node");
+        await Assert.That(node.TypeAnnotation).IsEqualTo("my-type");
+        await Assert.That(node.TerminatedBySemicolon).IsTrue();
 
-    //     var input = "{ child1 child2 }";
-    //     bool success = sut.TryParse(input, out var value);
+        // Check Entries
+        await Assert.That(node.Entries).HasCount(2);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        // Arg 1: 123
+        var arg = node.Entries[0] as KdlArgument;
+        await Assert.That(arg).IsNotNull();
+        await Assert.That(((KdlNumber)arg!.Value).ToInt32()).IsEqualTo(123);
 
-    // [Test]
-    // public async Task NodeChildren_ParsesEmptyChildren()
-    // {
-    //     var sut = NodeParsers.NodeChildren;
+        // Prop 2: key="value"
+        var prop = node.Entries[1] as KdlProperty;
+        await Assert.That(prop).IsNotNull();
+        await Assert.That(prop!.Key.Value).IsEqualTo("key");
+    }
 
-    //     var input = "{ }";
-    //     bool success = sut.TryParse(input, out var value);
+    [Test]
+    public async Task Node_ParsesChildren()
+    {
+        var sut = KuddleGrammar.Node;
+        var input = "parent { child; }";
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        bool success = sut.TryParse(input, out var node, out var error);
 
-    // [Test]
-    // public async Task Node_ParsesSimpleNode()
-    // {
-    //     var sut = NodeParsers.Node;
+        await Assert.That(success).IsTrue();
+        await Assert.That(node.Name.Value).IsEqualTo("parent");
+        await Assert.That(node.Children).IsNotNull();
+        await Assert.That(node.Children!.Nodes).HasCount(1);
+        await Assert.That(node.Children.Nodes[0].Name.Value).IsEqualTo("child");
+    }
 
-    //     var input = "node;";
-    //     bool success = sut.TryParse(input, out var value);
+    [Test]
+    public async Task Node_ParsesMixedContent()
+    {
+        var sut = KuddleGrammar.Node;
+        var input = "(type)node 10 prop=#true { child; }";
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        bool success = sut.TryParse(input, out var node);
 
-    // [Test]
-    // public async Task Node_ParsesNodeWithArguments()
-    // {
-    //     var sut = NodeParsers.Node;
+        await Assert.That(success).IsTrue();
 
-    //     var input = "node arg1 arg2;";
-    //     bool success = sut.TryParse(input, out var value);
+        // Metadata
+        await Assert.That(node.Name.Value).IsEqualTo("node");
+        await Assert.That(node.TypeAnnotation).IsEqualTo("type");
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        // Entries
+        await Assert.That(node.Entries).HasCount(2);
+        await Assert
+            .That(((KdlNumber)((KdlArgument)node.Entries[0]).Value).ToInt32())
+            .IsEqualTo(10);
+        await Assert.That(((KdlBool)((KdlProperty)node.Entries[1]).Value).Value).IsTrue();
 
-    // [Test]
-    // public async Task Node_ParsesNodeWithProperties()
-    // {
-    //     var sut = NodeParsers.Node;
+        // Children
+        await Assert.That(node.Children).IsNotNull();
+        await Assert.That(node.Children!.Nodes).HasCount(1);
+    }
 
-    //     var input = "node prop=value other=123;";
-    //     bool success = sut.TryParse(input, out var value);
+    [Test]
+    public async Task Node_SlashDash_SkipsNode()
+    {
+        // This tests the logic in 'Nodes' (plural) parser usually
+        var sut = KuddleGrammar.Document;
+        var input = "node1; /- node2; node3;";
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        bool success = sut.TryParse(input, out var doc);
 
-    // [Test]
-    // public async Task Node_ParsesNodeWithChildren()
-    // {
-    //     var sut = NodeParsers.Node;
+        await Assert.That(success).IsTrue();
+        await Assert.That(doc.Nodes).HasCount(2);
+        await Assert.That(doc.Nodes[0].Name.Value).IsEqualTo("node1");
+        await Assert.That(doc.Nodes[1].Name.Value).IsEqualTo("node3");
+    }
 
-    //     var input = "node { child1 child2 };";
-    //     bool success = sut.TryParse(input, out var value);
+    [Test]
+    public async Task Node_SlashDash_SkipsArg()
+    {
+        var sut = KuddleGrammar.Node;
+        var input = "node 1 /- 2 3";
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        bool success = sut.TryParse(input, out var node);
 
-    // [Test]
-    // public async Task Node_ParsesNodeWithNewlineTerminator()
-    // {
-    //     var sut = NodeParsers.Node;
+        await Assert.That(success).IsTrue();
+        await Assert.That(node.Entries).HasCount(2);
 
-    //     var input = "node\n";
-    //     bool success = sut.TryParse(input, out var value);
+        // Entry 0 should be 1
+        var arg1 = node.Entries[0] as KdlArgument;
+        await Assert.That(((KdlNumber)arg1!.Value).ToInt32()).IsEqualTo(1);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        // Entry 1 should be 3 (2 was skipped)
+        var arg2 = node.Entries[1] as KdlArgument;
+        await Assert.That(((KdlNumber)arg2!.Value).ToInt32()).IsEqualTo(3);
+    }
 
-    // [Test]
-    // public async Task Node_ParsesNodeWithCommentTerminator()
-    // {
-    //     var sut = NodeParsers.Node;
+    [Test]
+    public async Task SlashDash_SkipsProperty()
+    {
+        var sut = KuddleGrammar.Node;
+        var input = "node key=1 /- skipped=2 valid=3";
 
-    //     var input = "node // comment";
-    //     bool success = sut.TryParse(input, out var value);
+        bool success = sut.TryParse(input, out var node);
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(node.Entries).HasCount(2);
 
-    // [Test]
-    // public async Task Nodes_ParsesMultipleNodes()
-    // {
-    //     var sut = NodeParsers.Nodes;
+        var p1 = node.Entries[0] as KdlProperty;
+        await Assert.That(p1!.Key.Value).IsEqualTo("key");
 
-    //     var input = "node1; node2;";
-    //     bool success = sut.TryParse(input, out var value);
+        var p2 = node.Entries[1] as KdlProperty;
+        await Assert.That(p2!.Key.Value).IsEqualTo("valid");
+    }
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+    [Test]
+    public async Task Node_SlashDash_SkipsChildrenBlock()
+    {
+        var sut = KuddleGrammar.Node;
+        // Parsing a node that has a slash-dashed children block
+        var input = "node /- { child; }";
 
-    // [Test]
-    // public async Task Nodes_ParsesNodesWithWhitespace()
-    // {
-    //     var sut = NodeParsers.Nodes;
+        bool success = sut.TryParse(input, out var node);
 
-    //     var input = "\n  node1;\n  node2;\n";
-    //     bool success = sut.TryParse(input, out var value);
+        await Assert.That(success).IsTrue();
+        await Assert.That(node.Name.Value).IsEqualTo("node");
+        // The children block should be null because it was skipped
+        await Assert.That(node.Children).IsNull();
+    }
 
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.ToString()).IsEqualTo(input);
-    // }
+    [Test]
+    public async Task Nodes_ParsesNodesWithWhitespace()
+    {
+        var sut = KuddleGrammar.Nodes;
+        var input =
+            @"
+            node1;
+            
+            node2;
+        ";
 
-    // [Test]
-    // public async Task Prop_RejectsMissingValue()
-    // {
-    //     var sut = NodeParsers.Prop;
+        bool success = sut.TryParse(input, out var nodes);
 
-    //     var input = "key=";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsFalse();
-    // }
-
-    // [Test]
-    // public async Task Prop_RejectsMissingEquals()
-    // {
-    //     var sut = NodeParsers.Prop;
-
-    //     var input = "key value";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsFalse();
-    // }
-
-    // [Test]
-    // public async Task Type_RejectsEmptyType()
-    // {
-    //     var sut = NodeParsers.Type;
-
-    //     var input = "()";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsFalse();
-    // }
-
-    // [Test]
-    // public async Task NodeChildren_RejectsUnclosedBlock()
-    // {
-    //     var sut = NodeParsers.NodeChildren;
-
-    //     var input = "{ child1 child2";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsFalse();
-    // }
+        await Assert.That(success).IsTrue();
+        await Assert.That(nodes).HasCount(2);
+    }
 }

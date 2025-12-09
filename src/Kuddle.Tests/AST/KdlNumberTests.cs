@@ -556,7 +556,10 @@ public class KdlNumberTests
     [Arguments("0x1A", 26)]
     [Arguments("0o77", 63)]
     [Arguments("0b1010", 10)]
-    public async Task Given_HexString_When_ToInt32_Then_ReturnsCorrectValue(string raw, int expected)
+    public async Task Given_HexString_When_ToInt32_Then_ReturnsCorrectValue(
+        string raw,
+        int expected
+    )
     {
         var number = new KdlNumber(raw);
         var result = number.ToInt32();
@@ -568,7 +571,10 @@ public class KdlNumberTests
     [Arguments("0xFF_FF", 65535)]
     [Arguments("0o777_777", 262143)]
     [Arguments("0b1111_0000", 240)]
-    public async Task Given_UnderscoreFormatted_When_ToInt32_Then_UnderscoresIgnored(string raw, int expected)
+    public async Task Given_UnderscoreFormatted_When_ToInt32_Then_UnderscoresIgnored(
+        string raw,
+        int expected
+    )
     {
         var number = new KdlNumber(raw);
         var result = number.ToInt32();

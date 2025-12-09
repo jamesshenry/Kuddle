@@ -33,18 +33,18 @@ You have effectively **completed Phase 1** (AST) and the heavy lifting of **Phas
   * [x] Implement Recursion (Node -> Children -> Nodes).
   * [x] Implement "Slash-Dash" `/-` logic for skipping nodes/entries/children.
 * **2.3 API Wrapper**
-  * [ ] Create the public static `KdlParser.Parse(string input)` method that invokes `KuddleGrammar.Document.Parse(...)`.
-  * [ ] Add `KdlParseException` wrapping Parlot errors with line/column info.
+  * [x] Create the public static `KdlParser.Parse(string input)` method that invokes `KuddleGrammar.Document.Parse(...)`.
+  * [x] Add `KdlParseException` wrapping Parlot errors with line/column info.
 * **2.4 Reserved Type Validation**
-  * [ ] **(New)** Add a post-parse visitor or validation pass to ensure `(u8)` values fit in bytes, `(uuid)` are valid GUIDs, etc.
+  * [x] **(New)** Add a post-parse visitor or validation pass to ensure `(u8)` values fit in bytes, `(uuid)` are valid GUIDs, etc.
 
 ### Phase 3: The Developer Experience (DX) & Extensions
 
 *Goal: Provide a usable API without polluting the pure AST.*
 
 * **3.1 Value Extensions (The "TryGet" Pattern)**
-  * [ ] Create `KdlValueExtensions`.
-  * [ ] Implement `TryGetUuid`, `TryGetDateTime`, `TryGetInt`, etc.
+  * [x] Create `KdlValueExtensions`.
+  * [x] Implement `TryGetUuid`, `TryGetDateTime`, `TryGetInt`, etc.
 * **3.2 Mutation Factories**
   * [ ] Add `KdlValue.From(Guid)`, `KdlValue.From(int)` helpers.
 * **3.3 Navigation Helpers**

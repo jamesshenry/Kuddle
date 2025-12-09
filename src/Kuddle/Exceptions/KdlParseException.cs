@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Kuddle.AST;
 
 namespace Kuddle.Exceptions;
@@ -20,4 +21,16 @@ public class KdlParseException : Exception
 
     public KdlParseException(string? message, Exception? innerException)
         : base(message, innerException) { }
+
+    public KdlParseException(string? message, int? column, int? line, int? offset)
+        : this(message)
+    {
+        Column = column;
+        Line = line;
+        Offset = offset;
+    }
+
+    public int? Line { get; }
+    public int? Column { get; }
+    public int? Offset { get; }
 }

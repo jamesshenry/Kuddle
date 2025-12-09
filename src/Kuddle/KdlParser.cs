@@ -1,24 +1,38 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Kuddle.AST;
 using Kuddle.Exceptions;
 using Kuddle.Parser;
 using Kuddle.Validation;
-using Microsoft.VisualBasic;
 using Parlot.Fluent;
 
 namespace Kuddle;
 
-public class KdlParser
+public static class KdlReader
 {
-    private readonly Parser<KdlDocument> V2 = KuddleGrammar.Document.Compile();
+    private static readonly Parser<KdlDocument> _parser = KuddleGrammar.Document.Compile();
 
-    public KdlDocument Parse(string text, KuddleOptions? options = null)
+    /// <summary>
+    /// Parses a KDL string into a KdlDocument AST.
+    /// </summary>
+    public static KdlDocument Parse(string text, KuddleOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(text);
         options ??= KuddleOptions.Default;
-        KdlDocument doc;
-        if (!V2.TryParse(text, out doc!, out var error))
+
+        if (!_parser.TryParse(text, out var doc, out var error))
         {
-            throw new KdlParseException("Parsing failed");
+            if (error != null)
+            {
+                throw new KdlParseException(
+                    error.Message,
+                    error.Position.Line,
+                    error.Position.Column,
+                    error.Position.Offset
+                );
+            }
+            throw new KdlParseException("Parsing failed unexpectedly.");
         }
 
         if (options.ValidateReservedTypes)
@@ -27,6 +41,16 @@ public class KdlParser
         }
 
         return doc;
+    }
+
+    /// <summary>
+    /// Reads a stream assuming UTF-8 encoding.
+    /// </summary>
+    public static async Task<KdlDocument> ParseAsync(Stream stream, KuddleOptions? options = null)
+    {
+        using var reader = new StreamReader(stream);
+        var text = await reader.ReadToEndAsync();
+        return Parse(text, options);
     }
 }
 

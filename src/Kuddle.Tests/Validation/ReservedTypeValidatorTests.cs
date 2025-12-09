@@ -82,7 +82,6 @@ public class ReservedTypeValidatorTests
         // Assuming you have this set up from the previous steps
         // If KdlParser.Parse runs validation by default, pass 'false' here
         // so we can test the validator manually.
-        var parser = new KdlParser();
-        return parser.Parse(input, KuddleOptions.Default with { ValidateReservedTypes = false });
+        return KdlReader.Parse(input, KuddleOptions.Default with { ValidateReservedTypes = false });
     }
 }
