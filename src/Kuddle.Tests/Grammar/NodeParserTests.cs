@@ -90,10 +90,10 @@ public class NodeParsersTests
     [Test]
     public async Task Prop_ParsesSimpleProperty()
     {
-        var sut = KuddleGrammar.Node;
+        var sut = KuddleGrammar.Document;
 
-        var input = "test key=value";
-        bool success = sut.TryParse(input, out var value);
+        var input = "test a 6 key=34 b c prop=20";
+        bool success = sut.TryParse(input, out var value, out var error);
 
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(input);

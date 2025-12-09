@@ -1,9 +1,10 @@
 using System;
+using Kuddle.AST;
 
 namespace Kuddle.Exceptions;
 
 [Serializable]
-internal class KdlParseException : Exception
+public class KdlParseException : Exception
 {
     private readonly Exception? _ex = default;
 

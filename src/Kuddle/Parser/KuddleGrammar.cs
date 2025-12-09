@@ -65,6 +65,9 @@ public static class KuddleGrammar
 
     internal static readonly Parser<KdlNode> FinalNode = Deferred<KdlNode>();
     internal static readonly Parser<KdlNode> Node;
+    internal static readonly Parser<IReadOnlyList<KdlNode>> Nodes = Deferred<
+        IReadOnlyList<KdlNode>
+    >();
 
     static KuddleGrammar()
     {
@@ -81,32 +84,6 @@ public static class KuddleGrammar
         var hash = Literals.Char('#');
 
         var openingHashes = Capture(OneOrMany(hash));
-
-        // RawString = openingHashes
-        //     .Switch(
-        //         (context, hashes) =>
-        //         {
-        //             string delimiter = hashes.ToString();
-
-        //             static Parser<TextSpan> BodyUntil(Parser<TextSpan> closer) =>
-        //                 AnyCharBefore(closer)
-        //                     .When((_, span) => !span.Span.Any(IsDisallowedLiteralCodePoint));
-
-        //             var closeSingle = Capture(singleQuote.And(Literals.Text(delimiter)));
-        //             var singleRaw = Between(singleQuote, BodyUntil(closeSingle), closeSingle);
-
-        //             var closeTriple = Capture(tripleQuote.And(Literals.Text(delimiter)));
-        //             var tripleRaw = Between(
-        //                     tripleQuote.And(singleNewLine),
-        //                     BodyUntil(closeTriple),
-        //                     closeTriple
-        //                 )
-        //                 .Then(ts => new TextSpan(Dedent(ts.ToString())));
-
-        //             return tripleRaw.Or(singleRaw);
-        //         }
-        //     )
-        //     .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Raw));
 
         var identifierChar = Literals.Pattern(
             c =>
@@ -138,28 +115,7 @@ public static class KuddleGrammar
                 )
             )
             .Then(x => new TextSpan());
-        //         var stringEscapeChars = Literals
-        //             .AnyOf(
-        //                 """
-        // nrt"\bfs
-        // """,
-        //                 minSize: 1,
-        //                 maxSize: 1
-        //             )
-        //             .Then(ts =>
-        //                 ts.Span[0] switch
-        //                 {
-        //                     'n' => new TextSpan(Environment.NewLine),
-        //                     'r' => new TextSpan("\r"),
-        //                     't' => new TextSpan("\t"),
-        //                     '"' => new TextSpan("\""),
-        //                     '\\' => new TextSpan(@"\"),
-        //                     'b' => new TextSpan("\b"),
-        //                     'f' => new TextSpan("\f"),
-        //                     's' => new TextSpan(" "),
-        //                     _ => throw new Exception(),
-        //                 }
-        //             );
+
         var escapeSequence = Literals
             .Char('\\')
             .SkipAnd(
@@ -182,16 +138,7 @@ public static class KuddleGrammar
 
         var plainCharacter = Literals
             .Pattern(c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c), 1, 1)
-            .Then(
-                (_, x) =>
-                {
-                    if (x.Span[0] == '\r')
-                    {
-                        return new TextSpan();
-                    }
-                    return x;
-                }
-            );
+            .Then((_, x) => x.Span[0] == '\r' ? new TextSpan() : x);
         StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
 
         var singleLineStringBody = ZeroOrMany(StringCharacter)
@@ -254,22 +201,19 @@ public static class KuddleGrammar
         );
 
         UnambiguousIdent = Capture(
-                identifierChar
-                    .When(
-                        (a, b) =>
-                            !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.'
-                    )
-                    .And(ZeroOrMany(identifierChar))
-            )
-            .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
-            .ElseError("");
+            identifierChar
+                .When((a, b) => !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.')
+                .And(ZeroOrMany(identifierChar))
+        );
+        // .When((context, span) => !ReservedKeywords.Contains(span.Buffer!))
+        // .ElseError("Something went wrong in parsing an unambiguous indentifier");
 
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
-            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier))
-            .ElseError("Failed to parse identifier string");
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier));
+        // .ElseError("Failed to parse identifier string");
         RawString = new RawStringParser();
         String = OneOf(IdentifierString, RawString, QuotedString)
-            .ElseError("Failed to parse string")
+            // .ElseError("Failed to parse string")
             .Then((context, ks) => ks);
 
         Integer = Literals
@@ -374,9 +318,6 @@ public static class KuddleGrammar
 
         // Entries
 
-        var nodesRef = Deferred<List<KdlNode>>();
-        // finalNodeRef = Deferred<KdlNode?>();
-
         Type = Between(
             Literals.Char('('),
             ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
@@ -385,13 +326,10 @@ public static class KuddleGrammar
 
         Value = Type.Optional()
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(String.Or<KdlString, KdlNumber, KdlValue>(Number).Or(Keyword))
+            .And(Number.Or<KdlNumber, KdlString, KdlValue>(String).Or(Keyword))
             .Then(x =>
-            {
-                return x.Item1.HasValue
-                    ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value })
-                    : x.Item2;
-            });
+                x.Item1.HasValue ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value }) : x.Item2
+            );
 
         var prop = String
             .AndSkip(ZeroOrMany(NodeSpace))
@@ -411,15 +349,15 @@ public static class KuddleGrammar
 
         var skippedEntry = SlashDash
             .And(Capture(nodePropOrArg))
-            .Then(x => (KdlEntry)new KdlSkippedEntry(x.Item2.ToString()));
+            .Then(x => new KdlSkippedEntry(x.Item2.ToString()) as KdlEntry);
 
         var entryParser = OneOrMany(NodeSpace).SkipAnd(OneOf(skippedEntry, nodePropOrArg));
 
-        var nodeChildren = Between(Literals.Char('{'), nodesRef, Literals.Char('}'))
+        var nodeChildren = Between(Literals.Char('{'), Nodes, Literals.Char('}'))
             .And(FinalNode.Optional())
             .Then(x =>
             {
-                var block = new KdlBlock { Nodes = x.Item1 };
+                var block = new KdlBlock { Nodes = [.. x.Item1] };
                 if (x.Item2.HasValue)
                     block.Nodes.Add(x.Item2.Value!);
                 return block;
@@ -445,15 +383,10 @@ public static class KuddleGrammar
             .AndSkip(ZeroOrMany(NodeSpace))
             .Then(result =>
             {
-                // if (result.Item1.HasValue)
-                //     return null;
-
-                var children = result.Item5.FirstOrDefault(b => b != null);
-
                 return new KdlNode(result.Item3)
                 {
                     Entries = [.. result.Item4],
-                    Children = children,
+                    Children = result.Item5.FirstOrDefault(b => b != null),
                     TerminatedBySemicolon = false,
                     TypeAnnotation = result.Item1.HasValue ? result.Item1.Value.ToString() : null,
                 };
@@ -461,24 +394,19 @@ public static class KuddleGrammar
 
         Node = baseNode
             .And(nodeTerminator)
-            .Then(x =>
-            {
-                // if (x.Item1 == null)
-                //     return null;
-
-                return x.Item1 with { TerminatedBySemicolon = x.Item2.Span.Contains(';') };
-            });
+            .Then(x => x.Item1 with { TerminatedBySemicolon = x.Item2.Span.Contains(';') });
 
         (FinalNode as Deferred<KdlNode>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());
 
-        nodesRef.Parser = ZeroOrMany(ZeroOrMany(LineSpace).SkipAnd(Node))
+        (Nodes as Deferred<IReadOnlyList<KdlNode>>)!.Parser = Separated(LineSpace, Node);
+        ZeroOrMany(ZeroOrMany(LineSpace).SkipAnd(Node))
             .Then(list => list.OfType<KdlNode>().ToList()!);
 
         Document = Literals
             .Char('\uFEFF')
             .Optional()
-            .SkipAnd(nodesRef)
-            .Then(nodes => new KdlDocument { Nodes = nodes });
+            .SkipAnd(Nodes)
+            .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
     }
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';

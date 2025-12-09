@@ -2,6 +2,8 @@
 using Kuddle.AST;
 using Kuddle.Exceptions;
 using Kuddle.Parser;
+using Kuddle.Validation;
+using Microsoft.VisualBasic;
 using Parlot.Fluent;
 
 namespace Kuddle;
@@ -13,14 +15,18 @@ public class KdlParser
     public KdlDocument Parse(string text, KuddleOptions? options = null)
     {
         options ??= KuddleOptions.Default;
-        try
+        KdlDocument doc;
+        if (!V2.TryParse(text, out doc!, out var error))
         {
-            return V2.Parse(text)!;
+            throw new KdlParseException("Parsing failed");
         }
-        catch (Exception ex)
+
+        if (options.ValidateReservedTypes)
         {
-            throw new KdlParseException(ex);
+            KdlReservedTypeValidator.Validate(doc);
         }
+
+        return doc;
     }
 }
 

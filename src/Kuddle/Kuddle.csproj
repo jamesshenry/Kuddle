@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Parlot" Version="1.5.2" />
+    <PackageReference Include="Parlot" Version="1.5.6" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Kuddle.Tests" />
