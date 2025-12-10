@@ -3,14 +3,10 @@ using Kuddle.Parser;
 
 namespace Kuddle.Tests.Grammar;
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+
 public class NodeParsersTests
 {
-    // Helper to force static initialization if needed, though usually accessing the field is enough
-    private void InitGrammar()
-    {
-        _ = KuddleGrammar.Document;
-    }
-
     [Test]
     public async Task Type_ParsesSimpleType()
     {
@@ -38,7 +34,7 @@ public class NodeParsersTests
         bool success = sut.TryParse(input, out var node);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(node.Entries).HasCount(1);
+        await Assert.That(node.Entries).Count().IsEqualTo(1);
 
         var prop = node.Entries[0] as KdlProperty;
         await Assert.That(prop).IsNotNull();
@@ -63,7 +59,7 @@ public class NodeParsersTests
         await Assert.That(node.TerminatedBySemicolon).IsTrue();
 
         // Check Entries
-        await Assert.That(node.Entries).HasCount(2);
+        await Assert.That(node.Entries).Count().IsEqualTo(2);
 
         // Arg 1: 123
         var arg = node.Entries[0] as KdlArgument;
@@ -87,7 +83,7 @@ public class NodeParsersTests
         await Assert.That(success).IsTrue();
         await Assert.That(node.Name.Value).IsEqualTo("parent");
         await Assert.That(node.Children).IsNotNull();
-        await Assert.That(node.Children!.Nodes).HasCount(1);
+        await Assert.That(node.Children!.Nodes).Count().IsEqualTo(1);
         await Assert.That(node.Children.Nodes[0].Name.Value).IsEqualTo("child");
     }
 
@@ -106,7 +102,7 @@ public class NodeParsersTests
         await Assert.That(node.TypeAnnotation).IsEqualTo("type");
 
         // Entries
-        await Assert.That(node.Entries).HasCount(2);
+        await Assert.That(node.Entries).Count().IsEqualTo(2);
         await Assert
             .That(((KdlNumber)((KdlArgument)node.Entries[0]).Value).ToInt32())
             .IsEqualTo(10);
@@ -114,7 +110,7 @@ public class NodeParsersTests
 
         // Children
         await Assert.That(node.Children).IsNotNull();
-        await Assert.That(node.Children!.Nodes).HasCount(1);
+        await Assert.That(node.Children!.Nodes).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -127,7 +123,7 @@ public class NodeParsersTests
         bool success = sut.TryParse(input, out var doc);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(doc.Nodes).HasCount(2);
+        await Assert.That(doc.Nodes).Count().IsEqualTo(2);
         await Assert.That(doc.Nodes[0].Name.Value).IsEqualTo("node1");
         await Assert.That(doc.Nodes[1].Name.Value).IsEqualTo("node3");
     }
@@ -141,7 +137,7 @@ public class NodeParsersTests
         bool success = sut.TryParse(input, out var node);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(node.Entries).HasCount(2);
+        await Assert.That(node.Entries).Count().IsEqualTo(2);
 
         // Entry 0 should be 1
         var arg1 = node.Entries[0] as KdlArgument;
@@ -161,7 +157,7 @@ public class NodeParsersTests
         bool success = sut.TryParse(input, out var node);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(node.Entries).HasCount(2);
+        await Assert.That(node.Entries).Count().IsEqualTo(2);
 
         var p1 = node.Entries[0] as KdlProperty;
         await Assert.That(p1!.Key.Value).IsEqualTo("key");
@@ -199,6 +195,7 @@ public class NodeParsersTests
         bool success = sut.TryParse(input, out var nodes);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(nodes).HasCount(2);
+        await Assert.That(nodes).Count().IsEqualTo(2);
     }
 }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.

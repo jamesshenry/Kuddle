@@ -3,6 +3,8 @@ using Kuddle.Parser;
 
 namespace Kuddle.Tests.Grammar;
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+
 public class StringParserTests
 {
     // Note: These tests are stubs until StringParsers is implemented
@@ -400,3 +402,4 @@ hello\n\r\asd"#world
     //     await Assert.That(success).IsFalse();
     // }
 }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.

@@ -57,7 +57,7 @@ public abstract record KdlValue : KdlObject
         return new KdlString(guid.ToString(), stringKind) { TypeAnnotation = "uuid" };
     }
 
-    internal static KdlString? From(DateTimeOffset date, StringKind stringKind = StringKind.Quoted)
+    internal static KdlString From(DateTimeOffset date, StringKind stringKind = StringKind.Quoted)
     {
         return new KdlString(date.ToString("O"), stringKind) { TypeAnnotation = "date-time" };
     }

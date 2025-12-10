@@ -242,7 +242,7 @@ public static class KuddleGrammar
         Hex = Capture(
                 Sign.Optional()
                     .And(Literals.Text("0x"))
-                    .And(Literals.Pattern(IsHexChar, 1, 1).ElseError())
+                    .And(Literals.Pattern(IsHexChar, 1, 1))
                     .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsHexChar(c))))
             )
             .When((context, x) => x.Span[^1] != '_');

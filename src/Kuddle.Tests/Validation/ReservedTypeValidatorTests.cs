@@ -4,6 +4,8 @@ using Kuddle.Validation;
 
 namespace Kuddle.Tests.Validation;
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+
 public class ReservedTypeValidatorTests
 {
     [Test]
@@ -28,8 +30,6 @@ public class ReservedTypeValidatorTests
             .Throws<KdlValidationException>();
 
         // Assert
-        // TUnit might have different assertions for collections,
-        // essentially checking exception.Errors contains the right message
         await Assert.That(exception.Errors).IsNotEmpty();
         await Assert.That(exception.Errors.First().Message).Contains("not a valid 'u8'");
     }
@@ -85,3 +85,4 @@ public class ReservedTypeValidatorTests
         return KdlReader.Parse(input, KuddleOptions.Default with { ValidateReservedTypes = false });
     }
 }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
