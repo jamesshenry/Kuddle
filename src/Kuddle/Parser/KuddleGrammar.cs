@@ -118,13 +118,13 @@ public static class KuddleGrammar
             .Char('\\')
             .SkipAnd(
                 OneOf(
-                        Literals.Char('n').Then(_ => "\n"),
-                        Literals.Char('r').Then(_ => "\r"),
-                        Literals.Char('t').Then(_ => "\t"),
-                        Literals.Char('\\').Then(_ => "\\"),
-                        Literals.Char('"').Then(_ => "\""),
-                        Literals.Char('b').Then(_ => "\b"),
-                        Literals.Char('f').Then(_ => "\f"),
+                        Literals.Char('n').Then(_ => "\\n"),
+                        Literals.Char('r').Then(_ => "\\r"),
+                        Literals.Char('t').Then(_ => "\\t"),
+                        Literals.Char('\\').Then(_ => "\\\\"),
+                        Literals.Char('"').Then(_ => "\\\""),
+                        Literals.Char('b').Then(_ => "\\b"),
+                        Literals.Char('f').Then(_ => "\\f"),
                         Literals
                             .Text("u{")
                             .SkipAnd(HexUnicode)

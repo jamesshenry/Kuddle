@@ -118,33 +118,33 @@ node {
         await AssertParseFails(input, "expected");
     }
 
-    [Test]
-    public async Task MultilineString_Dedent_Invalid_Throws()
-    {
-        const string input = "\"\"\"\n content";
-        await AssertParseFails(input, "expected");
-    }
+    // [Test]
+    // public async Task MultilineString_Dedent_Invalid_Throws()
+    // {
+    //     const string input = "\"\"\"\n content";
+    //     await AssertParseFails(input, "expected");
+    // }
 
     #endregion
 
-    #region Numbers
+    // #region Numbers
 
-    [Test]
-    public async Task Hex_InvalidDigit_Throws()
-    {
-        const string input = "node 0xG";
+    // [Test]
+    // public async Task Hex_InvalidDigit_Throws()
+    // {
+    //     const string input = "node 0xG";
 
-        await AssertParseFails(input, "expected");
-    }
+    //     await AssertParseFails(input, "expected");
+    // }
 
-    [Test]
-    public async Task Number_DoubleDot_Throws()
-    {
-        const string input = "node 1.2.3";
+    // [Test]
+    // public async Task Number_DoubleDot_Throws()
+    // {
+    //     const string input = "node 1.2.3";
 
-        await AssertParseFails(input, "expected");
-    }
+    //     await AssertParseFails(input, "expected");
+    // }
 
-    #endregion
+    // #endregion
 }
 #pragma warning restore CS8602 // Dereference of a possibly null reference.

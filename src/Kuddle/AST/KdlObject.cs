@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Kuddle.Serialization;
 
 namespace Kuddle.AST;
 
@@ -12,6 +13,11 @@ public record KdlObject
 public sealed record KdlDocument : KdlObject
 {
     public List<KdlNode> Nodes { get; init; } = [];
+
+    public override string ToString()
+    {
+        return KdlWriter.Write(this);
+    }
 }
 
 public sealed record KdlBlock : KdlObject

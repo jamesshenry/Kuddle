@@ -40,7 +40,7 @@ public class KdlWriter
             _sb.Append(')');
         }
 
-        WriteIdentifier(node.Name.Value);
+        WriteString(node.Name);
 
         foreach (var entry in node.Entries)
         {
@@ -79,7 +79,7 @@ public class KdlWriter
         }
         else if (entry is KdlProperty prop)
         {
-            WriteIdentifier(prop.Key.Value);
+            WriteString(prop.Key);
             _sb.Append('=');
             WriteValue(prop.Value);
         }
@@ -133,6 +133,10 @@ public class KdlWriter
         { // TODO: Robust multiline logic is complex (dedenting).
             // Fallback to safe quoted string for now to ensure validity.
             WriteQuotedString(s.Value);
+        }
+        else if (s.Kind == StringKind.Identifier)
+        {
+            WriteIdentifier(s.Value);
         }
         else
         {
