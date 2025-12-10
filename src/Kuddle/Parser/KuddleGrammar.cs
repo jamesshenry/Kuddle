@@ -168,7 +168,7 @@ public static class KuddleGrammar
             )
             .Then(ts =>
             {
-                var dedented = Dedent(ts.ToString());
+                var dedented = Dedent(ts.Span.ToString());
 
                 return new KdlString(UnescapeKdl(dedented), StringKind.MultiLine);
             })
@@ -506,7 +506,7 @@ public static class KuddleGrammar
         int lastNewLineIndex = text.LastIndexOf('\n');
 
         if (lastNewLineIndex == -1)
-            return "";
+            return raw;
 
         string indentation = text.Substring(lastNewLineIndex + 1);
 
@@ -527,7 +527,7 @@ public static class KuddleGrammar
                 sb.Append(line);
             }
 
-            if (i < lines.Length - 2)
+            if (i < lines.Length - 2 && !string.IsNullOrWhiteSpace(line))
             {
                 sb.Append('\n');
             }
@@ -550,21 +550,23 @@ public class RawStringParser : Parser<KdlString>
             return false;
 
         // 2. Count opening hashes
-        int hashCount = 0;
+        int openHashCount = 0;
         while (cursor.Current == '#')
         {
-            hashCount++;
+            openHashCount++;
             cursor.Advance();
         }
 
         // 3. Must be followed by quote
-        if (cursor.Current != '"')
+        int openQuoteCount = 0;
+        while (cursor.Current == '"')
         {
-            // Backtrack if not a raw string
-
-            return false;
+            openQuoteCount++;
+            cursor.Advance();
         }
-        cursor.Advance(); // Skip open quote
+
+        if (openQuoteCount == 0)
+            return false;
 
         // 4. Read until quote + hashCount
         var start = cursor.Position;
@@ -573,38 +575,53 @@ public class RawStringParser : Parser<KdlString>
         {
             if (cursor.Current == '"')
             {
-                // Potential end
-                cursor.Advance();
-                int closingHashes = 0;
-                while (cursor.Current == '#' && closingHashes < hashCount)
+                var potentialEnd = cursor.Position;
+
+                // A. Check if we have the correct number of closing quotes
+                int closeQuoteCount = 0;
+                while (closeQuoteCount < openQuoteCount && cursor.Current == '"')
                 {
-                    closingHashes++;
+                    closeQuoteCount++;
                     cursor.Advance();
                 }
 
-                if (closingHashes == hashCount)
+                // B. If quotes matched, check if we have the correct number of hashes
+                int closeHashCount = 0;
+                if (closeQuoteCount == openQuoteCount)
                 {
-                    // Match found!
-                    // Extract content (excluding the surrounding quotes/hashes)
-                    var length = (cursor.Position.Offset - hashCount - 1) - start.Offset;
-                    var content = buffer.Substring(start.Offset, length);
+                    while (closeHashCount < openHashCount && cursor.Current == '#')
+                    {
+                        closeHashCount++;
+                        cursor.Advance();
+                    }
+                }
+
+                // C. Validate full match
+                if (closeQuoteCount == openQuoteCount && closeHashCount == openHashCount)
+                {
+                    // Match Found!
+                    // Extract content strictly between the delimiters
+                    var length = potentialEnd.Offset - start.Offset;
+                    var content = buffer[start.Offset..potentialEnd.Offset];
+
+                    // Use existing Dedent logic (KDL spec requires dedent for multiline strings)
                     content = KuddleGrammar.Dedent(content);
-                    result.Set(
-                        start.Offset,
-                        cursor.Position.Offset,
-                        new KdlString(content, StringKind.Raw)
-                    );
+
+                    result.Set(start.Offset, length, new KdlString(content, StringKind.Raw));
                     return true;
                 }
 
-                // If we didn't match enough hashes, we continue loop (it was part of the content)
+                // D. No match: The sequence we just scanned is actually part of the content.
+                // We continue the outer loop.
             }
             else
             {
                 cursor.Advance();
             }
         }
-
-        return false;
+        throw new ParseException(
+            $"Expected raw string to have {openHashCount} closing hashes",
+            cursor.Position
+        );
     }
 }

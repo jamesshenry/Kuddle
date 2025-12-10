@@ -1,11 +1,10 @@
 using Kuddle.Exceptions;
-using Kuddle.Parser;
 
-namespace Kuddle.Tests.ErrorHandling;
+namespace Kuddle.Tests.Errors;
 
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
 
-public class KdlErrorTests
+public class ErrorHandlingTests
 {
     private static async Task AssertParseFails(
         string kdl,
@@ -114,7 +113,7 @@ node {
     [Test]
     public async Task RawString_MismatchHashes_Throws()
     {
-        const string input = "node r##\"content\"#";
+        const string input = "node ##\"content\"#";
 
         await AssertParseFails(input, "expected");
     }

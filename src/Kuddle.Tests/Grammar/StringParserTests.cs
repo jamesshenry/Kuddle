@@ -339,7 +339,13 @@ hello\n\r\asd"#world
     """#
 """"";
         bool success = sut.TryParse(input, out var value);
-        var expected = "Here's a \"\"\"\n    multiline string\n    \"\"\"\nwithout escapes.";
+        string expected = """"
+Here's a """
+    multiline string
+    """
+without escapes.
+"""".Replace("\r\n", "\n");
+
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(expected);
     }
