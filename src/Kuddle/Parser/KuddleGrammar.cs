@@ -172,8 +172,12 @@ public static class KuddleGrammar
 
                 return new KdlString(UnescapeKdl(dedented), StringKind.MultiLine);
             })
-            .AndSkip(tripleQuote);
-        SingleLineQuoted = Between(Literals.Char('"'), singleLineStringBody, Literals.Char('"'))
+            .AndSkip(tripleQuote.ElseError("Expected a closing triple quote on multiline string"));
+        SingleLineQuoted = Between(
+                Literals.Char('"'),
+                singleLineStringBody,
+                Literals.Char('"').ElseError("Expected a closing quote on string")
+            )
             .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Quoted));
         QuotedString = OneOf(MultiLineQuoted, SingleLineQuoted);
 
@@ -222,11 +226,8 @@ public static class KuddleGrammar
 
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
             .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier));
-        // .ElseError("Failed to parse identifier string");
         RawString = new RawStringParser();
-        String = OneOf(IdentifierString, RawString, QuotedString)
-            // .ElseError("Failed to parse string")
-            .Then((context, ks) => ks);
+        String = OneOf(IdentifierString, RawString, QuotedString).Then((context, ks) => ks);
 
         Integer = Literals
             .Pattern(c => char.IsDigit(c) || c == '_')
@@ -241,7 +242,7 @@ public static class KuddleGrammar
         Hex = Capture(
                 Sign.Optional()
                     .And(Literals.Text("0x"))
-                    .And(Literals.Pattern(IsHexChar, 1, 1))
+                    .And(Literals.Pattern(IsHexChar, 1, 1).ElseError())
                     .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsHexChar(c))))
             )
             .When((context, x) => x.Span[^1] != '_');
@@ -333,7 +334,7 @@ public static class KuddleGrammar
         Type = Between(
             Literals.Char('('),
             ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
-            Literals.Char(')')
+            Literals.Char(')').ElseError("Expected closing brace on type annotation")
         );
 
         Value = Type.Optional()
@@ -347,7 +348,7 @@ public static class KuddleGrammar
             .AndSkip(ZeroOrMany(NodeSpace))
             .AndSkip(Literals.Char('='))
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(Value)
+            .And(Value.ElseError("Expected a value at end of input"))
             .Then(x => new KdlProperty(x.Item1, x.Item2) as KdlEntry);
         var arg = Value.Then(v => new KdlArgument(v) as KdlEntry);
         var nodePropOrArg = OneOf(prop, arg);

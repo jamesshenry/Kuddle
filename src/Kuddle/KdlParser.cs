@@ -27,8 +27,8 @@ public static class KdlReader
             {
                 throw new KdlParseException(
                     error.Message,
-                    error.Position.Line,
                     error.Position.Column,
+                    error.Position.Line,
                     error.Position.Offset
                 );
             }
