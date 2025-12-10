@@ -68,20 +68,14 @@ public class ReservedTypeValidatorTests
     public async Task Given_NodeNameWithReservedType_When_Validated_Then_IgnoresIt()
     {
         // Arrange
-        // (u8) here applies to the NODE NAME "123", not a value.
-        // This is valid structure, and the validator should IGNORE strict type checks on names.
         var doc = Parse("node (u8)123");
 
         // Act & Assert
         await Assert.That(() => KdlReservedTypeValidator.Validate(doc)).ThrowsNothing();
     }
 
-    // Helper to quickly get a doc from your parser
     private static KdlDocument Parse(string input)
     {
-        // Assuming you have this set up from the previous steps
-        // If KdlParser.Parse runs validation by default, pass 'false' here
-        // so we can test the validator manually.
         return KdlReader.Parse(input, KuddleOptions.Default with { ValidateReservedTypes = false });
     }
 }

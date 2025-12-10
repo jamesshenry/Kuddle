@@ -4,15 +4,6 @@ namespace Kuddle.Tests.Grammar;
 
 public class NumberParsersTests
 {
-    // Note: These tests are stubs until NumberParsers is implemented
-    // They represent the number parsing rules from the KDL grammar:
-    // number := keyword-number | hex | octal | binary | decimal
-    // decimal := sign? integer ('.' integer)? exponent?
-    // hex := sign? '0x' hex-digit (hex-digit | '_')*
-    // octal := sign? '0o' [0-7] [0-7_]*
-    // binary := sign? '0b' ('0' | '1') ('0' | '1' | '_')*
-    // keyword-number := '#inf' | '#-inf' | '#nan'
-
     [Test]
     public async Task Decimal_ParsesPositiveInteger()
     {
@@ -287,15 +278,4 @@ public class NumberParsersTests
 
         await Assert.That(success).IsFalse();
     }
-
-    // [Test]
-    // public async Task Decimal_RejectsConsecutiveUnderscores()
-    // {
-    //     var sut = KuddleGrammar.Decimal;
-
-    //     var input = "1__2";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsFalse();
-    // }
 }

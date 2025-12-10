@@ -22,12 +22,6 @@ public class NodeParsersTests
     [Test]
     public async Task Prop_ParsesSimpleProperty()
     {
-        // Internal grammar parts usually require accessing the specific parser instance
-        // We might need to expose 'Prop' in KuddleGrammar as internal for this to work
-        // Assuming you make 'Prop' internal static in KuddleGrammar:
-        // internal static readonly Parser<KdlEntry> Prop;
-
-        // For now, let's test a Node with a property since Node is exposed
         var sut = KuddleGrammar.Node;
         var input = "node key=value";
 

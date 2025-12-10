@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Kuddle.Parser;
 
 namespace Kuddle.Tests.Grammar;

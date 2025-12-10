@@ -47,8 +47,6 @@ public static class KuddleGrammar
     internal static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
     internal static readonly Parser<KdlString> Type;
     private static readonly Parser<KdlValue> Value;
-
-    // internal static readonly Parser<TextSpan> IdentifierChar;
     internal static readonly Parser<TextSpan> UnambiguousIdent;
     internal static readonly Parser<TextSpan> SignedIdent;
     internal static readonly Parser<TextSpan> DottedIdent;
@@ -366,12 +364,7 @@ public static class KuddleGrammar
 
         var entryParser = OneOrMany(NodeSpace).SkipAnd(OneOf(skippedEntry, nodePropOrArg));
 
-        var nodeChildren = /*  Between(
-                Literals.Char('{'),
-                Nodes.And(FinalNode.Optional()),
-                Literals.Char('}')
-            ) */
-        Literals
+        var nodeChildren = Literals
             .Char('{')
             .SkipAnd(ZeroOrMany(LineSpace))
             .SkipAnd(Nodes.And(FinalNode.Optional()))
@@ -521,8 +514,7 @@ public static class KuddleGrammar
             {
                 sb.Append(line.AsSpan(indentation.Length));
             }
-            else if (string.IsNullOrWhiteSpace(line)) { }
-            else
+            else if (!string.IsNullOrWhiteSpace(line))
             {
                 sb.Append(line);
             }
@@ -544,12 +536,9 @@ public class RawStringParser : Parser<KdlString>
         var cursor = context.Scanner.Cursor;
         var buffer = context.Scanner.Buffer;
 
-        // 1. Must start with 'r' or '#'
-        // Spec 2.0: just '#' or 'r#'? Spec says `raw-string := '#' ...`
         if (cursor.Current != '#')
             return false;
 
-        // 2. Count opening hashes
         int openHashCount = 0;
         while (cursor.Current == '#')
         {
@@ -557,7 +546,6 @@ public class RawStringParser : Parser<KdlString>
             cursor.Advance();
         }
 
-        // 3. Must be followed by quote
         int openQuoteCount = 0;
         while (cursor.Current == '"')
         {
@@ -568,7 +556,6 @@ public class RawStringParser : Parser<KdlString>
         if (openQuoteCount == 0)
             return false;
 
-        // 4. Read until quote + hashCount
         var start = cursor.Position;
 
         while (!cursor.Eof)
@@ -577,7 +564,6 @@ public class RawStringParser : Parser<KdlString>
             {
                 var potentialEnd = cursor.Position;
 
-                // A. Check if we have the correct number of closing quotes
                 int closeQuoteCount = 0;
                 while (closeQuoteCount < openQuoteCount && cursor.Current == '"')
                 {
@@ -585,7 +571,6 @@ public class RawStringParser : Parser<KdlString>
                     cursor.Advance();
                 }
 
-                // B. If quotes matched, check if we have the correct number of hashes
                 int closeHashCount = 0;
                 if (closeQuoteCount == openQuoteCount)
                 {
@@ -596,23 +581,16 @@ public class RawStringParser : Parser<KdlString>
                     }
                 }
 
-                // C. Validate full match
                 if (closeQuoteCount == openQuoteCount && closeHashCount == openHashCount)
                 {
-                    // Match Found!
-                    // Extract content strictly between the delimiters
                     var length = potentialEnd.Offset - start.Offset;
                     var content = buffer[start.Offset..potentialEnd.Offset];
 
-                    // Use existing Dedent logic (KDL spec requires dedent for multiline strings)
                     content = KuddleGrammar.Dedent(content);
 
                     result.Set(start.Offset, length, new KdlString(content, StringKind.Raw));
                     return true;
                 }
-
-                // D. No match: The sequence we just scanned is actually part of the content.
-                // We continue the outer loop.
             }
             else
             {
