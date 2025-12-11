@@ -1,6 +1,6 @@
 using Kuddle.AST;
 
-namespace Kuddle.Tests;
+namespace Kuddle.Tests.AST;
 
 public class KdlStringTests
 {

@@ -4,7 +4,7 @@ using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Serialization;
 
-public class WriterTests
+public class KdlWriterTests
 {
     [Test]
     public async Task Write_SimpleNode_FormatsCorrectly()

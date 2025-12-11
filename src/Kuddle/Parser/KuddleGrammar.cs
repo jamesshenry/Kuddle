@@ -388,6 +388,7 @@ public static class KuddleGrammar
             .And(
                 ZeroOrMany(
                     OneOrMany(NodeSpace)
+                        .ElseError("Expected space after node name")
                         .SkipAnd(
                             OneOf(
                                 SlashDash.And(nodeChildren).Then(_ => (KdlBlock?)null),
@@ -435,10 +436,10 @@ public static class KuddleGrammar
             .Char('\uFEFF')
             .Optional()
             .SkipAnd(Nodes)
-            .AndSkip(Always().Eof())
-            .ElseError(
-                "Unconsumed content at end of file. Syntax error likely occurred before this point."
-            )
+            // .AndSkip(Always().Eof())
+            // .ElseError(
+            //     "Unconsumed content at end of file. Syntax error likely occurred before this point."
+            // )
             .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
     }
 
