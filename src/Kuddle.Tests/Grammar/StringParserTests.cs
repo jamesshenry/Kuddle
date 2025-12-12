@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Kuddle.AST;
 using Kuddle.Parser;
 
 namespace Kuddle.Tests.Grammar;
@@ -350,6 +351,125 @@ without escapes.
         await Assert.That(value.ToString()).IsEqualTo(expected);
     }
 
+    [Test]
+    public async Task IdentifierString_SetsStyleToBare()
+    {
+        var sut = KuddleGrammar.IdentifierString;
+        var input = "bare_identifier";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Value).IsEqualTo("bare_identifier");
+        await Assert.That(value.Kind).IsEqualTo(StringKind.Bare);
+    }
+
+    [Test]
+    public async Task QuotedString_SetsStyleToQuoted()
+    {
+        var sut = KuddleGrammar.QuotedString;
+        var input = "\"quoted value\"";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Value).IsEqualTo("quoted value");
+        // Should be Quoted only
+        await Assert.That(value.Kind).IsEqualTo(StringKind.Quoted);
+    }
+
+    [Test]
+    public async Task MultiLineString_SetsStyleToMultiline()
+    {
+        var sut = KuddleGrammar.MultiLineQuoted;
+        var input = """"
+"""
+content
+"""
+"""";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Value).IsEqualTo("content");
+        // Should be MultiLine only (not Raw)
+        await Assert.That(value.Kind).IsEqualTo(StringKind.MultiLine);
+    }
+
+    [Test]
+    public async Task RawString_SingleLine_SetsStyleToRawAndQuoted()
+    {
+        var sut = KuddleGrammar.RawString;
+        var input = @"#""raw content""#";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Value).IsEqualTo("raw content");
+
+        // Use HasFlag to verify bitwise combination
+        await Assert.That(value.Kind.HasFlag(StringKind.Raw)).IsTrue();
+        await Assert.That(value.Kind.HasFlag(StringKind.Quoted)).IsTrue();
+        await Assert.That(value.Kind.HasFlag(StringKind.MultiLine)).IsFalse();
+    }
+
+    [Test]
+    public async Task RawString_MultiLine_SetsStyleToRawAndMultiline()
+    {
+        var sut = KuddleGrammar.RawString;
+        var input = """"
+#"""
+multi
+line
+"""#
+"""";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Value).IsEqualTo("multi\nline");
+
+        // Should be Raw AND MultiLine
+        await Assert.That(value.Kind.HasFlag(StringKind.Raw)).IsTrue();
+        await Assert.That(value.Kind.HasFlag(StringKind.MultiLine)).IsTrue();
+        await Assert.That(value.Kind.HasFlag(StringKind.Quoted)).IsFalse();
+    }
+
+    [Test]
+    public async Task String_UnifiedParser_DetectsBare()
+    {
+        var sut = KuddleGrammar.String;
+        var input = "node_name";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Kind).IsEqualTo(StringKind.Bare);
+    }
+
+    [Test]
+    public async Task String_UnifiedParser_DetectsQuoted()
+    {
+        var sut = KuddleGrammar.String;
+        var input = "\"node name\"";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Kind).IsEqualTo(StringKind.Quoted);
+    }
+
+    [Test]
+    public async Task String_UnifiedParser_DetectsRaw()
+    {
+        var sut = KuddleGrammar.String;
+        var input = @"#""node name""#";
+
+        bool success = sut.TryParse(input, out var value);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(value.Kind.HasFlag(StringKind.Raw)).IsTrue();
+    }
     // [Test]
     // public async Task String_ParsesIdentifierString()
     // {

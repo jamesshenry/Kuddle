@@ -1,7 +1,11 @@
+using Kuddle.Serialization;
+
 namespace Kuddle.Tests.Serialization;
 
 public class KdlParsingTests
 {
+    readonly KdlWriterOptions _options = new KdlWriterOptions() with { RoundTrip = false };
+
     [Test]
     [MethodDataSource(
         typeof(ParsingTestDataSources),
@@ -15,7 +19,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -37,7 +41,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -59,7 +63,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -81,7 +85,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -100,7 +104,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString(); // Assumes KdlDocument has ToString() for serialization
+            var serialized = doc.ToString(_options); // Assumes KdlDocument has ToString() for serialization
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -122,7 +126,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -144,7 +148,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -163,7 +167,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -185,7 +189,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -204,7 +208,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -226,7 +230,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -248,7 +252,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -267,7 +271,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -286,7 +290,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -305,7 +309,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -327,7 +331,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -349,7 +353,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -368,7 +372,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -390,7 +394,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -412,7 +416,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -434,7 +438,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -453,7 +457,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -472,7 +476,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -491,7 +495,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -510,7 +514,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -529,7 +533,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -548,7 +552,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -567,7 +571,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -589,7 +593,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -608,7 +612,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -630,7 +634,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -649,7 +653,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else
@@ -668,7 +672,7 @@ public class KdlParsingTests
             var doc = KdlReader.Parse(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
-            var serialized = doc.ToString();
+            var serialized = doc.ToString(_options);
             await Assert.That(serialized).IsEqualTo(expected);
         }
         else

@@ -65,6 +65,7 @@ public class RawStringParser : Parser<KdlString>
                     var length = potentialEnd.Offset - start.Offset;
                     var content = buffer[start.Offset..potentialEnd.Offset];
 
+                    // TODO: only need to detent multiline strings
                     content = KuddleGrammar.Dedent(content);
 
                     result.Set(start.Offset, length, new KdlString(content, StringKind.Raw));

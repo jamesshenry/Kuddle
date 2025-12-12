@@ -15,5 +15,31 @@ public static class SpanExtensions
             }
             return false;
         }
+
+        public int MaxConsecutive(T target)
+        {
+            int max = 0;
+            while (true)
+            {
+                int start = span.IndexOf(target);
+                if (start < 0)
+                    break;
+
+                span = span.Slice(start);
+
+                // .NET 7+ optimized skip
+                int length = span.IndexOfAnyExcept(target);
+                if (length < 0)
+                    length = span.Length;
+
+                if (length > max)
+                    max = length;
+
+                if (length == span.Length)
+                    break;
+                span = span.Slice(length);
+            }
+            return max;
+        }
     }
 }

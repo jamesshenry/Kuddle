@@ -1,6 +1,8 @@
 using System;
+using System.Linq.Expressions;
 using System.Text;
 using Kuddle.AST;
+using Kuddle.Extensions;
 
 namespace Kuddle.Serialization;
 
@@ -121,23 +123,83 @@ public class KdlWriter
 
     private void WriteString(KdlString s)
     {
-        if (s.Kind == StringKind.Raw)
+        StringKind kind;
+
+        if (_options.RoundTrip)
         {
-            // TODO: Handle raw strings
-        }
-        else if (s.Kind == StringKind.MultiLine)
-        { // TODO: Robust multiline logic is complex (dedenting).
-            // Fallback to safe quoted string for now to ensure validity.
-            WriteQuotedString(s.Value);
-        }
-        else if (s.Kind == StringKind.Identifier)
-        {
-            WriteIdentifier(s.Value);
+            kind = s.Kind;
+
+            if (kind == StringKind.Bare && !IsValidBareIdentifier(s.Value))
+            {
+                kind = StringKind.Quoted;
+            }
         }
         else
         {
-            WriteQuotedString(s.Value);
+            kind = StringKind.Quoted;
         }
+
+        // var sb = _sb.Insert(_sb.Length - 1, "");
+        // _sb = kind switch
+        // {
+        //     StringKind.Bare => _sb.Insert(_sb.Length - 1, s.Value),
+        //     StringKind.Quoted => _sb.Append('"').Append(EscapeString(s.Value)).Append('"'),
+        //     _ => _sb.Insert(_sb.Length - 1, s.Value),
+        // };
+        switch (kind)
+        {
+            case StringKind.Bare:
+                _sb.Append(s.Value);
+                return;
+            case StringKind.Quoted:
+                _sb.Append('"');
+                _sb.Append(EscapeString(s.Value));
+                _sb.Append('"');
+                return;
+        }
+
+        bool isRaw = s.Kind.HasFlag(StringKind.Raw);
+        bool isMulti = s.Kind.HasFlag(StringKind.MultiLine);
+
+        if (isRaw)
+        {
+            int hashCount = s.Value.AsSpan().MaxConsecutive('#') + 1;
+            string hashes = new('#', hashCount);
+
+            string quotes = isMulti ? new string('\"', 3) : new string('\"', 1);
+
+            _sb.Append(hashes).Append(quotes);
+
+            if (isMulti)
+                _sb.Append('\n');
+
+            _sb.Append(s.Value);
+
+            if (isMulti)
+                _sb.Append('\n');
+
+            _sb.Append(quotes).Append(hashes);
+        }
+        else
+        {
+            if (isMulti)
+            {
+                _sb.Append(new string('\"', 3));
+                _sb.Append(s.Value);
+                _sb.Append(new string('\"', 3));
+            }
+            else
+            {
+                _sb.Append(new string('\"', 1));
+                _sb.Append(EscapeString(s.Value));
+                _sb.Append(new string('\"', 1));
+            }
+        }
+    }
+
+    private bool EscapeString(string value)
+    {
+        throw new NotImplementedException();
     }
 
     private void WriteQuotedString(string val)
@@ -215,4 +277,5 @@ public record KdlWriterOptions
     public string NewLine { get; init; } = "\n";
     public string SpaceAfterProp { get; init; } = " ";
     public bool EscapeUnicode { get; init; } = false;
+    public bool RoundTrip { get; set; } = true;
 }

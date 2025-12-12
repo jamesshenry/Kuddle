@@ -14,6 +14,11 @@ public sealed record KdlDocument : KdlObject
 {
     public List<KdlNode> Nodes { get; init; } = [];
 
+    public string ToString(KdlWriterOptions? options = null)
+    {
+        return KdlWriter.Write(this, options);
+    }
+
     public override string ToString()
     {
         return KdlWriter.Write(this);
@@ -75,7 +80,6 @@ public enum StringKind
     Quoted,
     Raw,
     MultiLine,
-    Identifier,
 }
 
 public sealed record KdlString(string Value, StringKind Kind) : KdlValue
