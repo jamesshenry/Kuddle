@@ -65,10 +65,6 @@ public class KdlWriter
             WriteIndent();
             _sb.Append('}');
         }
-        else if (node.TerminatedBySemicolon)
-        {
-            _sb.Append(';');
-        }
     }
 
     private void WriteEntry(KdlEntry entry)
@@ -97,7 +93,7 @@ public class KdlWriter
         switch (value)
         {
             case KdlNumber n:
-                _sb.Append(n.RawValue);
+                _sb.Append(n.ToCanonicalString());
                 break;
             case KdlBool b:
                 _sb.Append(b.Value ? "#true" : "#false");

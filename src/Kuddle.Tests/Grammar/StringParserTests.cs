@@ -274,7 +274,7 @@ canis canem edit
 
         bool success = sut.TryParse(input, out var value, out var error);
 
-        var expected = "Hello\\nWorld";
+        var expected = "Hello\nWorld";
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(expected);
     }

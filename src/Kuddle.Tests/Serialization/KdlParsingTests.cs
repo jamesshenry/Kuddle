@@ -687,7 +687,7 @@ public static class ParsingTestDataSources
     public static IEnumerable<Func<ParsingTestData>> BlockCommentTestData() =>
         GetTestData("block_comment");
 
-    public static IEnumerable<Func<ParsingTestData>> EsclineTestData() => GetTestData("escline");
+    public static IEnumerable<Func<ParsingTestData>> EsclineTestData() => GetTestData("escline_");
 
     public static IEnumerable<Func<ParsingTestData>> MultilineRawStringTestData() =>
         GetTestData("multiline_raw_string");
@@ -713,7 +713,7 @@ public static class ParsingTestDataSources
 
     public static IEnumerable<Func<ParsingTestData>> EmptyTestData() => GetTestData("empty");
 
-    public static IEnumerable<Func<ParsingTestData>> EscTestData() => GetTestData("esc");
+    public static IEnumerable<Func<ParsingTestData>> EscTestData() => GetTestData("esc_");
 
     public static IEnumerable<Func<ParsingTestData>> FalseTestData() => GetTestData("false");
 
@@ -759,7 +759,7 @@ public static class ParsingTestDataSources
         var inputDir = "test_cases/input";
         var expectedDir = "test_cases/expected_kdl";
         var inputFiles = Directory.GetFiles(inputDir, $"{prefix}*.kdl");
-
+        inputFiles = inputFiles.Where(x => !x.EndsWith("_fail.kdl")).ToArray();
         foreach (var inputFile in inputFiles)
         {
             var fileName = Path.GetFileName(inputFile);

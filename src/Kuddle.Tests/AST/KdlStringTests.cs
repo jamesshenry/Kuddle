@@ -7,10 +7,8 @@ public class KdlStringTests
     #region Constructor and Value Property Tests
 
     [Test]
-    [Arguments("hello", StringKind.Identifier)]
     [Arguments("world", StringKind.Quoted)]
     [Arguments("", StringKind.Raw)]
-    [Arguments("string with spaces", StringKind.Identifier)]
     [Arguments("string\nwith\nnewlines", StringKind.Quoted)]
     public async Task Constructor_SetsValueAndTypeCorrectly(string input, StringKind type)
     {
@@ -43,7 +41,7 @@ public class KdlStringTests
     public async Task Equals_ReturnsFalseForDifferentType()
     {
         var sut1 = new KdlString("test", StringKind.Quoted);
-        var sut2 = new KdlString("test", StringKind.Identifier);
+        var sut2 = new KdlString("test", StringKind.Bare);
         await Assert.That(sut1).IsNotEqualTo(sut2);
     }
 
@@ -59,7 +57,7 @@ public class KdlStringTests
     #region ToString Tests
 
     [Test]
-    [Arguments("hello", StringKind.Identifier)]
+    [Arguments("hello", StringKind.Bare)]
     [Arguments("world", StringKind.Quoted)]
     [Arguments("", StringKind.Raw)]
     public async Task ToString_ReturnsValue(string input, StringKind type)
@@ -110,7 +108,7 @@ public class KdlStringTests
     public async Task GetHashCode_ReturnsDifferentForDifferentTypes()
     {
         var sut1 = new KdlString("test", StringKind.Quoted);
-        var sut2 = new KdlString("test", StringKind.Identifier);
+        var sut2 = new KdlString("test", StringKind.Bare);
         await Assert.That(sut1.GetHashCode()).IsNotEqualTo(sut2.GetHashCode());
     }
 

@@ -10,7 +10,7 @@ public static class KdlValueExtensions
     {
         public bool IsNull => value is KdlNull;
         public bool IsNumber => value is KdlNumber;
-        public bool IsString => value is KdlString s && s.Kind != StringKind.Identifier;
+        public bool IsString => value is KdlString;
         public bool IsBool => value is KdlBool;
 
         public bool TryGetInt(out int result)

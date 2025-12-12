@@ -71,7 +71,8 @@ public static class KuddleGrammar
     {
         var nodeSpace = Deferred<TextSpan>();
 
-        var singleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")));
+        var singleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")))
+            .Debug("SingleNewLine");
         var eof = Capture(Always().Eof());
         Sign = Literals.AnyOf(['+', '-'], 1, 1);
 
@@ -112,19 +113,20 @@ public static class KuddleGrammar
                     maxSize: 0
                 )
             )
-            .Then(x => new TextSpan());
+            .Then(x => new TextSpan())
+            .Debug("WsEscape");
 
         var escapeSequence = Literals
             .Char('\\')
             .SkipAnd(
                 OneOf(
-                        Literals.Char('n').Then(_ => "\\n"),
-                        Literals.Char('r').Then(_ => "\\r"),
-                        Literals.Char('t').Then(_ => "\\t"),
-                        Literals.Char('\\').Then(_ => "\\\\"),
-                        Literals.Char('"').Then(_ => "\\\""),
-                        Literals.Char('b').Then(_ => "\\b"),
-                        Literals.Char('f').Then(_ => "\\f"),
+                        Literals.Char('n').Then(_ => "\n"),
+                        Literals.Char('r').Then(_ => "\r"),
+                        Literals.Char('t').Then(_ => "\t"),
+                        Literals.Char('\\').Then(_ => "\\"),
+                        Literals.Char('"').Then(_ => "\""),
+                        Literals.Char('b').Then(_ => "\b"),
+                        Literals.Char('f').Then(_ => "\f"),
                         Literals
                             .Text("u{")
                             .SkipAnd(HexUnicode)
@@ -223,7 +225,7 @@ public static class KuddleGrammar
             );
 
         IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
-            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Identifier));
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Bare));
         RawString = new RawStringParser();
         String = OneOf(IdentifierString, RawString, QuotedString).Then((context, ks) => ks);
 
@@ -289,7 +291,7 @@ public static class KuddleGrammar
         var openComment = Literals.Text("/*");
         var closeComment = Literals.Text("*/");
 
-        SingleLineComment = Literals.Comments("//");
+        SingleLineComment = Literals.Comments("//").Debug("SingleLineComment");
         MultiLineComment = Recursive<TextSpan>(commentParser =>
         {
             var nestedComment = commentParser;
@@ -302,28 +304,28 @@ public static class KuddleGrammar
         });
 
         var lineSpace = Deferred<TextSpan>();
-        SlashDash = Capture(Literals.Text("/-").And(lineSpace));
+        SlashDash = Capture(Literals.Text("/-").And(ZeroOrMany(lineSpace))).Debug("SlashDash");
 
         // Whitespace
         Ws = Literals
             .Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1, maxSize: 1)
-            .Or(MultiLineComment);
+            .Or(MultiLineComment)
+            .Debug("Ws");
         EscLine = Capture(
             Literals
-                .Text(@"\\")
+                .Text(@"\")
                 .And(ZeroOrMany(Ws))
                 .And(
-                    OneOf(
-                        SingleLineComment,
-                        Literals.Pattern(CharacterSets.IsNewline, maxSize: 1),
-                        eof
-                    )
+                    OneOf(SingleLineComment.AndSkip(OneOf(singleNewLine, eof)), singleNewLine, eof)
                 )
+                .Debug("EscLine")
         );
 
         nodeSpace.Parser = Capture(Ws.ZeroOrMany().And(EscLine).And(Ws.ZeroOrMany()))
-            .Or(Capture(Ws.OneOrMany()));
-        NodeSpace = nodeSpace;
+            .Or(Capture(Ws.OneOrMany()))
+        // .Then((context, _) => new TextSpan(" "))
+        ;
+        NodeSpace = nodeSpace.Debug("NodeSpace");
         lineSpace.Parser = NodeSpace.Or(singleNewLine).Or(SingleLineComment);
         LineSpace = lineSpace;
 
@@ -352,17 +354,21 @@ public static class KuddleGrammar
         var nodePropOrArg = OneOf(prop, arg);
 
         var nodeTerminator = OneOf(
-            SingleLineComment,
-            singleNewLine,
-            Capture(Literals.AnyOf(";")),
-            eof
-        );
+                SingleLineComment,
+                singleNewLine,
+                Capture(Literals.AnyOf(";")),
+                eof
+            )
+            .Debug("NodeTerminator");
 
         var skippedEntry = SlashDash
             .And(Capture(nodePropOrArg))
-            .Then(x => new KdlSkippedEntry(x.Item2.ToString()) as KdlEntry);
+            .Then(x => new KdlSkippedEntry(x.Item2.ToString()) as KdlEntry)
+            .Debug("skippedEntry");
 
-        var entryParser = OneOrMany(NodeSpace).SkipAnd(OneOf(skippedEntry, nodePropOrArg));
+        var entryParser = OneOrMany(NodeSpace)
+            .SkipAnd(OneOf(skippedEntry, nodePropOrArg))
+            .Debug("EntryParser");
 
         var nodeChildren = Literals
             .Char('{')
@@ -377,7 +383,14 @@ public static class KuddleGrammar
                 if (x.Item2.HasValue)
                     block.Nodes.Add(x.Item2.Value!);
                 return block;
-            });
+            })
+            .Debug("nodeChildren");
+
+        var childrenValueParser = OneOf(
+                SlashDash.And(nodeChildren).Then(_ => (KdlBlock?)null),
+                nodeChildren.Then(b => (KdlBlock?)b)
+            )
+            .Debug("ChildrenValueParser");
 
         var baseNode = SlashDash
             .Optional()
@@ -387,14 +400,20 @@ public static class KuddleGrammar
             .And(ZeroOrMany(entryParser))
             .And(
                 ZeroOrMany(
-                    OneOrMany(NodeSpace)
-                        .ElseError("Expected space after node name")
-                        .SkipAnd(
-                            OneOf(
-                                SlashDash.And(nodeChildren).Then(_ => (KdlBlock?)null),
-                                nodeChildren.Then(b => (KdlBlock?)b)
+                    OneOf(
+                        // Option A: We find Space, then the Children block (Success)
+                        OneOrMany(NodeSpace).SkipAnd(childrenValueParser),
+                        // Option B: We find NO space, but we see the start of a block (Error)
+                        // This checks for '{' OR '/-' immediately after the previous token
+                        OneOf(Capture(Literals.Char('{')), Capture(Literals.Text("/-")))
+                            .Then<KdlBlock?>(
+                                (context, _) =>
+                                    throw new ParseException(
+                                        "Nodes must be separated from their children block by whitespace.",
+                                        context.Scanner.Cursor.Position
+                                    )
                             )
-                        )
+                    )
                 )
             )
             .AndSkip(ZeroOrMany(NodeSpace))
@@ -409,7 +428,8 @@ public static class KuddleGrammar
                     TerminatedBySemicolon = false,
                     TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.ToString() : null,
                 };
-            });
+            })
+            .Debug("BaseNode");
 
         Node = baseNode
             .And(nodeTerminator)
@@ -420,7 +440,8 @@ public static class KuddleGrammar
                     {
                         TerminatedBySemicolon = x.Item2.Span.Contains(';'),
                     }
-            );
+            )
+            .Debug("Node");
 
         (FinalNode as Deferred<KdlNode?>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());
 
@@ -437,9 +458,9 @@ public static class KuddleGrammar
             .Optional()
             .SkipAnd(Nodes)
             // .AndSkip(Always().Eof())
-            // .ElseError(
-            //     "Unconsumed content at end of file. Syntax error likely occurred before this point."
-            // )
+            .ElseError(
+                "Unconsumed content at end of file. Syntax error likely occurred before this point."
+            )
             .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
     }
 
@@ -527,80 +548,5 @@ public static class KuddleGrammar
         }
 
         return sb.ToString();
-    }
-}
-
-public class RawStringParser : Parser<KdlString>
-{
-    public override bool Parse(ParseContext context, ref ParseResult<KdlString> result)
-    {
-        var cursor = context.Scanner.Cursor;
-        var buffer = context.Scanner.Buffer;
-
-        if (cursor.Current != '#')
-            return false;
-
-        int openHashCount = 0;
-        while (cursor.Current == '#')
-        {
-            openHashCount++;
-            cursor.Advance();
-        }
-
-        int openQuoteCount = 0;
-        while (cursor.Current == '"')
-        {
-            openQuoteCount++;
-            cursor.Advance();
-        }
-
-        if (openQuoteCount == 0)
-            return false;
-
-        var start = cursor.Position;
-
-        while (!cursor.Eof)
-        {
-            if (cursor.Current == '"')
-            {
-                var potentialEnd = cursor.Position;
-
-                int closeQuoteCount = 0;
-                while (closeQuoteCount < openQuoteCount && cursor.Current == '"')
-                {
-                    closeQuoteCount++;
-                    cursor.Advance();
-                }
-
-                int closeHashCount = 0;
-                if (closeQuoteCount == openQuoteCount)
-                {
-                    while (closeHashCount < openHashCount && cursor.Current == '#')
-                    {
-                        closeHashCount++;
-                        cursor.Advance();
-                    }
-                }
-
-                if (closeQuoteCount == openQuoteCount && closeHashCount == openHashCount)
-                {
-                    var length = potentialEnd.Offset - start.Offset;
-                    var content = buffer[start.Offset..potentialEnd.Offset];
-
-                    content = KuddleGrammar.Dedent(content);
-
-                    result.Set(start.Offset, length, new KdlString(content, StringKind.Raw));
-                    return true;
-                }
-            }
-            else
-            {
-                cursor.Advance();
-            }
-        }
-        throw new ParseException(
-            $"Expected raw string to have {openHashCount} closing hashes",
-            cursor.Position
-        );
     }
 }

@@ -71,6 +71,7 @@ public abstract record KdlValue : KdlObject
 
 public enum StringKind
 {
+    Bare,
     Quoted,
     Raw,
     MultiLine,

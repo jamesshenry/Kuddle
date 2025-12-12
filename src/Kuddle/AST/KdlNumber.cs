@@ -197,4 +197,60 @@ public sealed record KdlNumber(string RawValue) : KdlValue
 
         return (sanitised, radix, isNegative);
     }
+
+    internal string ToCanonicalString()
+    {
+        if (RawValue.StartsWith('#'))
+            return RawValue;
+
+        var numberBase = GetBase();
+        var (clean, radix, isNegative) = Sanitise(RawValue, numberBase);
+
+        if (numberBase == NumberBase.Decimal)
+        {
+            return isNegative ? '-' + clean : clean;
+        }
+        else
+        {
+            return TryDecimal() ?? TryBigInteger() ?? RawValue;
+        }
+
+        string? TryDecimal()
+        {
+            try
+            {
+                var dec = ToDecimal();
+                return dec.ToString(CultureInfo.InvariantCulture);
+            }
+            catch (OverflowException)
+            {
+                return null;
+            }
+        }
+        string? TryBigInteger()
+        {
+            try
+            {
+                var bi = System.Numerics.BigInteger.Parse(
+                    "0" + clean,
+                    radix switch
+                    {
+                        2 => NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
+                        8 => NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
+                        16 => NumberStyles.AllowHexSpecifier,
+                        _ => NumberStyles.Integer,
+                    }
+                );
+
+                if (isNegative)
+                    bi = -bi;
+
+                return bi.ToString(CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
 }

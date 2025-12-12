@@ -59,7 +59,7 @@ public class WhiteSpaceParsersTests
         var sut = KuddleGrammar.EscLine;
 
         var input =
-            @"\\
+            @"\
 ";
         bool success = sut.TryParse(input, out var value);
 
@@ -71,7 +71,7 @@ public class WhiteSpaceParsersTests
     {
         var sut = KuddleGrammar.EscLine;
 
-        var input = @"\\   // comment";
+        var input = @"\    // comment";
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
