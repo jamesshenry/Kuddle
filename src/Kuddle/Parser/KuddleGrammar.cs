@@ -79,7 +79,7 @@ public static class KuddleGrammar
         //Strings
 
         var singleQuote = Literals.Char('"');
-        var tripleQuote = Literals.Text("\"\"\"");
+        var tripleQuote = Literals.Text("\"\"\"").Debug("tripleQuote");
         var hash = Literals.Char('#');
 
         var openingHashes = Capture(OneOrMany(hash));
@@ -127,6 +127,7 @@ public static class KuddleGrammar
                         Literals.Char('"').Then(_ => "\""),
                         Literals.Char('b').Then(_ => "\b"),
                         Literals.Char('f').Then(_ => "\f"),
+                        Literals.Char('s').Then(_ => " "),
                         Literals
                             .Text("u{")
                             .SkipAnd(HexUnicode)
@@ -154,7 +155,7 @@ public static class KuddleGrammar
 
         MultiLineQuoted = tripleQuote
             .SkipAnd(singleNewLine)
-            .SkipAnd(AnyCharBefore(tripleQuote))
+            .SkipAnd(AnyCharBefore(tripleQuote).Debug("AnyCharBefore"))
             .When(
                 (_, ts) =>
                 {
@@ -166,6 +167,7 @@ public static class KuddleGrammar
                     return lastChar == '\n' || lastChar == '\r';
                 }
             )
+            .Debug("MultiLineQuoted")
             .Then(ts =>
             {
                 var dedented = Dedent(ts.Span.ToString());
@@ -175,22 +177,27 @@ public static class KuddleGrammar
             .AndSkip(tripleQuote.ElseError("Expected a closing triple quote on multiline string"));
         SingleLineQuoted = Between(
                 Literals.Char('"'),
-                singleLineStringBody,
+                singleLineStringBody.Debug("singleLineStringBody"),
                 Literals.Char('"').ElseError("Expected a closing quote on string")
             )
+            .Debug("SingleLineQuoted")
             .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Quoted));
         QuotedString = OneOf(MultiLineQuoted, SingleLineQuoted);
 
         DottedIdent = Capture(
             Sign.Optional()
-                .And(Literals.Char('.'))
+                .And(Literals.Char('.').Debug("CHAR '.'"))
                 .And(
-                    ZeroOrOne(
-                        identifierChar
-                            .When((a, b) => !IsDigitChar(b.Span[0]))
-                            .ElseError("No numbers allowed")
-                            .And(ZeroOrMany(identifierChar))
-                    )
+                    identifierChar
+                        .When(
+                            (a, b) =>
+                            {
+                                return !IsDigitChar(b.Span[0]);
+                            }
+                        )
+                        .Debug("identifierChar")
+                        .And(ZeroOrMany(identifierChar))
+                        .Optional()
                 )
         );
 
@@ -258,12 +265,13 @@ public static class KuddleGrammar
             .When((context, x) => x.Span[^1] != '_');
 
         Binary = Capture(
-                Sign.Optional()
-                    .AndSkip(Literals.Text("0b"))
-                    .And(Literals.Char('0').Or(Literals.Char('1')))
-                    .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
-            )
-            .When((context, x) => x.Span[^1] != '_');
+            Sign.Optional()
+                .AndSkip(Literals.Text("0b"))
+                .And(Literals.Char('0').Or(Literals.Char('1')))
+                .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
+        )
+        // .When((context, x) => x.Span[^1] != '_')
+        ;
         Boolean = Literals
             .Text("#true")
             .Or(Literals.Text("#false"))
@@ -339,7 +347,7 @@ public static class KuddleGrammar
 
         Value = Type.Optional()
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(OneOf(Keyword, Number, String))
+            .And(OneOf(Number, String, Keyword))
             .Then(x =>
                 x.Item1.HasValue ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value }) : x.Item2
             );

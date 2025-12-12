@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Text;
 using Kuddle.AST;
 using Kuddle.Extensions;
+using Kuddle.Parser;
 
 namespace Kuddle.Serialization;
 
@@ -14,7 +15,7 @@ public class KdlWriter
 
     public KdlWriter(KdlWriterOptions? options = null)
     {
-        _options ??= KdlWriterOptions.Default;
+        _options ??= options ?? KdlWriterOptions.Default;
     }
 
     public static string Write(KdlDocument document, KdlWriterOptions? options = null)
@@ -41,7 +42,17 @@ public class KdlWriter
             WriteIdentifier(node.TypeAnnotation);
             _sb.Append(')');
         }
-
+        // if (_options.RoundTrip == false)
+        // {
+        //     if (node.Name.Value.AsSpan().ContainsAny(CharacterSets.WhiteSpaceChars))
+        //     {
+        //         WriteString(node.Name);
+        //     }
+        //     else
+        //     {
+        //         WriteIdentifier(node.Name.Value);
+        //     }
+        // }
         WriteString(node.Name);
 
         foreach (var entry in node.Entries)
@@ -136,7 +147,10 @@ public class KdlWriter
         }
         else
         {
-            kind = StringKind.Quoted;
+            kind =
+                IsValidBareIdentifier(s.Value) || s.Kind == StringKind.Bare
+                    ? StringKind.Bare
+                    : StringKind.Quoted;
         }
 
         // var sb = _sb.Insert(_sb.Length - 1, "");
@@ -197,9 +211,52 @@ public class KdlWriter
         }
     }
 
-    private bool EscapeString(string value)
+    private static string EscapeString(string input)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(input))
+            return "";
+
+        var sb = new StringBuilder(input.Length + 2);
+
+        foreach (char c in input)
+        {
+            switch (c)
+            {
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                case '\b':
+                    sb.Append("\\b");
+                    break;
+                case '\f':
+                    sb.Append("\\f");
+                    break;
+                default:
+                    // KDL allows most unicode, but you might want to escape control codes
+                    if (char.IsControl(c))
+                    {
+                        sb.Append($"\\u{(int)c:X4}");
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                    break;
+            }
+        }
+        return sb.ToString();
     }
 
     private void WriteQuotedString(string val)

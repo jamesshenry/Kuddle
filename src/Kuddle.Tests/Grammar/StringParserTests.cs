@@ -400,12 +400,12 @@ content
     public async Task RawString_SingleLine_SetsStyleToRawAndQuoted()
     {
         var sut = KuddleGrammar.RawString;
-        var input = @"#""raw content""#";
+        var input = "#\"\"raw content\"\"#";
 
         bool success = sut.TryParse(input, out var value);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(value.Value).IsEqualTo("raw content");
+        await Assert.That(value.Value).IsEqualTo("\"raw content\"");
 
         // Use HasFlag to verify bitwise combination
         await Assert.That(value.Kind.HasFlag(StringKind.Raw)).IsTrue();

@@ -74,12 +74,16 @@ public abstract record KdlValue : KdlObject
     }
 }
 
+[Flags]
 public enum StringKind
 {
-    Bare,
-    Quoted,
-    Raw,
-    MultiLine,
+    Bare = 1,
+    Quoted = 2,
+    Raw = 4,
+    MultiLine = 8,
+
+    MultiLineRaw = MultiLine | Raw,
+    QuotedRaw = Quoted | Raw,
 }
 
 public sealed record KdlString(string Value, StringKind Kind) : KdlValue

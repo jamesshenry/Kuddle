@@ -1,85 +1,94 @@
+using System;
 using Kuddle.AST;
+using Kuddle.Parser;
 using Parlot;
 using Parlot.Fluent;
-
-namespace Kuddle.Parser;
 
 public class RawStringParser : Parser<KdlString>
 {
     public override bool Parse(ParseContext context, ref ParseResult<KdlString> result)
     {
         var cursor = context.Scanner.Cursor;
-        var buffer = context.Scanner.Buffer;
-        var beforeHashPos = cursor.Position;
-
+        var bufferSpan = context.Scanner.Buffer.AsSpan();
         if (cursor.Current != '#')
             return false;
 
-        int openHashCount = 0;
-        while (cursor.Current == '#')
+        var startPos = cursor.Position;
+        int currentOffset = startPos.Offset;
+
+        int hashCount = 0;
+        while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '#')
         {
-            openHashCount++;
-            cursor.Advance();
+            hashCount++;
+            currentOffset++;
         }
 
-        int openQuoteCount = 0;
-        while (cursor.Current == '"')
+        int quoteCount = 0;
+        while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '"')
         {
-            openQuoteCount++;
-            cursor.Advance();
+            quoteCount++;
+            currentOffset++;
         }
 
-        if (openQuoteCount == 0)
+        // KDL only supports " or """
+        if (quoteCount > 3 || quoteCount < 1)
         {
-            cursor.ResetPosition(beforeHashPos);
+            // Reset and fail (or throw error if you want strictness here)
+            // But usually we return false to let other parsers try.
+            cursor.ResetPosition(startPos);
             return false;
         }
-
-        var start = cursor.Position;
-
-        while (!cursor.Eof)
+        if (quoteCount == 2)
         {
-            if (cursor.Current == '"')
-            {
-                var potentialEnd = cursor.Position;
-
-                int closeQuoteCount = 0;
-                while (closeQuoteCount < openQuoteCount && cursor.Current == '"')
-                {
-                    closeQuoteCount++;
-                    cursor.Advance();
-                }
-
-                int closeHashCount = 0;
-                if (closeQuoteCount == openQuoteCount)
-                {
-                    while (closeHashCount < openHashCount && cursor.Current == '#')
-                    {
-                        closeHashCount++;
-                        cursor.Advance();
-                    }
-                }
-
-                if (closeQuoteCount == openQuoteCount && closeHashCount == openHashCount)
-                {
-                    var length = potentialEnd.Offset - start.Offset;
-                    var content = buffer[start.Offset..potentialEnd.Offset];
-
-                    // TODO: only need to detent multiline strings
-                    content = KuddleGrammar.Dedent(content);
-
-                    result.Set(start.Offset, length, new KdlString(content, StringKind.Raw));
-                    return true;
-                }
-            }
-            else
-            {
-                cursor.Advance();
-            }
+            quoteCount--;
+            currentOffset--;
         }
-        throw new ParseException(
-            $"Expected raw string to have {openHashCount} closing hashes",
-            cursor.Position
-        );
+
+        bool isMultiline = quoteCount == 3;
+
+        int needleLength = quoteCount + hashCount;
+        Span<char> needle =
+            needleLength <= 256 ? stackalloc char[needleLength] : new char[needleLength];
+
+        needle[..quoteCount].Fill('"');
+        // Fill hashes
+        needle.Slice(quoteCount, hashCount).Fill('#');
+
+        var remainingBuffer = bufferSpan.Slice(currentOffset);
+
+        int matchIndex = remainingBuffer.IndexOf(needle);
+
+        if (matchIndex < 0)
+        {
+            throw new ParseException(
+                $"Expected raw string to be terminated with {needle}",
+                startPos
+            );
+        }
+
+        var content = remainingBuffer.Slice(0, matchIndex).ToString();
+
+        int totalLengthParsed = currentOffset - startPos.Offset + matchIndex + needleLength;
+
+        // Advance the Parlot cursor
+        // Note: Parlot's cursor doesn't have an "Advance(int count)" easily accessible
+        // without a loop unless we manipulate the offset directly, but usually we do:
+        for (int i = 0; i < totalLengthParsed; i++)
+            context.Scanner.Cursor.Advance();
+
+        // 8. Process Flags/Dedenting
+        if (isMultiline)
+        {
+            content = KuddleGrammar.Dedent(content);
+        }
+
+        var style = isMultiline
+            ? (StringKind.MultiLine | StringKind.Raw)
+            : (StringKind.Quoted | StringKind.Raw);
+
+        result.Set(startPos.Offset, totalLengthParsed, new KdlString(content, style));
+        return true;
+
+        throw new ParseException("Unterminated raw string", startPos);
     }
 }

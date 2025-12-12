@@ -23,13 +23,13 @@ public class DebugParser<T> : Parser<T>
         var peekPreview = context
             .Scanner.Buffer.Substring(
                 startCursor.Offset,
-                Math.Min(10, context.Scanner.Buffer.Length - startCursor.Offset)
+                Math.Min(20, context.Scanner.Buffer.Length - startCursor.Offset)
             )
             .Replace("\n", "\\n")
             .Replace("\r", "\\r");
 
         System.Diagnostics.Debug.WriteLine(
-            $"[START] {_name} at {startCursor.Line}:{startCursor.Column} (Input: '{peekPreview}...')"
+            $"[START] {_name} at {startCursor.Line}:{startCursor.Column} (Input: '{peekPreview}')"
         );
 
         if (_inner.Parse(context, ref result))
