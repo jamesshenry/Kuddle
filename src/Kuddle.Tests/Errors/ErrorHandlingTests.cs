@@ -12,7 +12,7 @@ public class ErrorHandlingTests
         int? expectedLine = null
     )
     {
-        var ex = await Assert.ThrowsAsync<KdlParseException>(async () => KdlReader.Parse(kdl));
+        var ex = await Assert.ThrowsAsync<KdlParseException>(async () => KuddleReader.Parse(kdl));
 
         await Assert
             .That(ex.Message)

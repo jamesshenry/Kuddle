@@ -6,11 +6,6 @@ public static class KdlNodeExtensions
 {
     extension(KdlNode node)
     {
-        // --- Core Navigation ---
-
-        /// <summary>
-        /// Gets the property value if it exists, otherwise KdlNull.
-        /// </summary>
         public KdlValue Prop(string key)
         {
             for (int i = node.Entries.Count - 1; i >= 0; i--)
@@ -35,10 +30,6 @@ public static class KdlNodeExtensions
             }
             return KdlValue.Null;
         }
-
-        // --- The "TryGet" Navigation Pattern ---
-
-        // Allows: if (node.TryGetProp("port", out int port)) { ... }
 
         public bool TryGetProp<T>(string key, out T result)
         {

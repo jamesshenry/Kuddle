@@ -10,9 +10,9 @@ public class KdlWriterTests
     public async Task Write_SimpleNode_FormatsCorrectly()
     {
         var kdl = "node 1 2 key=\"val\"";
-        var doc = KdlReader.Parse(kdl);
+        var doc = KuddleReader.Parse(kdl);
 
-        var output = KdlWriter.Write(doc, KdlWriterOptions.Default);
+        var output = KdlWriter.Write(doc, KuddleWriterOptions.Default);
 
         await Assert.That(output.Trim()).IsEqualTo("node 1 2 key=\"val\"");
     }
@@ -21,7 +21,7 @@ public class KdlWriterTests
     public async Task Write_NestedStructure_IndentsCorrectly()
     {
         var kdl = "parent { child; }";
-        var doc = KdlReader.Parse(kdl);
+        var doc = KuddleReader.Parse(kdl);
 
         var output = KdlWriter.Write(doc);
 
@@ -36,7 +36,7 @@ public class KdlWriterTests
     public async Task Write_ComplexString_EscapesCorrectly()
     {
         var kdl = "node \"line1\\nline2\"";
-        var doc = KdlReader.Parse(kdl);
+        var doc = KuddleReader.Parse(kdl);
 
         var output = KdlWriter.Write(doc);
 

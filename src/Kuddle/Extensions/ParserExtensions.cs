@@ -1,8 +1,9 @@
+using Kuddle.Parser;
 using Parlot.Fluent;
 
-namespace Kuddle.Parser;
+namespace Kuddle.Extensions;
 
-public static class ParserExtensions
+internal static class ParserExtensions
 {
     public static Parser<T> Debug<T>(this Parser<T> parser, string name)
     {

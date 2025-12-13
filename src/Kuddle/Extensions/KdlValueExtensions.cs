@@ -26,7 +26,7 @@ public static class KdlValueExtensions
                 catch
                 {
                     return false;
-                } // Handles Overflow or Format exceptions internally
+                }
             }
             return false;
         }

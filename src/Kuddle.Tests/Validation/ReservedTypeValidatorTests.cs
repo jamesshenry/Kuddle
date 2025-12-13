@@ -76,7 +76,13 @@ public class ReservedTypeValidatorTests
 
     private static KdlDocument Parse(string input)
     {
-        return KdlReader.Parse(input, KuddleOptions.Default with { ValidateReservedTypes = false });
+        return KuddleReader.Parse(
+            input,
+            KuddleReaderOptions.Default with
+            {
+                ValidateReservedTypes = false,
+            }
+        );
     }
 }
 #pragma warning restore CS8602 // Dereference of a possibly null reference.

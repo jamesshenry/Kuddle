@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
+using Kuddle.Extensions;
 using Parlot;
 using Parlot.Fluent;
 using static Parlot.Fluent.Parsers;
 
 namespace Kuddle.Parser;
 
-public static class KuddleGrammar
+public static class KdlGrammar
 {
     internal static readonly Parser<KdlDocument> Document;
 
@@ -67,7 +68,7 @@ public static class KuddleGrammar
         IReadOnlyList<KdlNode>
     >();
 
-    static KuddleGrammar()
+    static KdlGrammar()
     {
         var nodeSpace = Deferred<TextSpan>();
 
@@ -337,9 +338,7 @@ public static class KuddleGrammar
         );
 
         nodeSpace.Parser = Capture(Ws.ZeroOrMany().And(EscLine).And(Ws.ZeroOrMany()))
-            .Or(Capture(Ws.OneOrMany()))
-        // .Then((context, _) => new TextSpan(" "))
-        ;
+            .Or(Capture(Ws.OneOrMany()));
         NodeSpace = nodeSpace.Debug("NodeSpace");
         lineSpace.Parser = NodeSpace.Or(singleNewLine).Or(SingleLineComment);
         LineSpace = lineSpace;
@@ -469,7 +468,7 @@ public static class KuddleGrammar
             .Char('\uFEFF')
             .Optional()
             .SkipAnd(Nodes)
-            // .AndSkip(Always().Eof())
+            .AndSkip(Always().Eof())
             .ElseError(
                 "Unconsumed content at end of file. Syntax error likely occurred before this point."
             )
@@ -509,56 +508,4 @@ public static class KuddleGrammar
         "false",
         "null",
     ];
-
-    static string UnescapeKdl(string input)
-    {
-        var parser = ZeroOrMany(StringCharacter);
-        if (parser.TryParse(input, out var result))
-        {
-            var sb = new StringBuilder();
-            foreach (var part in result!)
-                sb.Append(part.Span);
-            return sb.ToString();
-        }
-        return input;
-    }
-
-    public static string Dedent(string raw)
-    {
-        if (string.IsNullOrEmpty(raw))
-            return "";
-
-        string text = raw.Replace("\r\n", "\n").Replace("\r", "\n");
-
-        int lastNewLineIndex = text.LastIndexOf('\n');
-
-        if (lastNewLineIndex == -1)
-            return raw;
-
-        string indentation = text.Substring(lastNewLineIndex + 1);
-
-        var lines = text.Split('\n');
-        var sb = new StringBuilder();
-
-        for (int i = 0; i < lines.Length - 1; i++)
-        {
-            var line = lines[i];
-
-            if (line.StartsWith(indentation))
-            {
-                sb.Append(line.AsSpan(indentation.Length));
-            }
-            else if (!string.IsNullOrWhiteSpace(line))
-            {
-                sb.Append(line);
-            }
-
-            if (i < lines.Length - 2 && !string.IsNullOrWhiteSpace(line))
-            {
-                sb.Append('\n');
-            }
-        }
-
-        return sb.ToString();
-    }
 }

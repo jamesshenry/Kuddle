@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Kuddle.AST;
@@ -9,17 +9,17 @@ using Parlot.Fluent;
 
 namespace Kuddle;
 
-public static class KdlReader
+public static class KuddleReader
 {
-    private static readonly Parser<KdlDocument> _parser = KuddleGrammar.Document.Compile();
+    private static readonly Parser<KdlDocument> _parser = KdlGrammar.Document.Compile();
 
     /// <summary>
     /// Parses a KDL string into a KdlDocument AST.
     /// </summary>
-    public static KdlDocument Parse(string text, KuddleOptions? options = null)
+    public static KdlDocument Parse(string text, KuddleReaderOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        options ??= KuddleOptions.Default;
+        options ??= KuddleReaderOptions.Default;
 
         if (!_parser.TryParse(text, out var doc, out var error))
         {
@@ -46,16 +46,13 @@ public static class KdlReader
     /// <summary>
     /// Reads a stream assuming UTF-8 encoding.
     /// </summary>
-    public static async Task<KdlDocument> ParseAsync(Stream stream, KuddleOptions? options = null)
+    public static async Task<KdlDocument> ParseAsync(
+        Stream stream,
+        KuddleReaderOptions? options = null
+    )
     {
         using var reader = new StreamReader(stream);
         var text = await reader.ReadToEndAsync();
         return Parse(text, options);
     }
-}
-
-public record KuddleOptions
-{
-    public static KuddleOptions Default => new() { ValidateReservedTypes = true };
-    public bool ValidateReservedTypes { get; init; } = true;
 }

@@ -151,16 +151,6 @@ public sealed record KdlNumber(string RawValue) : KdlValue
         return isNegative ? result * -1 : result;
     }
 
-    // public BigInteger ToBigInteger()
-    // {
-    //     if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
-    //         throw new InvalidOperationException();
-    //     var cleaned = Sanitise(RawValue, Base);
-    //     var actualInt = Convert.ToInt64(cleaned.sanitised, 2);
-    //     var test = cleaned.sanitised.Aggregate(BigInteger.Zero, (s, a) => (s << 1) + a - '0');
-    //     return BigInteger.Parse(cleaned.sanitised, System.Globalization.NumberStyles.BinaryNumber);
-    // }
-
     private static (string cleaned, int radix, bool isNegative) Sanitise(
         string raw,
         NumberBase baseKind

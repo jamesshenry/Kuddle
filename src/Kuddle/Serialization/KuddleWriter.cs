@@ -1,24 +1,22 @@
 using System;
-using System.Linq.Expressions;
 using System.Text;
 using Kuddle.AST;
 using Kuddle.Extensions;
-using Kuddle.Parser;
 
 namespace Kuddle.Serialization;
 
 public class KdlWriter
 {
-    private readonly KdlWriterOptions _options;
+    private readonly KuddleWriterOptions _options;
     private readonly StringBuilder _sb = new();
     private int _depth = 0;
 
-    public KdlWriter(KdlWriterOptions? options = null)
+    public KdlWriter(KuddleWriterOptions? options = null)
     {
-        _options ??= options ?? KdlWriterOptions.Default;
+        _options ??= options ?? KuddleWriterOptions.Default;
     }
 
-    public static string Write(KdlDocument document, KdlWriterOptions? options = null)
+    public static string Write(KdlDocument document, KuddleWriterOptions? options = null)
     {
         var writer = new KdlWriter(options);
         writer.WriteDocument(document);
@@ -42,17 +40,7 @@ public class KdlWriter
             WriteIdentifier(node.TypeAnnotation);
             _sb.Append(')');
         }
-        // if (_options.RoundTrip == false)
-        // {
-        //     if (node.Name.Value.AsSpan().ContainsAny(CharacterSets.WhiteSpaceChars))
-        //     {
-        //         WriteString(node.Name);
-        //     }
-        //     else
-        //     {
-        //         WriteIdentifier(node.Name.Value);
-        //     }
-        // }
+
         WriteString(node.Name);
 
         foreach (var entry in node.Entries)
@@ -79,12 +67,9 @@ public class KdlWriter
             _sb.Append('}');
         }
 
-        if (_options.RoundTrip)
+        if (_options.RoundTrip && node.TerminatedBySemicolon)
         {
-            if (node.TerminatedBySemicolon)
-            {
-                _sb.Append(';');
-            }
+            _sb.Append(';');
         }
     }
 
@@ -161,13 +146,6 @@ public class KdlWriter
                     : StringKind.Quoted;
         }
 
-        // var sb = _sb.Insert(_sb.Length - 1, "");
-        // _sb = kind switch
-        // {
-        //     StringKind.Bare => _sb.Insert(_sb.Length - 1, s.Value),
-        //     StringKind.Quoted => _sb.Append('"').Append(EscapeString(s.Value)).Append('"'),
-        //     _ => _sb.Insert(_sb.Length - 1, s.Value),
-        // };
         switch (kind)
         {
             case StringKind.Bare:
@@ -332,15 +310,4 @@ public class KdlWriter
         }
         return true;
     }
-}
-
-public record KdlWriterOptions
-{
-    public static KdlWriterOptions Default => new();
-
-    public string IndentChar { get; init; } = "    ";
-    public string NewLine { get; init; } = "\n";
-    public string SpaceAfterProp { get; init; } = " ";
-    public bool EscapeUnicode { get; init; } = false;
-    public bool RoundTrip { get; set; } = true;
 }
