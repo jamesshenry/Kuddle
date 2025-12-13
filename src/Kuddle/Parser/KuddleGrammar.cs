@@ -146,12 +146,36 @@ public static class KuddleGrammar
         var singleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
             {
-                var sb = new StringBuilder();
-                foreach (var item in x)
-                {
-                    sb.Append(item.Span);
-                }
-                return new TextSpan(sb.ToString());
+                // Fast path: no characters means empty string
+                if (x.Count == 0)
+                    return new TextSpan(string.Empty);
+
+                // Fast path: single span can be returned directly
+                if (x.Count == 1)
+                    return new TextSpan(x[0].Span.ToString());
+
+                // Calculate total length to avoid StringBuilder resizing
+                int totalLength = 0;
+                for (int i = 0; i < x.Count; i++)
+                    totalLength += x[i].Length;
+
+                // Use string.Create for efficient concatenation
+                return new TextSpan(
+                    string.Create(
+                        totalLength,
+                        x,
+                        static (span, items) =>
+                        {
+                            int pos = 0;
+                            for (int i = 0; i < items.Count; i++)
+                            {
+                                var itemSpan = items[i].Span;
+                                itemSpan.CopyTo(span.Slice(pos));
+                                pos += itemSpan.Length;
+                            }
+                        }
+                    )
+                );
             });
         MultiLineQuoted = new MultiLineStringParser().Debug("MultiLineQuoted");
         SingleLineQuoted = Between(
@@ -230,7 +254,8 @@ public static class KuddleGrammar
             .Then(
                 (context, span) =>
                 {
-                    return ReservedKeywords.Contains(span.ToString())
+                    // Use span-based comparison to avoid allocation for valid identifiers
+                    return IsReservedKeyword(span.Span)
                         ? throw new ParseException(
                             $"The keyword '{span}' cannot be used as an unquoted identifier. Wrap it in quotes: \"{span}\".",
                             context.Scanner.Cursor.Position
@@ -465,7 +490,7 @@ public static class KuddleGrammar
                     Entries = filteredEntries,
                     Children = result.Item5.FirstOrDefault(b => b != null),
                     TerminatedBySemicolon = false,
-                    TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.ToString() : null,
+                    TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.Value : null,
                 };
             })
             .Debug("BaseNode");
@@ -554,13 +579,20 @@ public static class KuddleGrammar
             || c == '\uFEFF';
     }
 
-    private static readonly HashSet<string> ReservedKeywords =
-    [
-        "inf",
-        "-inf",
-        "nan",
-        "true",
-        "false",
-        "null",
-    ];
+    /// <summary>
+    /// Checks if a span matches a reserved keyword without allocating a string.
+    /// </summary>
+    private static bool IsReservedKeyword(ReadOnlySpan<char> span)
+    {
+        return span switch
+        {
+            "inf" => true,
+            "-inf" => true,
+            "nan" => true,
+            "true" => true,
+            "false" => true,
+            "null" => true,
+            _ => false,
+        };
+    }
 }
