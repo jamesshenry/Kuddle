@@ -432,9 +432,37 @@ public static class KuddleGrammar
             {
                 if (result.Item1.HasValue)
                     return null;
+                // Filter skipped entries - use single pass allocation
+                var entries = result.Item4;
+                var hasSkipped = false;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is KdlSkippedEntry)
+                    {
+                        hasSkipped = true;
+                        break;
+                    }
+                }
+                List<KdlEntry> filteredEntries;
+                if (hasSkipped)
+                {
+                    filteredEntries = new List<KdlEntry>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                    {
+                        if (entries[i] is not KdlSkippedEntry)
+                            filteredEntries.Add(entries[i]);
+                    }
+                }
+                else
+                {
+                    // No skipped entries - just copy to list
+                    filteredEntries = new List<KdlEntry>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                        filteredEntries.Add(entries[i]);
+                }
                 return new KdlNode(result.Item3)
                 {
-                    Entries = result.Item4.Where(e => e is not KdlSkippedEntry).ToList(),
+                    Entries = filteredEntries,
                     Children = result.Item5.FirstOrDefault(b => b != null),
                     TerminatedBySemicolon = false,
                     TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.ToString() : null,
@@ -461,8 +489,32 @@ public static class KuddleGrammar
             )
             .AndSkip(ZeroOrMany(LineSpace))
             .Then(list =>
-                list.Where(x => x != null).Select(n => n!).ToList() as IReadOnlyList<KdlNode>
-            );
+            {
+                // Single-pass filter to avoid Where().Select().ToList() triple allocation
+                List<KdlNode>? filtered = null;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var node = list[i];
+                    if (node is null)
+                    {
+                        // First null found - need to build filtered list
+                        if (filtered is null)
+                        {
+                            filtered = new List<KdlNode>(list.Count);
+                            for (int j = 0; j < i; j++)
+                            {
+                                if (list[j] is not null)
+                                    filtered.Add(list[j]!);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        filtered?.Add(node);
+                    }
+                }
+                return (IReadOnlyList<KdlNode>)(filtered ?? list!);
+            });
 
         Document = Literals
             .Char('\uFEFF')
@@ -472,7 +524,10 @@ public static class KuddleGrammar
             .ElseError(
                 "Unconsumed content at end of file. Syntax error likely occurred before this point."
             )
-            .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
+            .Then(nodes => new KdlDocument
+            {
+                Nodes = nodes is List<KdlNode> list ? list : [.. nodes],
+            });
     }
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';
