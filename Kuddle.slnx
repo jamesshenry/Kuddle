@@ -4,6 +4,7 @@
     <File Path="dotnet.config" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Kuddle.Benchmarks/Kuddle.Benchmarks.csproj" />
     <Project Path="src/Kuddle.Tests/Kuddle.Tests.csproj" />
     <Project Path="src/Kuddle/Kuddle.csproj" />
   </Folder>
