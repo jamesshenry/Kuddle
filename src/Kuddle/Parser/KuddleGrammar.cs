@@ -152,20 +152,7 @@ public static class KuddleGrammar
                 }
                 return new TextSpan(sb.ToString());
             });
-
-        MultiLineQuoted = tripleQuote
-            .SkipAnd(singleNewLine)
-            .SkipAnd(AnyCharBefore(tripleQuote).Debug("AnyCharBefore"))
-            .AndSkip(tripleQuote)
-            .Then(
-                (ctx, ts) =>
-                {
-                    return ProcessMultiLineString(ts.Span, ctx);
-                }
-            )
-            .Debug("MultiLineQuoted")
-        // .AndSkip(tripleQuote.ElseError("Expected a closing triple quote on multiline string"))
-        ;
+        MultiLineQuoted = new MultiLineStringParser().Debug("MultiLineQuoted");
         SingleLineQuoted = Between(
                 Literals.Char('"'),
                 singleLineStringBody.Debug("singleLineStringBody"),
@@ -176,21 +163,50 @@ public static class KuddleGrammar
         QuotedString = OneOf(MultiLineQuoted, SingleLineQuoted);
 
         DottedIdent = Capture(
-            Sign.Optional()
-                .And(Literals.Char('.').Debug("CHAR '.'"))
-                .And(
-                    identifierChar
-                        .When(
-                            (a, b) =>
-                            {
-                                return !IsDigitChar(b.Span[0]);
-                            }
-                        )
-                        .Debug("identifierChar")
-                        .And(ZeroOrMany(identifierChar))
-                        .Optional()
-                )
-        );
+                Sign.Optional()
+                    .And(
+                        Literals
+                            .Char('.')
+                            .Debug("First identifierChar")
+                            .And(
+                                Literals
+                                    .Pattern(
+                                        c =>
+                                            !CharacterSets.IsNewline(c)
+                                            && !CharacterSets.IsWhiteSpace(c)
+                                            && !"\\/(){};[]\"#=".Contains(c),
+                                        0
+                                    )
+                                    .Optional()
+                                    .Debug("Remaining identifierChars")
+                            )
+                    )
+            )
+            .When(
+                (ctx, b) =>
+                {
+                    var span = b.Span;
+                    if (span.IsEmpty)
+                        return false;
+
+                    char c0 = span[0];
+                    bool isSign = c0 == '+' || c0 == '-';
+
+                    if (isSign && span.Length == 1)
+                        return true;
+
+                    ReadOnlySpan<char> slice = isSign ? span[1..] : span;
+
+                    if (char.IsDigit(slice[0]))
+                        return false;
+
+                    if (slice[0] == '.' && slice.Length > 1 && char.IsDigit(slice[1]))
+                        return false;
+
+                    return true;
+                }
+            )
+            .Debug("DottedIdent");
 
         SignedIdent = Capture(
             Sign.And(
@@ -338,7 +354,7 @@ public static class KuddleGrammar
 
         Value = Type.Optional()
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(OneOf(Number, String, Keyword))
+            .And(OneOf(Keyword, Number, String))
             .Then(x =>
                 x.Item1.HasValue ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value }) : x.Item2
             );
@@ -395,7 +411,7 @@ public static class KuddleGrammar
             .Optional()
             .And(Type.Optional())
             .AndSkip(ZeroOrMany(NodeSpace))
-            .And(String)
+            .And(String.Debug("NodeName"))
             .And(ZeroOrMany(entryParser))
             .And(
                 ZeroOrMany(
@@ -458,147 +474,6 @@ public static class KuddleGrammar
                 "Unconsumed content at end of file. Syntax error likely occurred before this point."
             )
             .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
-    }
-
-    private static KdlString ProcessMultiLineString(
-        ReadOnlySpan<char> rawInput,
-        ParseContext context
-    )
-    {
-        string text = rawInput.ToString().Replace("\r\n", "\n").Replace("\r", "\n");
-
-        text = ResolveWsEscapes(text);
-
-        int lastNewLine = text.LastIndexOf('\n');
-        string prefix = "";
-        string contentBody = text;
-
-        if (lastNewLine >= 0)
-        {
-            prefix = text.Substring(lastNewLine + 1);
-
-            contentBody = text.Substring(0, lastNewLine + 1);
-        }
-        else
-        {
-            prefix = text;
-            contentBody = "";
-        }
-
-        foreach (char c in prefix)
-        {
-            if (!char.IsWhiteSpace(c))
-            {
-                throw new ParseException(
-                    "Multi-line string syntax error: The closing '\"\"\"' must be on its own line, preceded only by whitespace.",
-                    context.Scanner.Cursor.Position
-                );
-            }
-        }
-
-        var sb = new StringBuilder();
-
-        int pos = 0;
-        while (pos < contentBody.Length)
-        {
-            int nextNewLine = contentBody.IndexOf('\n', pos);
-            if (nextNewLine == -1)
-                break;
-
-            int lineLength = (nextNewLine + 1) - pos;
-            ReadOnlySpan<char> line = contentBody.AsSpan(pos, lineLength);
-
-            bool isWhitespaceOnly = true;
-            for (int i = 0; i < line.Length - 1; i++)
-            {
-                if (!CharacterSets.IsWhiteSpace(line[i]))
-                {
-                    isWhitespaceOnly = false;
-                    break;
-                }
-            }
-
-            if (isWhitespaceOnly)
-            {
-                sb.Append('\n');
-            }
-            else
-            {
-                if (!line.StartsWith(prefix))
-                {
-                    throw new ParseException(
-                        "Multi-line string indentation error: A line contained less indentation than the closing delimiter.",
-                        context.Scanner.Cursor.Position
-                    );
-                }
-
-                sb.Append(line.Slice(prefix.Length));
-            }
-
-            pos = nextNewLine + 1;
-        }
-
-        string dedented = sb.ToString();
-
-        if (dedented.EndsWith("\n"))
-        {
-            dedented = dedented.Substring(0, dedented.Length - 1);
-        }
-
-        dedented = dedented.Replace("\\s", " ");
-        string finalValue = Regex.Unescape(dedented);
-
-        return new KdlString(finalValue, StringKind.MultiLine);
-    }
-
-    private static string ResolveWsEscapes(string input)
-    {
-        if (input.IndexOf('\\') == -1)
-            return input;
-
-        var sb = new StringBuilder(input.Length);
-        for (int i = 0; i < input.Length; i++)
-        {
-            char c = input[i];
-
-            if (c == '\\')
-            {
-                int nextIdx = i + 1;
-                bool isWsEscape = false;
-
-                while (nextIdx < input.Length)
-                {
-                    char next = input[nextIdx];
-                    if (next == ' ' || next == '\t')
-                    {
-                        nextIdx++;
-                        continue;
-                    }
-                    else if (next == '\n')
-                    {
-                        i = nextIdx;
-                        isWsEscape = true;
-                        break;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                if (!isWsEscape && nextIdx >= input.Length)
-                {
-                    i = nextIdx;
-                    isWsEscape = true;
-                }
-
-                if (isWsEscape)
-                    continue;
-            }
-
-            sb.Append(c);
-        }
-        return sb.ToString();
     }
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';

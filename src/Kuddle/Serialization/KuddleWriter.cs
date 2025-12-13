@@ -78,6 +78,14 @@ public class KdlWriter
             WriteIndent();
             _sb.Append('}');
         }
+
+        if (_options.RoundTrip)
+        {
+            if (node.TerminatedBySemicolon)
+            {
+                _sb.Append(';');
+            }
+        }
     }
 
     private void WriteEntry(KdlEntry entry)
