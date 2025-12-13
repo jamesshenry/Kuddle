@@ -46,20 +46,20 @@ You have effectively **completed Phase 1** (AST) and the heavy lifting of **Phas
   * [x] Create `KdlValueExtensions`.
   * [x] Implement `TryGetUuid`, `TryGetDateTime`, `TryGetInt`, etc.
 * **3.2 Mutation Factories**
-  * [ ] Add `KdlValue.From(Guid)`, `KdlValue.From(int)` helpers.
+  * [x] Add `KdlValue.From(Guid)`, `KdlValue.From(int)` helpers.
 * **3.3 Navigation Helpers**
-  * [ ] Add indexers: `node["propName"]`.
-  * [ ] Add `node.Arguments` (computed view).
+  * [x] Add indexers: `node["propName"]`.
+  * [x] Add `node.Arguments` (computed view).
 
 ### Phase 4: Serialization
 
 *Goal: Output KDL from the AST.*
 
 * **4.1 Round-Trip Writer**
-  * [ ] Create `KdlWriter` implementation.
+  * [x] Create `KdlWriter` implementation.
   * [ ] Logic: Iterate AST, write `LeadingTrivia`, `TypeAnnotation`, `RawText`, `TrailingTrivia`.
 * **4.2 Formatting Writer**
-  * [ ] Create `KdlFormatter` (or options for `KdlWriter`).
+  * [x] Create `KdlFormatter` (or options for `KdlWriter`).
   * [ ] Logic to ignore stored trivia and re-indent based on settings.
 
 ### Phase 5: Verification 🚧
@@ -67,10 +67,10 @@ You have effectively **completed Phase 1** (AST) and the heavy lifting of **Phas
 *Goal: Ensure correctness.*
 
 * **5.1 Unit Tests**
-  * [ ] **(In Progress)** AST Structural Tests.
-  * [ ] Grammar Logic Tests (Strings, Numbers).
+  * [x] **(In Progress)** AST Structural Tests.
+  * [x] Grammar Logic Tests (Strings, Numbers).
 * **5.2 Integration Tests**
-  * [ ] Run against the official `kdl-org/kdl` test suite.
+  * [x] Run against the official `kdl-org/kdl` test suite.
 
 ### Phase 6: Object Mapping (POCOs) & Source Gen
 
