@@ -20,7 +20,7 @@ public class StringParserTests
     [Arguments("-negative")]
     public async Task SignedIdent_ParsesSignedIdentifier(string input)
     {
-        var sut = KdlGrammar.SignedIdent;
+        var sut = KuddleGrammar.SignedIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -34,7 +34,7 @@ public class StringParserTests
     [Arguments(".three")]
     public async Task DottedIdent_ParsesDottedIdentifier(string input)
     {
-        var sut = KdlGrammar.DottedIdent;
+        var sut = KuddleGrammar.DottedIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -47,7 +47,7 @@ public class StringParserTests
     [Arguments(".01")]
     public async Task DottedIdent_DoesNotParseNumberDottedNumber(string input)
     {
-        var sut = KdlGrammar.DottedIdent;
+        var sut = KuddleGrammar.DottedIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -62,7 +62,7 @@ public class StringParserTests
     [Arguments("test_case")]
     public async Task UnambiguousIdent_ParsesUnambiguousIdentifier(string input)
     {
-        var sut = KdlGrammar.UnambiguousIdent;
+        var sut = KuddleGrammar.UnambiguousIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -76,7 +76,7 @@ public class StringParserTests
     [Arguments(".one")]
     public async Task UnambiguousIdent_DoesNotParseInvalidIdentifier(string input)
     {
-        var sut = KdlGrammar.UnambiguousIdent;
+        var sut = KuddleGrammar.UnambiguousIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -92,7 +92,7 @@ public class StringParserTests
     [Arguments("nan")]
     public async Task UnambiguousIdent_DoesNotParseDisallowedKeywordString(string input)
     {
-        var sut = KdlGrammar.UnambiguousIdent;
+        var sut = KuddleGrammar.UnambiguousIdent;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -112,7 +112,7 @@ public class StringParserTests
     [Arguments("-negative")]
     public async Task IdentifierString_ParsesIdentifierString(string input)
     {
-        var sut = KdlGrammar.IdentifierString;
+        var sut = KuddleGrammar.IdentifierString;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -124,7 +124,7 @@ public class StringParserTests
     [Arguments("\"\\   \"")]
     public async Task WsEscape_ParsesWhiteSpace(string input)
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value, out var error);
 
@@ -135,7 +135,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesSingleLineString()
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
 
         const string input = """
 "hello world"
@@ -149,7 +149,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesEmptyString()
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
 
         const string input = """
 ""
@@ -163,7 +163,7 @@ public class StringParserTests
     [Test]
     public async Task QuotedString_ParsesEmptyMultilineString()
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
 
         const string input = """"
 """
@@ -206,7 +206,7 @@ so am
     )]
     public async Task MultiLineStringBody_HandlesVarious(string input, string expected)
     {
-        var sut = KdlGrammar.MultiLineQuoted;
+        var sut = KuddleGrammar.MultiLineQuoted;
 
         bool success = sut.TryParse(input, out var value);
         Debug.WriteLine(input);
@@ -234,7 +234,7 @@ canis canem edit
     )]
     public async Task MultiLineQuotedString_CanParseMultiLine(string input, string expected)
     {
-        var sut = KdlGrammar.MultiLineQuoted;
+        var sut = KuddleGrammar.MultiLineQuoted;
         bool success = sut.TryParse(input, out var value, out var error);
         await Assert.That(success).IsTrue();
         await Assert.That(value.ToString()).IsEqualTo(expected);
@@ -249,7 +249,7 @@ canis canem edit
     )]
     public async Task QuotedString_HandlesUnicodeEscapes(string input, string expected)
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value);
 
@@ -271,7 +271,7 @@ canis canem edit
     )]
     public async Task QuotedString_HandlesWhitespaceEscapes(string input)
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
 
         bool success = sut.TryParse(input, out var value, out var error);
 
@@ -283,7 +283,7 @@ canis canem edit
     [Test]
     public async Task RawString_ParsesSimpleRawString()
     {
-        var sut = KdlGrammar.RawString;
+        var sut = KuddleGrammar.RawString;
 
         var input = """
 #"\n will be literal"#
@@ -297,7 +297,7 @@ canis canem edit
     [Test]
     public async Task RawString_ParsesRawStringWithQuotes()
     {
-        var sut = KdlGrammar.RawString;
+        var sut = KuddleGrammar.RawString;
 
         var input = "#\"content with \"quotes\"\"#";
         bool success = sut.TryParse(input, out var value);
@@ -309,7 +309,7 @@ canis canem edit
     [Test]
     public async Task RawString_HandlesMultipleHashDelimiters()
     {
-        var sut = KdlGrammar.RawString;
+        var sut = KuddleGrammar.RawString;
 
         var input = """
 ##"hello\n\r\asd"#world"##
@@ -329,7 +329,7 @@ hello\n\r\asd"#world
     [Test]
     public async Task RawString_ParsesMultiLineRawString()
     {
-        var sut = KdlGrammar.RawString;
+        var sut = KuddleGrammar.RawString;
 
         var input = """""
 #"""
@@ -354,7 +354,7 @@ without escapes.
     [Test]
     public async Task IdentifierString_SetsStyleToBare()
     {
-        var sut = KdlGrammar.IdentifierString;
+        var sut = KuddleGrammar.IdentifierString;
         var input = "bare_identifier";
 
         bool success = sut.TryParse(input, out var value);
@@ -367,7 +367,7 @@ without escapes.
     [Test]
     public async Task QuotedString_SetsStyleToQuoted()
     {
-        var sut = KdlGrammar.QuotedString;
+        var sut = KuddleGrammar.QuotedString;
         var input = "\"quoted value\"";
 
         bool success = sut.TryParse(input, out var value);
@@ -381,7 +381,7 @@ without escapes.
     [Test]
     public async Task MultiLineString_SetsStyleToMultiline()
     {
-        var sut = KdlGrammar.MultiLineQuoted;
+        var sut = KuddleGrammar.MultiLineQuoted;
         var input = """"
 """
 content
@@ -399,7 +399,7 @@ content
     [Test]
     public async Task RawString_SingleLine_SetsStyleToRawAndQuoted()
     {
-        var sut = KdlGrammar.RawString;
+        var sut = KuddleGrammar.RawString;
         var input = "#\"\"raw content\"\"#";
 
         bool success = sut.TryParse(input, out var value);
@@ -416,7 +416,7 @@ content
     [Test]
     public async Task RawString_MultiLine_SetsStyleToRawAndMultiline()
     {
-        var sut = KdlGrammar.RawString;
+        var sut = KuddleGrammar.RawString;
         var input = """"
 #"""
 multi
@@ -438,7 +438,7 @@ line
     [Test]
     public async Task String_UnifiedParser_DetectsBare()
     {
-        var sut = KdlGrammar.String;
+        var sut = KuddleGrammar.String;
         var input = "node_name";
 
         bool success = sut.TryParse(input, out var value);
@@ -450,7 +450,7 @@ line
     [Test]
     public async Task String_UnifiedParser_DetectsQuoted()
     {
-        var sut = KdlGrammar.String;
+        var sut = KuddleGrammar.String;
         var input = "\"node name\"";
 
         bool success = sut.TryParse(input, out var value);
@@ -462,7 +462,7 @@ line
     [Test]
     public async Task String_UnifiedParser_DetectsRaw()
     {
-        var sut = KdlGrammar.String;
+        var sut = KuddleGrammar.String;
         var input = @"#""node name""#";
 
         bool success = sut.TryParse(input, out var value);

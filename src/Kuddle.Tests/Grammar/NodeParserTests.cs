@@ -10,7 +10,7 @@ public class NodeParsersTests
     [Test]
     public async Task Type_ParsesSimpleType()
     {
-        var sut = KdlGrammar.Type;
+        var sut = KuddleGrammar.Type;
         var input = "(string)";
 
         bool success = sut.TryParse(input, out var result);
@@ -22,7 +22,7 @@ public class NodeParsersTests
     [Test]
     public async Task Prop_ParsesSimpleProperty()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         var input = "node key=value";
 
         bool success = sut.TryParse(input, out var node);
@@ -39,7 +39,7 @@ public class NodeParsersTests
     [Test]
     public async Task Node_ParsesComplexLine()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         // Test: Name, Arg, Prop, Type Annotation
         var input = "(my-type)node 123 key=\"value\";";
 
@@ -69,7 +69,7 @@ public class NodeParsersTests
     [Test]
     public async Task Node_ParsesChildren()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         var input = "parent { child; }";
 
         bool success = sut.TryParse(input, out var node, out var error);
@@ -84,7 +84,7 @@ public class NodeParsersTests
     [Test]
     public async Task Node_ParsesMixedContent()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         var input = "(type)node 10 prop=#true { child; }";
 
         bool success = sut.TryParse(input, out var node);
@@ -111,7 +111,7 @@ public class NodeParsersTests
     public async Task Node_SlashDash_SkipsNode()
     {
         // This tests the logic in 'Nodes' (plural) parser usually
-        var sut = KdlGrammar.Document;
+        var sut = KuddleGrammar.Document;
         var input = "node1; /- node2; node3;";
 
         bool success = sut.TryParse(input, out var doc);
@@ -125,7 +125,7 @@ public class NodeParsersTests
     [Test]
     public async Task Node_SlashDash_SkipsArg()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         var input = "node 1 /- 2 3";
 
         bool success = sut.TryParse(input, out var node);
@@ -145,7 +145,7 @@ public class NodeParsersTests
     [Test]
     public async Task SlashDash_SkipsProperty()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         var input = "node key=1 /- skipped=2 valid=3";
 
         bool success = sut.TryParse(input, out var node);
@@ -163,7 +163,7 @@ public class NodeParsersTests
     [Test]
     public async Task Node_SlashDash_SkipsChildrenBlock()
     {
-        var sut = KdlGrammar.Node;
+        var sut = KuddleGrammar.Node;
         // Parsing a node that has a slash-dashed children block
         var input = "node /- { child; }";
 
@@ -178,7 +178,7 @@ public class NodeParsersTests
     [Test]
     public async Task Nodes_ParsesNodesWithWhitespace()
     {
-        var sut = KdlGrammar.Nodes;
+        var sut = KuddleGrammar.Nodes;
         var input =
             @"
             node1;

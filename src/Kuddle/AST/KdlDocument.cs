@@ -9,11 +9,11 @@ public sealed record KdlDocument : KdlObject
 
     public string ToString(KuddleWriterOptions? options = null)
     {
-        return KdlWriter.Write(this, options);
+        return KuddleWriter.Write(this, options);
     }
 
     public override string ToString()
     {
-        return KdlWriter.Write(this);
+        return KuddleWriter.Write(this);
     }
 }

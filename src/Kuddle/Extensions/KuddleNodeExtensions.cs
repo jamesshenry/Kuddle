@@ -2,7 +2,7 @@ using Kuddle.AST;
 
 namespace Kuddle.Extensions;
 
-public static class KdlNodeExtensions
+public static class KuddleNodeExtensions
 {
     extension(KdlNode node)
     {

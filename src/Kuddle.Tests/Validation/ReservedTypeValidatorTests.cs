@@ -15,7 +15,7 @@ public class ReservedTypeValidatorTests
         var doc = Parse("node 255");
 
         // Act & Assert
-        await Assert.That(() => KdlReservedTypeValidator.Validate(doc)).ThrowsNothing();
+        await Assert.That(() => KuddleReservedTypeValidator.Validate(doc)).ThrowsNothing();
     }
 
     [Test]
@@ -26,8 +26,8 @@ public class ReservedTypeValidatorTests
 
         // Act
         var exception = await Assert
-            .That(() => KdlReservedTypeValidator.Validate(doc))
-            .Throws<KdlValidationException>();
+            .That(() => KuddleReservedTypeValidator.Validate(doc))
+            .Throws<KuddleValidationException>();
 
         // Assert
         await Assert.That(exception.Errors).IsNotEmpty();
@@ -41,8 +41,8 @@ public class ReservedTypeValidatorTests
         var doc = Parse("node (u8)\"not a number\"");
 
         // Act
-        var exception = Assert.Throws<KdlValidationException>(() =>
-            KdlReservedTypeValidator.Validate(doc)
+        var exception = Assert.Throws<KuddleValidationException>(() =>
+            KuddleReservedTypeValidator.Validate(doc)
         );
 
         // Assert
@@ -56,8 +56,8 @@ public class ReservedTypeValidatorTests
         var doc = Parse("node (uuid)\"im-not-a-uuid\"");
 
         // Act
-        var exception = Assert.Throws<KdlValidationException>(() =>
-            KdlReservedTypeValidator.Validate(doc)
+        var exception = Assert.Throws<KuddleValidationException>(() =>
+            KuddleReservedTypeValidator.Validate(doc)
         );
 
         // Assert
@@ -71,7 +71,7 @@ public class ReservedTypeValidatorTests
         var doc = Parse("node (u8)123");
 
         // Act & Assert
-        await Assert.That(() => KdlReservedTypeValidator.Validate(doc)).ThrowsNothing();
+        await Assert.That(() => KuddleReservedTypeValidator.Validate(doc)).ThrowsNothing();
     }
 
     private static KdlDocument Parse(string input)

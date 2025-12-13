@@ -4,7 +4,7 @@ using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Serialization;
 
-public class KdlWriterTests
+public class KuddleWriterTests
 {
     [Test]
     public async Task Write_SimpleNode_FormatsCorrectly()
@@ -12,7 +12,7 @@ public class KdlWriterTests
         var kdl = "node 1 2 key=\"val\"";
         var doc = KuddleReader.Parse(kdl);
 
-        var output = KdlWriter.Write(doc, KuddleWriterOptions.Default);
+        var output = KuddleWriter.Write(doc, KuddleWriterOptions.Default);
 
         await Assert.That(output.Trim()).IsEqualTo("node 1 2 key=\"val\"");
     }
@@ -23,7 +23,7 @@ public class KdlWriterTests
         var kdl = "parent { child; }";
         var doc = KuddleReader.Parse(kdl);
 
-        var output = KdlWriter.Write(doc);
+        var output = KuddleWriter.Write(doc);
 
         var expected = @"parent {
     child;
@@ -38,7 +38,7 @@ public class KdlWriterTests
         var kdl = "node \"line1\\nline2\"";
         var doc = KuddleReader.Parse(kdl);
 
-        var output = KdlWriter.Write(doc);
+        var output = KuddleWriter.Write(doc);
 
         await Assert.That(output.Trim()).IsEqualTo("node \"line1\\nline2\"");
     }
@@ -51,7 +51,7 @@ public class KdlWriterTests
             Nodes = [new KdlNode(new KdlString("node name", StringKind.Quoted))],
         };
 
-        var output = KdlWriter.Write(doc);
+        var output = KuddleWriter.Write(doc);
 
         await Assert.That(output.Trim()).IsEqualTo("\"node name\"");
     }

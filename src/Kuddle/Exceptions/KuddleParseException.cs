@@ -3,24 +3,24 @@ using System;
 namespace Kuddle.Exceptions;
 
 [Serializable]
-public class KdlParseException : Exception
+public class KuddleParseException : Exception
 {
     private readonly Exception? _ex = default;
 
-    public KdlParseException() { }
+    public KuddleParseException() { }
 
-    public KdlParseException(Exception ex)
+    public KuddleParseException(Exception ex)
     {
         _ex = ex;
     }
 
-    public KdlParseException(string? message)
+    public KuddleParseException(string? message)
         : base(message) { }
 
-    public KdlParseException(string? message, Exception? innerException)
+    public KuddleParseException(string? message, Exception? innerException)
         : base(message, innerException) { }
 
-    public KdlParseException(string? message, int? column, int? line, int? offset)
+    public KuddleParseException(string? message, int? column, int? line, int? offset)
         : this(message)
     {
         Column = column;

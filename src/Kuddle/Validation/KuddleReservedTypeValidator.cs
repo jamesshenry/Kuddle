@@ -9,7 +9,7 @@ using Kuddle.Exceptions;
 
 namespace Kuddle.Validation;
 
-public static class KdlReservedTypeValidator
+public static class KuddleReservedTypeValidator
 {
     private static readonly HashSet<string> ReservedTypes =
     [
@@ -43,7 +43,7 @@ public static class KdlReservedTypeValidator
 
     public static void Validate(KdlDocument doc)
     {
-        var errors = new List<KdlValidationError>();
+        var errors = new List<KuddleValidationError>();
 
         foreach (var node in doc.Nodes)
         {
@@ -52,11 +52,11 @@ public static class KdlReservedTypeValidator
 
         if (errors.Count > 0)
         {
-            throw new KdlValidationException(errors);
+            throw new KuddleValidationException(errors);
         }
     }
 
-    private static void ValidateNode(KdlNode node, List<KdlValidationError> errors)
+    private static void ValidateNode(KdlNode node, List<KuddleValidationError> errors)
     {
         foreach (var entry in node.Entries)
         {
@@ -79,7 +79,7 @@ public static class KdlReservedTypeValidator
         }
     }
 
-    private static void ValidateValue(KdlValue val, List<KdlValidationError> errors)
+    private static void ValidateValue(KdlValue val, List<KuddleValidationError> errors)
     {
         if (val.TypeAnnotation == null)
             return;
@@ -169,12 +169,12 @@ public static class KdlReservedTypeValidator
         }
         catch (Exception ex) when (ex.Message.StartsWith("Expected a"))
         {
-            errors.Add(new KdlValidationError(ex.Message, val));
+            errors.Add(new KuddleValidationError(ex.Message, val));
         }
         catch (Exception)
         {
             errors.Add(
-                new KdlValidationError($"Value '{val}' is not a valid '{val.TypeAnnotation}'.", val)
+                new KuddleValidationError($"Value '{val}' is not a valid '{val.TypeAnnotation}'.", val)
             );
         }
     }

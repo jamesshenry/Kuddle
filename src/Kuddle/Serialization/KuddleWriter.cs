@@ -5,20 +5,20 @@ using Kuddle.Extensions;
 
 namespace Kuddle.Serialization;
 
-public class KdlWriter
+public class KuddleWriter
 {
     private readonly KuddleWriterOptions _options;
     private readonly StringBuilder _sb = new();
     private int _depth = 0;
 
-    public KdlWriter(KuddleWriterOptions? options = null)
+    public KuddleWriter(KuddleWriterOptions? options = null)
     {
         _options ??= options ?? KuddleWriterOptions.Default;
     }
 
     public static string Write(KdlDocument document, KuddleWriterOptions? options = null)
     {
-        var writer = new KdlWriter(options);
+        var writer = new KuddleWriter(options);
         writer.WriteDocument(document);
         return writer._sb.ToString();
     }

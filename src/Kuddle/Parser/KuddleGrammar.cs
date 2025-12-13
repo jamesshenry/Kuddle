@@ -11,7 +11,7 @@ using static Parlot.Fluent.Parsers;
 
 namespace Kuddle.Parser;
 
-public static class KdlGrammar
+public static class KuddleGrammar
 {
     internal static readonly Parser<KdlDocument> Document;
 
@@ -68,7 +68,7 @@ public static class KdlGrammar
         IReadOnlyList<KdlNode>
     >();
 
-    static KdlGrammar()
+    static KuddleGrammar()
     {
         var nodeSpace = Deferred<TextSpan>();
 

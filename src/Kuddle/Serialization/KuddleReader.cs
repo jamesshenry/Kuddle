@@ -11,7 +11,7 @@ namespace Kuddle;
 
 public static class KuddleReader
 {
-    private static readonly Parser<KdlDocument> _parser = KdlGrammar.Document.Compile();
+    private static readonly Parser<KdlDocument> _parser = KuddleGrammar.Document.Compile();
 
     /// <summary>
     /// Parses a KDL string into a KdlDocument AST.
@@ -25,19 +25,19 @@ public static class KuddleReader
         {
             if (error != null)
             {
-                throw new KdlParseException(
+                throw new KuddleParseException(
                     error.Message,
                     error.Position.Column,
                     error.Position.Line,
                     error.Position.Offset
                 );
             }
-            throw new KdlParseException("Parsing failed unexpectedly.");
+            throw new KuddleParseException("Parsing failed unexpectedly.");
         }
 
         if (options.ValidateReservedTypes)
         {
-            KdlReservedTypeValidator.Validate(doc);
+            KuddleReservedTypeValidator.Validate(doc);
         }
 
         return doc;

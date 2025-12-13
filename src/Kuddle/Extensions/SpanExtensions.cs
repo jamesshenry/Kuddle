@@ -27,7 +27,6 @@ public static class SpanExtensions
 
                 span = span.Slice(start);
 
-                // .NET 7+ optimized skip
                 int length = span.IndexOfAnyExcept(target);
                 if (length < 0)
                     length = span.Length;

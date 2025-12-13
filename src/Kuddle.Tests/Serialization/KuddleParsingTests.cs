@@ -2,14 +2,14 @@ using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Serialization;
 
-public class KdlParsingTests
+public class KuddleParsingTests
 {
     readonly KuddleWriterOptions _options = new KuddleWriterOptions() with { RoundTrip = false };
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.BlockCommentTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BlockCommentTestData)
     )]
     public async Task TestBlockComment(ParsingTestData testData)
     {
@@ -30,8 +30,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.EsclineTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.EsclineTestData)
     )]
     public async Task TestEscline(ParsingTestData testData)
     {
@@ -52,8 +52,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.MultilineRawStringTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.MultilineRawStringTestData)
     )]
     public async Task TestMultilineRawString(ParsingTestData testData)
     {
@@ -74,8 +74,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.MultilineStringTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.MultilineStringTestData)
     )]
     public async Task TestMultilineString(ParsingTestData testData)
     {
@@ -95,7 +95,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.ArgTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.ArgTestData))]
     public async Task TestArg(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -115,8 +115,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.BareIdentTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BareIdentTestData)
     )]
     public async Task TestBareIdent(ParsingTestData testData)
     {
@@ -137,8 +137,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.BinaryTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BinaryTestData)
     )]
     public async Task TestBinary(ParsingTestData testData)
     {
@@ -158,7 +158,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.BlankTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.BlankTestData))]
     public async Task TestBlank(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -178,8 +178,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.BooleanTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BooleanTestData)
     )]
     public async Task TestBoolean(ParsingTestData testData)
     {
@@ -199,7 +199,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.BomTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.BomTestData))]
     public async Task TestBom(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -219,8 +219,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.CommentTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.CommentTestData)
     )]
     public async Task TestComment(ParsingTestData testData)
     {
@@ -241,8 +241,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.CommentedTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.CommentedTestData)
     )]
     public async Task TestCommented(ParsingTestData testData)
     {
@@ -262,7 +262,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.EmptyTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EmptyTestData))]
     public async Task TestEmpty(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -281,7 +281,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.EscTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EscTestData))]
     public async Task TestEsc(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -300,7 +300,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.FalseTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.FalseTestData))]
     public async Task TestFalse(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -320,8 +320,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.IllegalTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.IllegalTestData)
     )]
     public async Task TestIllegal(ParsingTestData testData)
     {
@@ -342,8 +342,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.BareEmojiTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BareEmojiTestData)
     )]
     public async Task TestBareEmoji(ParsingTestData testData)
     {
@@ -363,7 +363,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.AllTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.AllTestData))]
     public async Task TestAll(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -383,8 +383,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.AsteriskTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.AsteriskTestData)
     )]
     public async Task TestAsterisk(ParsingTestData testData)
     {
@@ -405,8 +405,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.BracesTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BracesTestData)
     )]
     public async Task TestBraces(ParsingTestData testData)
     {
@@ -427,8 +427,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.ChevronsTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.ChevronsTestData)
     )]
     public async Task TestChevrons(ParsingTestData testData)
     {
@@ -448,7 +448,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.CommaTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.CommaTestData))]
     public async Task TestComma(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -467,7 +467,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.CrlfTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.CrlfTestData))]
     public async Task TestCrlf(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -486,7 +486,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.DashTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.DashTestData))]
     public async Task TestDash(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -505,7 +505,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.DotTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.DotTestData))]
     public async Task TestDot(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -524,7 +524,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.EmojiTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EmojiTestData))]
     public async Task TestEmoji(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -543,7 +543,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.EofTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EofTestData))]
     public async Task TestEof(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -562,7 +562,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.ErrTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.ErrTestData))]
     public async Task TestErr(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -582,8 +582,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.EscapedTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.EscapedTestData)
     )]
     public async Task TestEscaped(ParsingTestData testData)
     {
@@ -603,7 +603,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.HexTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.HexTestData))]
     public async Task TestHex(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -623,8 +623,8 @@ public class KdlParsingTests
 
     [Test]
     [MethodDataSource(
-        typeof(ParsingTestDataSources),
-        nameof(ParsingTestDataSources.InitialTestData)
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.InitialTestData)
     )]
     public async Task TestInitial(ParsingTestData testData)
     {
@@ -644,7 +644,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.IntTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.IntTestData))]
     public async Task TestInt(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -663,7 +663,7 @@ public class KdlParsingTests
     }
 
     [Test]
-    [MethodDataSource(typeof(ParsingTestDataSources), nameof(ParsingTestDataSources.JustTestData))]
+    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.JustTestData))]
     public async Task TestJust(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
@@ -684,7 +684,7 @@ public class KdlParsingTests
 
 public record ParsingTestData(string InputFile, string ExpectedFile);
 
-public static class ParsingTestDataSources
+public static class KuddleParsingTestDataSources
 {
     public static IEnumerable<Func<ParsingTestData>> ArgTestData() => GetTestData("arg");
 
