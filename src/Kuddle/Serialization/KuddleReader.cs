@@ -16,6 +16,10 @@ public static class KuddleReader
     /// <summary>
     /// Parses a KDL string into a KdlDocument AST.
     /// </summary>
+    /// <param name="text"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    /// <exception cref="KuddleParseException"></exception>
     public static KdlDocument Parse(string text, KuddleReaderOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -43,16 +47,24 @@ public static class KuddleReader
         return doc;
     }
 
-    /// <summary>
-    /// Reads a stream assuming UTF-8 encoding.
-    /// </summary>
-    public static async Task<KdlDocument> ParseAsync(
-        Stream stream,
+    // /// <summary>
+    // /// Reads a stream assuming UTF-8 encoding.
+    // /// </summary>
+    // public static async Task<KdlDocument> ReadAsync(
+    //     Stream stream,
+    //     KuddleReaderOptions? options = null
+    // )
+    // {
+    //     using var reader = new StreamReader(stream);
+    //     var text = await reader.ReadToEndAsync();
+    //     return await ReadASync(text, options);
+    // }
+
+    public static async Task<KdlDocument> ReadAsync(
+        string text,
         KuddleReaderOptions? options = null
     )
     {
-        using var reader = new StreamReader(stream);
-        var text = await reader.ReadToEndAsync();
         return Parse(text, options);
     }
 }
