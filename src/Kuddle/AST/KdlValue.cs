@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 
 namespace Kuddle.AST;
 
@@ -23,8 +24,13 @@ public abstract record KdlValue : KdlObject
     }
 
     /// <summary>Creates a KdlString from a string value.</summary>
-    public static KdlString From(string value, StringKind stringKind = StringKind.Quoted)
+    public static KdlString From(string value, StringKind stringKind = StringKind.Bare)
     {
+        foreach (char c in value)
+        {
+            if (char.IsWhiteSpace(c))
+                stringKind = StringKind.Quoted;
+        }
         return new KdlString(value, stringKind);
     }
 

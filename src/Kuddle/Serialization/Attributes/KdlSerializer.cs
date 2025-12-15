@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Kuddle.AST;
 using Kuddle.Extensions;
@@ -131,19 +129,6 @@ public static class KdlSerializer
                 }
             }
         }
-        // var kdlChildrenProps = props.Where(p =>
-        //     p.GetCustomAttribute<KdlChildrenAttribute>() is not null
-        // );
-        // foreach (var childNodeGroup in node.Children?.Nodes.GroupBy(n => n.Name) ?? [])
-        // {
-        //     foreach (var prop in kdlChildrenProps)
-        //     {
-        //         var attr = prop.GetCustomAttribute<KdlChildrenAttribute>();
-        //         Debug.WriteLine(attr!.ChildNodeName);
-        //         var nodeName = attr.ChildNodeName ?? prop.Name.ToLowerInvariant();
-        //         SetCollectionPropValue(prop, instance, childNodeGroup);
-        //     }
-        // }
     }
 
     private static void SetCollectionPropValue(
@@ -216,7 +201,7 @@ public static class KdlSerializer
 
     private static void SetPropValue(PropertyInfo prop, object instance, KdlValue kdlValue)
     {
-        if (!TryConvertKdlValue(kdlValue, prop.PropertyType, out var result))
+        if (!TryConvertFromKdlValue(kdlValue, prop.PropertyType, out var result))
         {
             throw new KuddleSerializationException(
                 $"Cannot convert KDL value to property {prop.Name} ({prop.PropertyType})"
@@ -226,7 +211,11 @@ public static class KdlSerializer
         prop.SetValue(instance, result);
     }
 
-    private static bool TryConvertKdlValue(KdlValue kdlValue, Type targetType, out object? result)
+    private static bool TryConvertFromKdlValue(
+        KdlValue kdlValue,
+        Type targetType,
+        out object? result
+    )
     {
         result = null;
         if (kdlValue is KdlNull)
@@ -311,46 +300,87 @@ public static class KdlSerializer
         return KuddleWriter.Write(doc);
     }
 
-    private static KdlNode SerializeNode<T>(T? original)
+    private static KdlNode SerializeNode(object? instance, string? nodeName = null)
     {
-        var type = typeof(T);
-        var nodeName =
+        var type = instance?.GetType() ?? throw new ArgumentNullException();
+        nodeName ??=
             type.GetCustomAttribute<KdlNodeAttribute>()?.Name ?? type.Name.ToLowerInvariant();
 
-        var node = new KdlNode(KdlValue.From(nodeName)){ };
-
-        foreach (var prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        var entries = new List<KdlEntry>();
+        foreach (var argProp in type.GetKdlArgProps())
         {
-            var argAttr = prop.GetCustomAttribute<KdlArgumentAttribute>();
-            if (argAttr is not null)
-            {
-                if (prop.PropertyType.IsComplexType)
-                    throw new KuddleSerializationException(
-                        "Kdl arguments should be simple scalar values"
-                    );
+            var value = argProp.Item1.GetValue(instance);
+
+            if (!TryConvertToKdlValue(value, out var kdlValue))
                 continue;
 
-            }
-
-            var propAttr = prop.GetCustomAttribute<KdlPropertyAttribute>();
-            if (propAttr is not null)
-            {
-                var propKey = propAttr.Key ?? prop.Name.ToLowerInvariant();
-                var kdlProp = node.Prop(propKey);
-
-                if (kdlProp is null)
-                    continue;
-            }
-            var childAttr = prop.GetCustomAttribute<KdlChildrenAttribute>();
+            var arg = new KdlArgument(kdlValue);
+            entries.Add(arg);
         }
-        return node;
+
+        var propProps = type.GetKdlPropProps();
+
+        foreach (var (prop, kdlAttr) in propProps)
+        {
+            var key = kdlAttr.Key ?? prop.Name.ToLowerInvariant();
+            if (!TryConvertToKdlValue(prop.GetValue(instance), out var value))
+                continue;
+
+            var kdlProp = new KdlProperty(KdlValue.From(key), value);
+            entries.Add(kdlProp);
+        }
+
+        var childProps = type.GetKdlChildProps();
+        var block = new KdlBlock();
+        foreach (var (prop, childAttr) in childProps)
+        {
+            var childNodeName = childAttr.ChildNodeName ?? prop.Name.ToLowerInvariant();
+            if (prop.PropertyType.IsDictionary)
+                throw new NotSupportedException();
+
+            if (prop.PropertyType.IsIEnumerable)
+            {
+                var col = prop.GetValue(instance);
+                var nodes = SerializeCollection(col as IEnumerable);
+                block.Nodes.AddRange(nodes);
+            }
+        }
+        return new KdlNode(KdlValue.From(nodeName))
+        {
+            Entries = entries,
+            Children = block.Nodes.Count > 0 ? block : null,
+        };
     }
 
-    private static IEnumerable<KdlNode> SerializeCollection<T>(T? original)
-        where T : IEnumerable
+    private static bool TryConvertToKdlValue(object? input, out KdlValue kdlValue)
+    {
+        kdlValue = KdlValue.Null;
+        if (input is null)
+            return true;
+
+        var type = input.GetType();
+        if (type.IsComplexType)
+            throw new KuddleSerializationException("Kdl arguments should be simple scalar values");
+
+        kdlValue = input switch
+        {
+            string s => KdlValue.From(s),
+            int i => KdlValue.From(i),
+            double d => KdlValue.From(d),
+            long l => KdlValue.From(l),
+            decimal m => KdlValue.From(m),
+            bool b => KdlValue.From(b),
+            Guid uuid => KdlValue.From(uuid),
+            DateTimeOffset dto => KdlValue.From(dto),
+            _ => null!,
+        };
+        return kdlValue is not null;
+    }
+
+    private static IEnumerable<KdlNode> SerializeCollection(IEnumerable? original)
     {
         var nodes = new List<KdlNode>();
-        foreach (var item in (original as IEnumerable)!)
+        foreach (var item in original!)
         {
             var node = SerializeNode(item);
             nodes.Add(node);
@@ -389,6 +419,40 @@ internal static class TypeExtensions
             type != typeof(string)
             && !type.IsDictionary
             && type.IsAssignableTo(typeof(IEnumerable));
+
+        internal (PropertyInfo, KdlArgumentAttribute)[] GetKdlArgProps() =>
+            type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(p => new
+                {
+                    Property = p,
+                    ArgAttr = p.GetCustomAttribute<KdlArgumentAttribute>(),
+                })
+                .Where(x => x.ArgAttr is not null)
+                .OrderBy(x => x.ArgAttr!.Index)
+                .Select(x => (x.Property, x.ArgAttr!))
+                .ToArray();
+
+        internal (PropertyInfo, KdlPropertyAttribute)[] GetKdlPropProps() =>
+            type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(p => new
+                {
+                    Property = p,
+                    PropAttr = p.GetCustomAttribute<KdlPropertyAttribute>(),
+                })
+                .Where(x => x.PropAttr is not null)
+                .Select(x => (x.Property, x.PropAttr!))
+                .ToArray();
+
+        internal (PropertyInfo, KdlChildrenAttribute)[] GetKdlChildProps() =>
+            type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(p => new
+                {
+                    Property = p,
+                    ChildAttr = p.GetCustomAttribute<KdlChildrenAttribute>(),
+                })
+                .Where(x => x.ChildAttr is not null)
+                .Select(x => (x.Property, x.ChildAttr!))
+                .ToArray();
 
         public bool IsNullable() => Nullable.GetUnderlyingType(type) != null;
     }

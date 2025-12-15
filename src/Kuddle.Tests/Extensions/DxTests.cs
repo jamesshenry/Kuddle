@@ -10,7 +10,7 @@ public class DxTests
     public async Task TryGet_Int_Success()
     {
         var doc = KuddleReader.Parse("node 123");
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetInt(out int result);
 
@@ -22,7 +22,7 @@ public class DxTests
     public async Task TryGet_Int_Failure_WrongType()
     {
         var doc = KuddleReader.Parse("node \"hello\"");
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetInt(out int result);
 
@@ -35,7 +35,7 @@ public class DxTests
     {
         // Value larger than Int32
         var doc = KuddleReader.Parse("node 9999999999");
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetInt(out int result);
 
@@ -49,7 +49,7 @@ public class DxTests
         var node = doc.Nodes[0];
 
         // Combine finding the prop and converting it
-        var propVal = node.Prop("port");
+        var propVal = node.Prop("port")!;
 
         if (propVal.TryGetInt(out int port))
         {
@@ -67,7 +67,7 @@ public class DxTests
         var doc = KuddleReader.Parse("server host=\"localhost\"");
         var node = doc.Nodes[0];
 
-        var propVal = node.Prop("port"); // Returns KdlNull
+        var propVal = node.Prop("port")!; // Returns KdlNull
 
         bool success = propVal.TryGetInt(out _);
         await Assert.That(success).IsFalse();
@@ -79,7 +79,7 @@ public class DxTests
         var expected = Guid.NewGuid();
         var kdl = $"node \"{expected}\""; // e.g. "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
         var doc = KuddleReader.Parse(kdl);
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetUuid(out var result);
 
@@ -91,7 +91,7 @@ public class DxTests
     public async Task TryGetUuid_InvalidString_ReturnsFalse()
     {
         var doc = KuddleReader.Parse("node \"not-a-guid\"");
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetUuid(out var result);
 
@@ -102,11 +102,10 @@ public class DxTests
     [Test]
     public async Task TryGetUuid_FromAnnotatedValue_ReturnsTrue()
     {
-        // KDL 2.0 Spec: (uuid)"..."
         var expected = Guid.NewGuid();
         var kdl = $"node (uuid)\"{expected}\"";
         var doc = KuddleReader.Parse(kdl);
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetUuid(out var result);
 
@@ -121,7 +120,7 @@ public class DxTests
     public async Task Factory_FromGuid_CreatesAnnotatedString()
     {
         var guid = Guid.NewGuid();
-        var val = KdlValue.From(guid);
+        var val = KdlValue.From(guid)!;
 
         // 1. Check Runtime Type
         await Assert.That(val).IsOfType(typeof(KdlString));
@@ -140,7 +139,7 @@ public class DxTests
         // Round-trip format "O" is standard for KDL/JSON
         var kdl = $"node \"{now:O}\"";
         var doc = KuddleReader.Parse(kdl);
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetDateTime(out var result);
 
@@ -155,7 +154,7 @@ public class DxTests
         // YYYY-MM-DD
         var kdl = "node \"2023-10-25\"";
         var doc = KuddleReader.Parse(kdl);
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetDateTime(out var result);
 
@@ -169,7 +168,7 @@ public class DxTests
     public async Task TryGetDateTime_InvalidString_ReturnsFalse()
     {
         var doc = KuddleReader.Parse("node \"tomorrow\"");
-        var val = doc.Nodes[0].Arg(0);
+        var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetDateTime(out var result);
 
@@ -181,7 +180,7 @@ public class DxTests
     public async Task Factory_FromDateTime_CreatesAnnotatedString()
     {
         var date = new DateTimeOffset(2023, 12, 25, 10, 0, 0, TimeSpan.Zero);
-        var val = KdlValue.From(date);
+        var val = KdlValue.From(date)!;
 
         // 1. Check Runtime Type
         await Assert.That(val).IsOfType(typeof(KdlString));
