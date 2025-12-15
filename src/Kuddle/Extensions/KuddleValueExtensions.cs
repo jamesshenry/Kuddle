@@ -69,6 +69,24 @@ public static class KuddleValueExtensions
             return false;
         }
 
+        public bool TryGetDecimal(out decimal result)
+        {
+            result = 0;
+            if (value is KdlNumber num)
+            {
+                try
+                {
+                    result = num.ToDecimal();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
         // --- Booleans ---
 
         public bool TryGetBool(out bool result)
