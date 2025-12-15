@@ -18,6 +18,7 @@ sealed class RawStringParser : Parser<KdlString>
         var startPos = cursor.Position;
         int currentOffset = startPos.Offset;
 
+        // Count opening hashes
         int hashCount = 0;
         while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '#')
         {
@@ -25,6 +26,7 @@ sealed class RawStringParser : Parser<KdlString>
             currentOffset++;
         }
 
+        // Count opening quotes
         int quoteCount = 0;
         while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '"')
         {
@@ -46,6 +48,7 @@ sealed class RawStringParser : Parser<KdlString>
 
         bool isMultiline = quoteCount == 3;
 
+        // Build closing delimiter: quotes followed by hashes
         int needleLength = quoteCount + hashCount;
         Span<char> needle =
             needleLength <= 256 ? stackalloc char[needleLength] : new char[needleLength];
@@ -64,21 +67,25 @@ sealed class RawStringParser : Parser<KdlString>
             );
         }
 
-        var content = remainingBuffer.Slice(0, matchIndex).ToString();
-
+        var contentSpan = remainingBuffer.Slice(0, matchIndex);
         int totalLengthParsed = (currentOffset - startPos.Offset) + matchIndex + needleLength;
-        for (int i = 0; i < totalLengthParsed; i++)
-            context.Scanner.Cursor.Advance();
 
+        // Advance cursor
+        for (int i = 0; i < totalLengthParsed; i++)
+            cursor.Advance();
+
+        string content;
         StringKind style;
 
         if (isMultiline)
         {
-            content = ProcessMultiLineRawString(content);
+            content = ProcessMultiLineRawString(contentSpan);
             style = StringKind.MultiLine | StringKind.Raw;
         }
         else
         {
+            // Raw single-line strings have no escape processing
+            content = contentSpan.ToString();
             style = StringKind.Quoted | StringKind.Raw;
         }
 
@@ -86,66 +93,151 @@ sealed class RawStringParser : Parser<KdlString>
         return true;
     }
 
-    public static string ProcessMultiLineRawString(string rawInput)
+    /// <summary>
+    /// Processes a multi-line raw string, handling newline normalization and dedentation.
+    /// Works directly with spans to minimize allocations.
+    /// </summary>
+    public static string ProcessMultiLineRawString(ReadOnlySpan<char> rawInput)
     {
-        string text = rawInput.Replace("\r\n", "\n").Replace("\r", "\n");
+        // Fast path: empty content
+        if (rawInput.IsEmpty)
+            return string.Empty;
 
-        if (!text.StartsWith('\n')) { }
+        // Check if we need newline normalization
+        bool hasCR = rawInput.Contains('\r');
 
-        int lastNewLine = text.LastIndexOf('\n');
-        string prefix = "";
-        string contentBody = text;
+        ReadOnlySpan<char> normalized;
+        string? normalizedString = null;
 
-        if (lastNewLine >= 0)
+        if (hasCR)
         {
-            prefix = text.Substring(lastNewLine + 1);
-            contentBody = text.Substring(0, lastNewLine + 1);
+            // Need to normalize - allocate once
+            normalizedString = NormalizeNewlines(rawInput);
+            normalized = normalizedString.AsSpan();
         }
         else
         {
-            prefix = text;
-            contentBody = "";
+            normalized = rawInput;
         }
 
+        // Find the last newline to extract the prefix (indentation)
+        int lastNewLine = normalized.LastIndexOf('\n');
+
+        ReadOnlySpan<char> prefix;
+        ReadOnlySpan<char> contentBody;
+
+        if (lastNewLine >= 0)
+        {
+            prefix = normalized.Slice(lastNewLine + 1);
+            contentBody = normalized.Slice(0, lastNewLine + 1);
+        }
+        else
+        {
+            prefix = normalized;
+            contentBody = ReadOnlySpan<char>.Empty;
+        }
+
+        // Validate prefix contains only whitespace
         foreach (char c in prefix)
         {
             if (c != ' ' && c != '\t')
+            {
                 throw new ParseException(
                     "Multi-line raw string closing delimiter must be on its own line, preceded only by whitespace.",
                     TextPosition.Start
                 );
+            }
         }
 
-        var sb = new System.Text.StringBuilder();
+        // If no content body, return empty
+        if (contentBody.IsEmpty)
+            return string.Empty;
+
+        // Skip leading newline
         int pos = 0;
-
-        if (contentBody.StartsWith('\n'))
-        {
+        if (contentBody[0] == '\n')
             pos = 1;
+
+        // Fast path: no prefix means no dedentation needed
+        if (prefix.IsEmpty)
+        {
+            var body = contentBody.Slice(pos);
+            // Remove trailing newline if present
+            if (body.Length > 0 && body[^1] == '\n')
+                body = body.Slice(0, body.Length - 1);
+            return body.ToString();
         }
+
+        // Need to process with dedentation
+        return BuildDedentedString(contentBody, pos, prefix);
+    }
+
+    private static string NormalizeNewlines(ReadOnlySpan<char> input)
+    {
+        // Count output size to avoid StringBuilder resizing
+        int outputLength = 0;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '\r')
+            {
+                outputLength++;
+                if (i + 1 < input.Length && input[i + 1] == '\n')
+                    i++;
+            }
+            else
+            {
+                outputLength++;
+            }
+        }
+
+        return string.Create(
+            outputLength,
+            input.ToString(),
+            static (span, inputStr) =>
+            {
+                int writePos = 0;
+                for (int i = 0; i < inputStr.Length; i++)
+                {
+                    if (inputStr[i] == '\r')
+                    {
+                        span[writePos++] = '\n';
+                        if (i + 1 < inputStr.Length && inputStr[i + 1] == '\n')
+                            i++;
+                    }
+                    else
+                    {
+                        span[writePos++] = inputStr[i];
+                    }
+                }
+            }
+        );
+    }
+
+    private static string BuildDedentedString(
+        ReadOnlySpan<char> contentBody,
+        int startPos,
+        ReadOnlySpan<char> prefix
+    )
+    {
+        // First pass: calculate output length and validate
+        int outputLength = 0;
+        int pos = startPos;
 
         while (pos < contentBody.Length)
         {
-            int nextNewLine = contentBody.IndexOf('\n', pos);
-            if (nextNewLine == -1)
+            int nextNewLine = contentBody.Slice(pos).IndexOf('\n');
+            if (nextNewLine < 0)
                 break;
 
-            int lineLength = (nextNewLine + 1) - pos;
-            ReadOnlySpan<char> line = contentBody.AsSpan(pos, lineLength);
+            nextNewLine += pos;
+            int lineLength = nextNewLine + 1 - pos;
+            var line = contentBody.Slice(pos, lineLength);
 
-            bool isWhitespaceOnly = true;
-            for (int i = 0; i < line.Length - 1; i++)
-            {
-                if (!char.IsWhiteSpace(line[i]))
-                {
-                    isWhitespaceOnly = false;
-                    break;
-                }
-            }
+            bool isWhitespaceOnly = IsWhitespaceOnlyLine(line);
 
             if (isWhitespaceOnly)
             {
-                sb.Append('\n');
+                outputLength++;
             }
             else
             {
@@ -156,20 +248,78 @@ sealed class RawStringParser : Parser<KdlString>
                         TextPosition.Start
                     );
                 }
-
-                sb.Append(line.Slice(prefix.Length));
+                outputLength += line.Length - prefix.Length;
             }
 
             pos = nextNewLine + 1;
         }
 
-        string result = sb.ToString();
+        // Remove trailing newline
+        if (outputLength > 0)
+            outputLength--;
 
-        if (result.EndsWith('\n'))
+        if (outputLength <= 0)
+            return string.Empty;
+
+        // Second pass: build the string
+        string prefixStr = prefix.ToString();
+        string contentStr = contentBody.ToString();
+
+        return string.Create(
+            outputLength,
+            (contentStr, startPos, prefixStr),
+            static (span, state) =>
+            {
+                var (content, startIdx, prefixS) = state;
+                int writePos = 0;
+                int pos = startIdx;
+
+                while (pos < content.Length && writePos < span.Length)
+                {
+                    int nextNewLine = content.IndexOf('\n', pos);
+                    if (nextNewLine < 0)
+                        break;
+
+                    int lineLength = nextNewLine + 1 - pos;
+                    var line = content.AsSpan(pos, lineLength);
+
+                    bool isWhitespaceOnly = true;
+                    for (int i = 0; i < line.Length - 1; i++)
+                    {
+                        if (!char.IsWhiteSpace(line[i]))
+                        {
+                            isWhitespaceOnly = false;
+                            break;
+                        }
+                    }
+
+                    if (isWhitespaceOnly)
+                    {
+                        if (writePos < span.Length)
+                            span[writePos++] = '\n';
+                    }
+                    else
+                    {
+                        var dedentedLine = line.Slice(prefixS.Length);
+                        int copyLen = Math.Min(dedentedLine.Length, span.Length - writePos);
+                        dedentedLine.Slice(0, copyLen).CopyTo(span.Slice(writePos));
+                        writePos += copyLen;
+                    }
+
+                    pos = nextNewLine + 1;
+                }
+            }
+        );
+    }
+
+    private static bool IsWhitespaceOnlyLine(ReadOnlySpan<char> line)
+    {
+        // Check all chars except the trailing newline
+        for (int i = 0; i < line.Length - 1; i++)
         {
-            result = result.Substring(0, result.Length - 1);
+            if (!char.IsWhiteSpace(line[i]))
+                return false;
         }
-
-        return result;
+        return true;
     }
 }

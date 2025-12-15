@@ -15,6 +15,7 @@
     <PackageReference Include="Parlot" Version="1.5.6" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Kuddle.Benchmarks" />
     <InternalsVisibleTo Include="Kuddle.Tests" />
   </ItemGroup>
 </Project>

@@ -146,12 +146,36 @@ public static class KuddleGrammar
         var singleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
             {
-                var sb = new StringBuilder();
-                foreach (var item in x)
-                {
-                    sb.Append(item.Span);
-                }
-                return new TextSpan(sb.ToString());
+                // Fast path: no characters means empty string
+                if (x.Count == 0)
+                    return new TextSpan(string.Empty);
+
+                // Fast path: single span can be returned directly
+                if (x.Count == 1)
+                    return new TextSpan(x[0].Span.ToString());
+
+                // Calculate total length to avoid StringBuilder resizing
+                int totalLength = 0;
+                for (int i = 0; i < x.Count; i++)
+                    totalLength += x[i].Length;
+
+                // Use string.Create for efficient concatenation
+                return new TextSpan(
+                    string.Create(
+                        totalLength,
+                        x,
+                        static (span, items) =>
+                        {
+                            int pos = 0;
+                            for (int i = 0; i < items.Count; i++)
+                            {
+                                var itemSpan = items[i].Span;
+                                itemSpan.CopyTo(span.Slice(pos));
+                                pos += itemSpan.Length;
+                            }
+                        }
+                    )
+                );
             });
         MultiLineQuoted = new MultiLineStringParser().Debug("MultiLineQuoted");
         SingleLineQuoted = Between(
@@ -230,7 +254,8 @@ public static class KuddleGrammar
             .Then(
                 (context, span) =>
                 {
-                    return ReservedKeywords.Contains(span.ToString())
+                    // Use span-based comparison to avoid allocation for valid identifiers
+                    return IsReservedKeyword(span.Span)
                         ? throw new ParseException(
                             $"The keyword '{span}' cannot be used as an unquoted identifier. Wrap it in quotes: \"{span}\".",
                             context.Scanner.Cursor.Position
@@ -432,12 +457,40 @@ public static class KuddleGrammar
             {
                 if (result.Item1.HasValue)
                     return null;
+                // Filter skipped entries - use single pass allocation
+                var entries = result.Item4;
+                var hasSkipped = false;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is KdlSkippedEntry)
+                    {
+                        hasSkipped = true;
+                        break;
+                    }
+                }
+                List<KdlEntry> filteredEntries;
+                if (hasSkipped)
+                {
+                    filteredEntries = new List<KdlEntry>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                    {
+                        if (entries[i] is not KdlSkippedEntry)
+                            filteredEntries.Add(entries[i]);
+                    }
+                }
+                else
+                {
+                    // No skipped entries - just copy to list
+                    filteredEntries = new List<KdlEntry>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                        filteredEntries.Add(entries[i]);
+                }
                 return new KdlNode(result.Item3)
                 {
-                    Entries = result.Item4.Where(e => e is not KdlSkippedEntry).ToList(),
+                    Entries = filteredEntries,
                     Children = result.Item5.FirstOrDefault(b => b != null),
                     TerminatedBySemicolon = false,
-                    TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.ToString() : null,
+                    TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.Value : null,
                 };
             })
             .Debug("BaseNode");
@@ -461,8 +514,32 @@ public static class KuddleGrammar
             )
             .AndSkip(ZeroOrMany(LineSpace))
             .Then(list =>
-                list.Where(x => x != null).Select(n => n!).ToList() as IReadOnlyList<KdlNode>
-            );
+            {
+                // Single-pass filter to avoid Where().Select().ToList() triple allocation
+                List<KdlNode>? filtered = null;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var node = list[i];
+                    if (node is null)
+                    {
+                        // First null found - need to build filtered list
+                        if (filtered is null)
+                        {
+                            filtered = new List<KdlNode>(list.Count);
+                            for (int j = 0; j < i; j++)
+                            {
+                                if (list[j] is not null)
+                                    filtered.Add(list[j]!);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        filtered?.Add(node);
+                    }
+                }
+                return (IReadOnlyList<KdlNode>)(filtered ?? list!);
+            });
 
         Document = Literals
             .Char('\uFEFF')
@@ -472,7 +549,10 @@ public static class KuddleGrammar
             .ElseError(
                 "Unconsumed content at end of file. Syntax error likely occurred before this point."
             )
-            .Then(nodes => new KdlDocument { Nodes = nodes.ToList() });
+            .Then(nodes => new KdlDocument
+            {
+                Nodes = nodes is List<KdlNode> list ? list : [.. nodes],
+            });
     }
 
     private static bool IsBinaryChar(char c) => c == '0' || c == '1';
@@ -499,13 +579,20 @@ public static class KuddleGrammar
             || c == '\uFEFF';
     }
 
-    private static readonly HashSet<string> ReservedKeywords =
-    [
-        "inf",
-        "-inf",
-        "nan",
-        "true",
-        "false",
-        "null",
-    ];
+    /// <summary>
+    /// Checks if a span matches a reserved keyword without allocating a string.
+    /// </summary>
+    private static bool IsReservedKeyword(ReadOnlySpan<char> span)
+    {
+        return span switch
+        {
+            "inf" => true,
+            "-inf" => true,
+            "nan" => true,
+            "true" => true,
+            "false" => true,
+            "null" => true,
+            _ => false,
+        };
+    }
 }
