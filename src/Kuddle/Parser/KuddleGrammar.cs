@@ -137,10 +137,22 @@ public static class KuddleGrammar
                     )
                     .Then(s => new TextSpan(s))
             );
+        // 1. Define a parser for Surrogate Pairs (valid emojis/symbols outside BMP)
+        var surrogatePair = Capture(
+            Literals
+                .Pattern(char.IsHighSurrogate, 1, 1)
+                .And(Literals.Pattern(char.IsLowSurrogate, 1, 1))
+        );
 
-        var plainCharacter = Literals
-            .Pattern(c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c), 1, 1)
-            .Then((_, x) => x.Span[0] == '\r' ? new TextSpan() : x);
+        // 2. Define the standard character parser (checks for disallowed chars like lone surrogates)
+        var singleChar = Literals.Pattern(
+            c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c),
+            1,
+            1
+        );
+        var plainCharacter = OneOf(surrogatePair, singleChar)
+            .Then((_, x) => x.Span[0] == '\r' ? new TextSpan() : x)
+            .Debug("plainCharacter");
         StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
 
         var singleLineStringBody = ZeroOrMany(StringCharacter)

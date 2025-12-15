@@ -6,17 +6,17 @@ public static class KuddleNodeExtensions
 {
     extension(KdlNode node)
     {
-        public KdlValue Prop(string key)
+        public KdlValue? Prop(string key)
         {
             for (int i = node.Entries.Count - 1; i >= 0; i--)
             {
                 if (node.Entries[i] is KdlProperty prop && prop.Key.Value == key)
                     return prop.Value;
             }
-            return KdlValue.Null;
+            return null;
         }
 
-        public KdlValue Arg(int index)
+        public KdlValue? Arg(int index)
         {
             int count = 0;
             foreach (var entry in node.Entries)
@@ -28,13 +28,17 @@ public static class KuddleNodeExtensions
                     count++;
                 }
             }
-            return KdlValue.Null;
+            return null;
         }
 
         public bool TryGetProp<T>(string key, out T result)
         {
             result = default!;
             var val = node.Prop(key);
+            if (val is null)
+            {
+                return false;
+            }
 
             if (typeof(T) == typeof(int) && val.TryGetInt(out int i))
             {
