@@ -28,14 +28,31 @@ public class TheGenerator : IIncrementalGenerator
     {
         var (compilation, list) = tuple;
 
-        var theCode = """
+        var nameList = new List<string>();
+
+        foreach (var syntax in list)
+        {
+            var symbol =
+                compilation.GetSemanticModel(syntax.SyntaxTree).GetDeclaredSymbol(syntax)
+                as INamedTypeSymbol;
+
+            nameList.Add(
+                $"""
+                "{symbol.ToDisplayString()}"
+                """
+            );
+        }
+
+        var names = string.Join(",", nameList);
+
+        var theCode = $$"""
 namespace ClassListGenerator;
 
 public static class ClassNames
 {
     public static List<string> Names = new()
     {
-        "SomeClass"
+        {{names}}
     };
 }
 """;
