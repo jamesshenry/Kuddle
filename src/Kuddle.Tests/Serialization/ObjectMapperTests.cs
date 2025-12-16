@@ -1,11 +1,10 @@
 using Kuddle.AST;
-using Kuddle.Exceptions;
 using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Serialization;
 
 /// <summary>
-/// Tests for await KdlSerializer.Deserialize<T>() and KdlSerializer.Serialize<T>()
+/// Tests for KdlSerializer.Deserialize<T>() and KdlSerializer.Serialize<T>()
 /// which map between KDL documents and strongly-typed C# objects.
 /// </summary>
 public class ObjectMapperTests
@@ -21,7 +20,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Package>(kdl);
+        var result = KdlSerializer.Deserialize<Package>(kdl);
 
         // Assert
         await Assert.That(result.Name).IsEqualTo("my-lib");
@@ -36,7 +35,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Package>(kdl);
+        var result = KdlSerializer.Deserialize<Package>(kdl);
 
         // Assert
         await Assert.That(result.Name).IsEqualTo("my-lib");
@@ -53,7 +52,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Package>(kdl);
+        var result = KdlSerializer.Deserialize<Package>(kdl);
 
         // Assert
         await Assert.That(result.Description).IsNull();
@@ -77,7 +76,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Project>(kdl);
+        var result = KdlSerializer.Deserialize<Project>(kdl);
 
         // Assert
         await Assert.That(result.Name).IsEqualTo("my-app");
@@ -101,7 +100,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Project>(kdl);
+        var result = KdlSerializer.Deserialize<Project>(kdl);
 
         // Assert
         await Assert.That(result.Dependencies).Count().IsEqualTo(2);
@@ -119,7 +118,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Project>(kdl);
+        var result = KdlSerializer.Deserialize<Project>(kdl);
 
         // Assert
         await Assert.That(result.Dependencies).IsEmpty();
@@ -139,7 +138,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Timeout).IsEqualTo(5000);
@@ -154,7 +153,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Retries).IsEqualTo(long.MaxValue);
@@ -169,7 +168,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Ratio).IsEqualTo(3.14159).Within(0.00001);
@@ -184,7 +183,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Enabled).IsTrue();
@@ -199,7 +198,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Timeout).IsEqualTo(500);
@@ -222,7 +221,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<User>(kdl);
+        var result = KdlSerializer.Deserialize<User>(kdl);
 
         // Assert
         await Assert.That(result.Username).IsEqualTo("alice");
@@ -239,7 +238,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<User>(kdl);
+        var result = KdlSerializer.Deserialize<User>(kdl);
 
         // Assert
         await Assert.That(result.CreatedAt).IsEqualTo(now);
@@ -309,7 +308,7 @@ public class ObjectMapperTests
 
         // Act
         var kdl = KdlSerializer.Serialize(original);
-        var deserialized = await KdlSerializer.Deserialize<Package>(kdl);
+        var deserialized = KdlSerializer.Deserialize<Package>(kdl);
 
         // Assert
         await Assert.That(deserialized.Name).IsEqualTo(original.Name);
@@ -344,7 +343,7 @@ public class ObjectMapperTests
 
         // Act
         var kdl = KdlSerializer.Serialize(original);
-        var deserialized = await KdlSerializer.Deserialize<Project>(kdl);
+        var deserialized = KdlSerializer.Deserialize<Project>(kdl);
 
         // Assert
         await Assert.That(deserialized.Name).IsEqualTo(original.Name);
@@ -366,7 +365,7 @@ public class ObjectMapperTests
     //         """;
 
     //     // Act
-    //     var result = await KdlSerializer.Deserialize<Resource>(kdl);
+    //     var result = KdlSerializer.Deserialize<Resource>(kdl);
 
     //     // Assert
     //     await Assert.That(result).IsOfType(typeof(FileResource));
@@ -383,7 +382,7 @@ public class ObjectMapperTests
     //         """;
 
     //     // Act
-    //     var result = await KdlSerializer.Deserialize<Resource>(kdl);
+    //     var result = KdlSerializer.Deserialize<Resource>(kdl);
 
     //     // Assert
     //     await Assert.That(result).IsOfType(typeof(UrlResource));
@@ -404,7 +403,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Package>(kdl);
+        var result = KdlSerializer.Deserialize<Package>(kdl);
 
         // Assert
         await Assert.That(result.Name).IsEqualTo("");
@@ -420,7 +419,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Package>(kdl);
+        var result = KdlSerializer.Deserialize<Package>(kdl);
 
         // Assert
         await Assert.That(result.Name).IsEqualTo("my-lib@1.0");
@@ -436,7 +435,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Timeout).IsEqualTo(-1000);
@@ -452,7 +451,7 @@ public class ObjectMapperTests
             """;
 
         // Act
-        var result = await KdlSerializer.Deserialize<Settings>(kdl);
+        var result = KdlSerializer.Deserialize<Settings>(kdl);
 
         // Assert
         await Assert.That(result.Timeout).IsEqualTo(255);
@@ -473,7 +472,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<Package>(kdl))
+            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
             .Throws<KuddleSerializationException>();
     }
 
@@ -489,7 +488,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<Package>(kdl))
+            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
             .Throws<KuddleSerializationException>();
     }
 
@@ -505,7 +504,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<Dictionary<string, Package>>(kdl))
+            .That(async () => KdlSerializer.Deserialize<Dictionary<string, Package>>(kdl))
             .Throws<KuddleSerializationException>()
             .WithMessageContaining("not supported");
     }
@@ -522,7 +521,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<List<Package>>(kdl))
+            .That(async () => KdlSerializer.Deserialize<List<Package>>(kdl))
             .Throws<KuddleSerializationException>();
     }
 
@@ -536,7 +535,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<Settings>(kdl))
+            .That(async () => KdlSerializer.Deserialize<Settings>(kdl))
             .Throws<KuddleSerializationException>();
     }
 
@@ -550,7 +549,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<Package>(kdl))
+            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
             .Throws<KuddleSerializationException>();
     }
 
@@ -564,7 +563,7 @@ public class ObjectMapperTests
 
         // Act & Assert
         await Assert
-            .That(async () => await KdlSerializer.Deserialize<string>(kdl))
+            .That(async () => KdlSerializer.Deserialize<string>(kdl))
             .Throws<KuddleSerializationException>()
             .WithMessageContaining("Cannot deserialize type");
     }

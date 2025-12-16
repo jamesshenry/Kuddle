@@ -4,7 +4,7 @@ using Kuddle.AST;
 
 namespace Kuddle.Extensions;
 
-public static class KuddleValueExtensions
+public static class KdlValueExtensions
 {
     extension(KdlValue value)
     {

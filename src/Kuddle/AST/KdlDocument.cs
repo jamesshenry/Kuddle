@@ -7,13 +7,13 @@ public sealed record KdlDocument : KdlObject
 {
     public List<KdlNode> Nodes { get; init; } = [];
 
-    public string ToString(KuddleWriterOptions? options = null)
+    public string ToString(KdlWriterOptions? options = null)
     {
-        return KuddleWriter.Write(this, options);
+        return KdlWriter.Write(this, options);
     }
 
     public override string ToString()
     {
-        return KuddleWriter.Write(this);
+        return KdlWriter.Write(this);
     }
 }

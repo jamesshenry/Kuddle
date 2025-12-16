@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
 using Kuddle.Exceptions;
 
 namespace Kuddle.Validation;
 
-public static class KuddleReservedTypeValidator
+public static class KdlReservedTypeValidator
 {
     private static readonly HashSet<string> ReservedTypes =
     [
@@ -174,7 +173,10 @@ public static class KuddleReservedTypeValidator
         catch (Exception)
         {
             errors.Add(
-                new KuddleValidationError($"Value '{val}' is not a valid '{val.TypeAnnotation}'.", val)
+                new KuddleValidationError(
+                    $"Value '{val}' is not a valid '{val.TypeAnnotation}'.",
+                    val
+                )
             );
         }
     }

@@ -33,7 +33,7 @@ public class WhiteSpaceParsersTests
     [Arguments('\u3000')]
     public async Task Ws_ParsesUnicodeSpace(char input)
     {
-        var sut = KuddleGrammar.Ws;
+        var sut = KdlGrammar.Ws;
 
         bool success = sut.TryParse(input.ToString(), out var value);
 
@@ -44,7 +44,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task Ws_ParsesMultiLineComment()
     {
-        var sut = KuddleGrammar.Ws;
+        var sut = KdlGrammar.Ws;
 
         var input = "/* comment */";
         bool success = sut.TryParse(input, out var value);
@@ -56,7 +56,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task EscLine_ParsesBackslashContinuation()
     {
-        var sut = KuddleGrammar.EscLine;
+        var sut = KdlGrammar.EscLine;
 
         var input =
             @"\
@@ -69,7 +69,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task EscLine_ParsesBackslashWithComment()
     {
-        var sut = KuddleGrammar.EscLine;
+        var sut = KdlGrammar.EscLine;
 
         var input = @"\    // comment";
         bool success = sut.TryParse(input, out var value);
@@ -81,7 +81,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task LineSpace_ParsesWhitespace()
     {
-        var sut = KuddleGrammar.LineSpace;
+        var sut = KdlGrammar.LineSpace;
 
         var input = "   ";
         bool success = sut.TryParse(input, out var value);
@@ -93,7 +93,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task LineSpace_ParsesNewLine()
     {
-        var sut = KuddleGrammar.LineSpace;
+        var sut = KdlGrammar.LineSpace;
 
         var input = "\n";
         bool success = sut.TryParse(input, out var value);
@@ -105,7 +105,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task LineSpace_ParsesComment()
     {
-        var sut = KuddleGrammar.LineSpace;
+        var sut = KdlGrammar.LineSpace;
 
         var input = "// comment";
         bool success = sut.TryParse(input, out var value);
@@ -117,7 +117,7 @@ public class WhiteSpaceParsersTests
     [Test]
     public async Task NodeSpace_ParsesSimpleWhitespace()
     {
-        var sut = KuddleGrammar.NodeSpace;
+        var sut = KdlGrammar.NodeSpace;
 
         var input = "   ";
         bool success = sut.TryParse(input, out var value);

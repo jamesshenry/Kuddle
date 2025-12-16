@@ -1,8 +1,8 @@
 namespace Kuddle.Serialization;
 
-public record KuddleWriterOptions
+public record KdlWriterOptions
 {
-    public static KuddleWriterOptions Default => new();
+    public static KdlWriterOptions Default => new();
 
     public string IndentChar { get; init; } = "    ";
     public string NewLine { get; init; } = "\n";

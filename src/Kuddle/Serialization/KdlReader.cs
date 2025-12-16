@@ -1,17 +1,15 @@
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using Kuddle.AST;
 using Kuddle.Exceptions;
 using Kuddle.Parser;
 using Kuddle.Validation;
 using Parlot.Fluent;
 
-namespace Kuddle;
+namespace Kuddle.Serialization;
 
-public static class KuddleReader
+public static class KdlReader
 {
-    private static readonly Parser<KdlDocument> _parser = KuddleGrammar.Document.Compile();
+    private static readonly Parser<KdlDocument> _parser = KdlGrammar.Document.Compile();
 
     /// <summary>
     /// Parses a KDL string into a KdlDocument AST.
@@ -20,10 +18,10 @@ public static class KuddleReader
     /// <param name="options"></param>
     /// <returns></returns>
     /// <exception cref="KuddleParseException"></exception>
-    public static KdlDocument Parse(string text, KuddleReaderOptions? options = null)
+    public static KdlDocument Read(string text, KdlReaderOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        options ??= KuddleReaderOptions.Default;
+        options ??= KdlReaderOptions.Default;
 
         if (!_parser.TryParse(text, out var doc, out var error))
         {
@@ -41,7 +39,7 @@ public static class KuddleReader
 
         if (options.ValidateReservedTypes)
         {
-            KuddleReservedTypeValidator.Validate(doc);
+            KdlReservedTypeValidator.Validate(doc);
         }
 
         return doc;
@@ -59,12 +57,4 @@ public static class KuddleReader
     //     var text = await reader.ReadToEndAsync();
     //     return await ReadASync(text, options);
     // }
-
-    public static async Task<KdlDocument> ReadAsync(
-        string text,
-        KuddleReaderOptions? options = null
-    )
-    {
-        return Parse(text, options);
-    }
 }

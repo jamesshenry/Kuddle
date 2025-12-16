@@ -64,8 +64,8 @@ public class ParserBenchmarks
         }
         _largeDocument = largeDocBuilder.ToString();
 
-        _compiledParser = KuddleGrammar.Document.Compile();
-        _nonCompiledParser = KuddleGrammar.Document;
+        _compiledParser = KdlGrammar.Document.Compile();
+        _nonCompiledParser = KdlGrammar.Document;
     }
 
     [Benchmark]

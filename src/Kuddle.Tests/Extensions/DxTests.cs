@@ -1,6 +1,7 @@
 using Kuddle.AST;
 using Kuddle.Extensions;
 using Kuddle.Parser;
+using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Extensions;
 
@@ -9,7 +10,7 @@ public class DxTests
     [Test]
     public async Task TryGet_Int_Success()
     {
-        var doc = KuddleReader.Parse("node 123");
+        var doc = KdlReader.Read("node 123");
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetInt(out int result);
@@ -21,7 +22,7 @@ public class DxTests
     [Test]
     public async Task TryGet_Int_Failure_WrongType()
     {
-        var doc = KuddleReader.Parse("node \"hello\"");
+        var doc = KdlReader.Read("node \"hello\"");
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetInt(out int result);
@@ -34,7 +35,7 @@ public class DxTests
     public async Task TryGet_Int_Failure_Overflow()
     {
         // Value larger than Int32
-        var doc = KuddleReader.Parse("node 9999999999");
+        var doc = KdlReader.Read("node 9999999999");
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetInt(out int result);
@@ -45,7 +46,7 @@ public class DxTests
     [Test]
     public async Task TryGet_Prop_Navigation_Success()
     {
-        var doc = KuddleReader.Parse("server port=8080");
+        var doc = KdlReader.Read("server port=8080");
         var node = doc.Nodes[0];
 
         // Combine finding the prop and converting it
@@ -64,7 +65,7 @@ public class DxTests
     [Test]
     public async Task TryGet_Prop_Navigation_Missing()
     {
-        var doc = KuddleReader.Parse("server host=\"localhost\"");
+        var doc = KdlReader.Read("server host=\"localhost\"");
         var node = doc.Nodes[0];
 
         var propVal = node.Prop("port")!; // Returns KdlNull
@@ -78,7 +79,7 @@ public class DxTests
     {
         var expected = Guid.NewGuid();
         var kdl = $"node \"{expected}\""; // e.g. "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetUuid(out var result);
@@ -90,7 +91,7 @@ public class DxTests
     [Test]
     public async Task TryGetUuid_InvalidString_ReturnsFalse()
     {
-        var doc = KuddleReader.Parse("node \"not-a-guid\"");
+        var doc = KdlReader.Read("node \"not-a-guid\"");
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetUuid(out var result);
@@ -104,7 +105,7 @@ public class DxTests
     {
         var expected = Guid.NewGuid();
         var kdl = $"node (uuid)\"{expected}\"";
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetUuid(out var result);
@@ -138,7 +139,7 @@ public class DxTests
         var now = DateTimeOffset.UtcNow;
         // Round-trip format "O" is standard for KDL/JSON
         var kdl = $"node \"{now:O}\"";
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetDateTime(out var result);
@@ -153,7 +154,7 @@ public class DxTests
     {
         // YYYY-MM-DD
         var kdl = "node \"2023-10-25\"";
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetDateTime(out var result);
@@ -167,7 +168,7 @@ public class DxTests
     [Test]
     public async Task TryGetDateTime_InvalidString_ReturnsFalse()
     {
-        var doc = KuddleReader.Parse("node \"tomorrow\"");
+        var doc = KdlReader.Read("node \"tomorrow\"");
         var val = doc.Nodes[0].Arg(0)!;
 
         bool success = val.TryGetDateTime(out var result);

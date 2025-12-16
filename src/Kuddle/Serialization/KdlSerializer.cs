@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using Kuddle.AST;
 using Kuddle.Extensions;
 
@@ -11,70 +10,77 @@ namespace Kuddle.Serialization;
 
 public static class KdlSerializer
 {
-    public static async Task<T> Deserialize<T>(string text, KdlSerializerOptions? options = null)
+    public static T Deserialize<T>(string text, KdlSerializerOptions? options = null)
     {
+        var document = KdlReader.Read(text);
         var t = typeof(T);
-        KdlDocument document;
-        if (t.IsDictionary)
+
+        if (t.IsNodeDefinition)
         {
-            throw new KuddleSerializationException(
-                "Deserialization to dictionaries is not supported"
-            );
-        }
-        else if (t.IsIEnumerable)
-        {
-            var genericTypeDef = t.GetGenericTypeDefinition();
-            var args = t.GetGenericArguments();
-            var listType = typeof(List<>).MakeGenericType(args);
-            var listInstance = (IList)Activator.CreateInstance(listType)!;
+            // T does not have any kdl args or properties, so should be a single root node doc
 
-            document = await KuddleReader.ReadAsync(text);
-
-            var firstName = document.Nodes.FirstOrDefault()?.Name;
-
-            foreach (var node in document.Nodes)
+            if (t.IsDictionary)
             {
-                if (node.Name != firstName)
+                throw new KuddleSerializationException(
+                    "Deserialization to dictionaries is not supported"
+                );
+            }
+            else if (t.IsIEnumerable)
+            {
+                var genericTypeDef = t.GetGenericTypeDefinition();
+                var args = t.GetGenericArguments();
+                var listType = typeof(List<>).MakeGenericType(args);
+                var listInstance = (IList)Activator.CreateInstance(listType)!;
+
+                var firstName = document.Nodes.FirstOrDefault()?.Name;
+
+                foreach (var node in document.Nodes)
                 {
-                    throw new KuddleSerializationException(
-                        "All root nodes must have the same name."
-                    );
+                    if (node.Name != firstName)
+                    {
+                        throw new KuddleSerializationException(
+                            "All root nodes must have the same name."
+                        );
+                    }
                 }
+
+                return (T)listInstance;
             }
 
-            return (T)listInstance;
-        }
+            if (!t.IsComplexType)
+            {
+                throw new KuddleSerializationException(
+                    $"Cannot deserialize type '{t.FullName}' as a complex object. "
+                        + "Ensure the type is a concrete class with a public parameterless constructor."
+                );
+            }
+            var instance = Activator.CreateInstance<T>();
 
-        if (!t.IsComplexType)
-        {
-            throw new KuddleSerializationException(
-                $"Cannot deserialize type '{t.FullName}' as a complex object. "
-                    + "Ensure the type is a concrete class with a public parameterless constructor."
-            );
-        }
-        var instance = Activator.CreateInstance<T>();
-        document = await KuddleReader.ReadAsync(text);
-
-        if (document.Nodes.Count != 1)
-        {
-            throw new KuddleSerializationException(
-                "Kdl document must have a single root node to map to an instance T"
-            );
-        }
-        if (
-            !typeof(T).Name.Equals(
-                document.Nodes[0].Name.Value,
-                StringComparison.InvariantCultureIgnoreCase
+            if (document.Nodes.Count != 1)
+            {
+                throw new KuddleSerializationException(
+                    "Kdl document must have a single root node to map to an instance T"
+                );
+            }
+            if (
+                !typeof(T).Name.Equals(
+                    document.Nodes[0].Name.Value,
+                    StringComparison.InvariantCultureIgnoreCase
+                )
             )
-        )
-        {
-            throw new KuddleSerializationException(
-                $"Node name '{document.Nodes[0].Name}' does not match target type name '{typeof(T).Name}'."
-            );
-        }
-        MapToInstance(document.Nodes[0], instance);
+            {
+                throw new KuddleSerializationException(
+                    $"Node name '{document.Nodes[0].Name}' does not match target type name '{typeof(T).Name}'."
+                );
+            }
+            MapToInstance(document.Nodes[0], instance);
 
-        return instance;
+            return instance;
+        }
+        else
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private static void MapToInstance<T>(KdlNode node, T instance)
@@ -297,7 +303,7 @@ public static class KdlSerializer
             doc.Nodes.Add(node);
         }
 
-        return KuddleWriter.Write(doc);
+        return KdlWriter.Write(doc);
     }
 
     private static KdlNode SerializeNode(object? instance, string? nodeName = null)
@@ -396,7 +402,13 @@ internal static class TypeExtensions
 {
     extension(Type type)
     {
-        public bool IsComplexType =>
+        internal bool IsNodeDefinition =>
+            !type.GetProperties()
+                .Any(p =>
+                    p.GetCustomAttribute<KdlArgumentAttribute>() != null
+                    || p.GetCustomAttribute<KdlPropertyAttribute>() != null
+                );
+        internal bool IsComplexType =>
             !type.IsValueType
             && !type.IsPrimitive
             && type != typeof(string)
@@ -404,7 +416,7 @@ internal static class TypeExtensions
             && !type.IsInterface
             && !type.IsAbstract;
 
-        public bool IsDictionary =>
+        internal bool IsDictionary =>
             type.IsGenericType
             && type.GetInterfaces()
                 .Any(i =>
@@ -415,7 +427,7 @@ internal static class TypeExtensions
                     )
                 );
 
-        public bool IsIEnumerable =>
+        internal bool IsIEnumerable =>
             type != typeof(string)
             && !type.IsDictionary
             && type.IsAssignableTo(typeof(IEnumerable));

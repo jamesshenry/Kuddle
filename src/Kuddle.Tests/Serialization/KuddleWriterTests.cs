@@ -10,9 +10,9 @@ public class KuddleWriterTests
     public async Task Write_SimpleNode_FormatsCorrectly()
     {
         var kdl = "node 1 2 key=\"val\"";
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
 
-        var output = KuddleWriter.Write(doc, KuddleWriterOptions.Default);
+        var output = KdlWriter.Write(doc, KdlWriterOptions.Default);
 
         await Assert.That(output.Trim()).IsEqualTo("node 1 2 key=\"val\"");
     }
@@ -21,9 +21,9 @@ public class KuddleWriterTests
     public async Task Write_NestedStructure_IndentsCorrectly()
     {
         var kdl = "parent { child; }";
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
 
-        var output = KuddleWriter.Write(doc);
+        var output = KdlWriter.Write(doc);
 
         var expected = @"parent {
     child;
@@ -36,9 +36,9 @@ public class KuddleWriterTests
     public async Task Write_ComplexString_EscapesCorrectly()
     {
         var kdl = "node \"line1\\nline2\"";
-        var doc = KuddleReader.Parse(kdl);
+        var doc = KdlReader.Read(kdl);
 
-        var output = KuddleWriter.Write(doc);
+        var output = KdlWriter.Write(doc);
 
         await Assert.That(output.Trim()).IsEqualTo("node \"line1\\nline2\"");
     }
@@ -51,7 +51,7 @@ public class KuddleWriterTests
             Nodes = [new KdlNode(new KdlString("node name", StringKind.Quoted))],
         };
 
-        var output = KuddleWriter.Write(doc);
+        var output = KdlWriter.Write(doc);
 
         await Assert.That(output.Trim()).IsEqualTo("\"node name\"");
     }

@@ -4,7 +4,7 @@ namespace Kuddle.Tests.Serialization;
 
 public class KuddleParsingTests
 {
-    readonly KuddleWriterOptions _options = new KuddleWriterOptions() with { RoundTrip = false };
+    readonly KdlWriterOptions _options = new KdlWriterOptions() with { RoundTrip = false };
 
     [Test]
     [MethodDataSource(
@@ -16,7 +16,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -24,7 +24,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -38,7 +38,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -46,7 +46,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -60,7 +60,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -68,7 +68,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -82,7 +82,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -90,18 +90,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.ArgTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.ArgTestData)
+    )]
     public async Task TestArg(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options); // Assumes KdlDocument has ToString() for serialization
@@ -109,7 +112,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -123,7 +126,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -131,7 +134,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -145,7 +148,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -153,18 +156,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.BlankTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BlankTestData)
+    )]
     public async Task TestBlank(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -172,7 +178,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -186,7 +192,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -194,18 +200,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.BomTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.BomTestData)
+    )]
     public async Task TestBom(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -213,7 +222,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -227,7 +236,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -235,7 +244,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -249,7 +258,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -257,18 +266,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EmptyTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.EmptyTestData)
+    )]
     public async Task TestEmpty(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -276,18 +288,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EscTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.EscTestData)
+    )]
     public async Task TestEsc(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -295,18 +310,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.FalseTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.FalseTestData)
+    )]
     public async Task TestFalse(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -314,7 +332,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -328,7 +346,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -336,7 +354,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -350,7 +368,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -358,18 +376,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.AllTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.AllTestData)
+    )]
     public async Task TestAll(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -377,7 +398,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -391,7 +412,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -399,7 +420,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -413,7 +434,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -421,7 +442,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -435,7 +456,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -443,18 +464,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.CommaTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.CommaTestData)
+    )]
     public async Task TestComma(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -462,18 +486,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.CrlfTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.CrlfTestData)
+    )]
     public async Task TestCrlf(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -481,18 +508,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.DashTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.DashTestData)
+    )]
     public async Task TestDash(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -500,18 +530,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.DotTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.DotTestData)
+    )]
     public async Task TestDot(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -519,18 +552,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EmojiTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.EmojiTestData)
+    )]
     public async Task TestEmoji(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -538,18 +574,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.EofTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.EofTestData)
+    )]
     public async Task TestEof(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -557,18 +596,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.ErrTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.ErrTestData)
+    )]
     public async Task TestErr(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -576,7 +618,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -590,7 +632,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -598,18 +640,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.HexTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.HexTestData)
+    )]
     public async Task TestHex(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -617,7 +662,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
@@ -631,7 +676,7 @@ public class KuddleParsingTests
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -639,18 +684,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.IntTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.IntTestData)
+    )]
     public async Task TestInt(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -658,18 +706,21 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 
     [Test]
-    [MethodDataSource(typeof(KuddleParsingTestDataSources), nameof(KuddleParsingTestDataSources.JustTestData))]
+    [MethodDataSource(
+        typeof(KuddleParsingTestDataSources),
+        nameof(KuddleParsingTestDataSources.JustTestData)
+    )]
     public async Task TestJust(ParsingTestData testData)
     {
         if (File.Exists(testData.ExpectedFile))
         {
             var inputKdl = await File.ReadAllTextAsync(testData.InputFile);
-            var doc = KuddleReader.Parse(inputKdl);
+            var doc = KdlReader.Read(inputKdl);
             var expected = await File.ReadAllTextAsync(testData.ExpectedFile);
             expected = expected.Replace("\r\n", "\n");
             var serialized = doc.ToString(_options);
@@ -677,7 +728,7 @@ public class KuddleParsingTests
         }
         else
         {
-            Assert.Throws<Exception>(() => KuddleReader.Parse(testData.InputFile));
+            Assert.Throws<Exception>(() => KdlReader.Read(testData.InputFile));
         }
     }
 }

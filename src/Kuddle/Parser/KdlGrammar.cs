@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
 using Kuddle.Extensions;
@@ -11,7 +10,7 @@ using static Parlot.Fluent.Parsers;
 
 namespace Kuddle.Parser;
 
-public static class KuddleGrammar
+public static class KdlGrammar
 {
     internal static readonly Parser<KdlDocument> Document;
 
@@ -68,7 +67,7 @@ public static class KuddleGrammar
         IReadOnlyList<KdlNode>
     >();
 
-    static KuddleGrammar()
+    static KdlGrammar()
     {
         var nodeSpace = Deferred<TextSpan>();
 

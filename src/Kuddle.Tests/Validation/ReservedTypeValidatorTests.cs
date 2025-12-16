@@ -1,5 +1,6 @@
 using Kuddle.AST;
 using Kuddle.Exceptions;
+using Kuddle.Serialization;
 using Kuddle.Validation;
 
 namespace Kuddle.Tests.Validation;
@@ -15,7 +16,7 @@ public class ReservedTypeValidatorTests
         var doc = Parse("node 255");
 
         // Act & Assert
-        await Assert.That(() => KuddleReservedTypeValidator.Validate(doc)).ThrowsNothing();
+        await Assert.That(() => KdlReservedTypeValidator.Validate(doc)).ThrowsNothing();
     }
 
     [Test]
@@ -26,7 +27,7 @@ public class ReservedTypeValidatorTests
 
         // Act
         var exception = await Assert
-            .That(() => KuddleReservedTypeValidator.Validate(doc))
+            .That(() => KdlReservedTypeValidator.Validate(doc))
             .Throws<KuddleValidationException>();
 
         // Assert
@@ -42,7 +43,7 @@ public class ReservedTypeValidatorTests
 
         // Act
         var exception = Assert.Throws<KuddleValidationException>(() =>
-            KuddleReservedTypeValidator.Validate(doc)
+            KdlReservedTypeValidator.Validate(doc)
         );
 
         // Assert
@@ -57,7 +58,7 @@ public class ReservedTypeValidatorTests
 
         // Act
         var exception = Assert.Throws<KuddleValidationException>(() =>
-            KuddleReservedTypeValidator.Validate(doc)
+            KdlReservedTypeValidator.Validate(doc)
         );
 
         // Assert
@@ -71,14 +72,14 @@ public class ReservedTypeValidatorTests
         var doc = Parse("node (u8)123");
 
         // Act & Assert
-        await Assert.That(() => KuddleReservedTypeValidator.Validate(doc)).ThrowsNothing();
+        await Assert.That(() => KdlReservedTypeValidator.Validate(doc)).ThrowsNothing();
     }
 
     private static KdlDocument Parse(string input)
     {
-        return KuddleReader.Parse(
+        return KdlReader.Read(
             input,
-            KuddleReaderOptions.Default with
+            KdlReaderOptions.Default with
             {
                 ValidateReservedTypes = false,
             }

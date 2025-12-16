@@ -1,4 +1,5 @@
 using Kuddle.Exceptions;
+using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Errors;
 
@@ -12,7 +13,7 @@ public class ErrorHandlingTests
         int? expectedLine = null
     )
     {
-        var ex = await Assert.ThrowsAsync<KuddleParseException>(async () => KuddleReader.Parse(kdl));
+        var ex = await Assert.ThrowsAsync<KuddleParseException>(async () => KdlReader.Read(kdl));
 
         await Assert
             .That(ex.Message)
