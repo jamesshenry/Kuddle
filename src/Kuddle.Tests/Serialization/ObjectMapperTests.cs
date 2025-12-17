@@ -553,20 +553,20 @@ public class ObjectMapperTests
             .Throws<KuddleSerializationException>();
     }
 
-    [Test]
-    public async Task DeserializeObject_WhenTargetIsSimpleValue_ThrowsException()
-    {
-        // Arrange
-        var kdl = """
-            package
-            """;
+    // [Test]
+    // public async Task DeserializeObject_WhenTargetIsSimpleValue_ThrowsException()
+    // {
+    //     // Arrange
+    //     var kdl = """
+    //         package
+    //         """;
 
-        // Act & Assert
-        await Assert
-            .That(async () => KdlSerializer.Deserialize<string>(kdl))
-            .Throws<KuddleSerializationException>()
-            .WithMessageContaining("Cannot deserialize type");
-    }
+    //     // Act & Assert
+    //     await Assert
+    //         .That(async () => KdlSerializer.Deserialize<string>(kdl))
+    //         .Throws<KuddleSerializationException>()
+    //         .WithMessageContaining("Cannot deserialize type");
+    // }
     #endregion
 
     #region Test Models
