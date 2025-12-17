@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <RootNamespace>Kuddle.Benchmarks</RootNamespace>
+    <AssemblyName>Kuddle.Net.Benchmarks</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>preview</LangVersion>
@@ -11,6 +13,6 @@
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Kuddle\Kuddle.csproj" />
+    <ProjectReference Include="..\Kuddle.Net\Kuddle.Net.csproj" />
   </ItemGroup>
 </Project>

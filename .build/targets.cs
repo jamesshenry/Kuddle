@@ -37,7 +37,7 @@ app.OnExecuteAsync(async _ =>
 {
     const string configuration = "Release";
     const string solution = "Kuddle.slnx";
-    const string packProject = "src/Kuddle/Kuddle.csproj";
+    const string packProject = "src/Kuddle.Net/Kuddle.Net.csproj";
 
     var root = Directory.GetCurrentDirectory();
 

@@ -1,9 +1,7 @@
-using System;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Kuddle.AST;
 using Kuddle.Parser;
-using Parlot;
 using Parlot.Fluent;
 
 namespace Kuddle.Benchmarks;
