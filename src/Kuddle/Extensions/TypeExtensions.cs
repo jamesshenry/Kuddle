@@ -63,12 +63,12 @@ internal static class TypeExtensions
                 .Select(x => (x.Property, x.PropAttr!))
                 .ToArray();
 
-        internal (PropertyInfo, KdlChildrenAttribute)[] GetKdlChildProps() =>
+        internal (PropertyInfo, KdlNodeAttribute)[] GetKdlChildProps() =>
             type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Select(p => new
                 {
                     Property = p,
-                    ChildAttr = p.GetCustomAttribute<KdlChildrenAttribute>(),
+                    ChildAttr = p.GetCustomAttribute<KdlNodeAttribute>(),
                 })
                 .Where(x => x.ChildAttr is not null)
                 .Select(x => (x.Property, x.ChildAttr!))

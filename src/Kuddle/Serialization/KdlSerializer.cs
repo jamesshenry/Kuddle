@@ -41,9 +41,13 @@ public static class KdlSerializer
         var kdlTypeAttr = type.GetCustomAttribute<KdlTypeAttribute>();
 
         if (kdlTypeAttr is null)
-            return null;
-
-        return kdlTypeAttr.Name;
+        {
+            return type.Name.ToLowerInvariant();
+        }
+        else
+        {
+            return kdlTypeAttr.Name;
+        }
     }
 
     public static T Deserialize<T>(string text, KdlSerializerOptions? options = null)
@@ -64,7 +68,10 @@ public static class KdlSerializer
             var rootNode = document.Nodes[0];
             var expectedName = GetExpectedNodeName(type);
 
-            if (expectedName != null && rootNode.Name.Value != expectedName)
+            if (
+                expectedName != null
+                && !rootNode.Name.Value.Equals(expectedName, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 throw new KuddleSerializationException(
                     $"Node name '{rootNode.Name.Value}' does not match target type name '{typeof(T).Name}'."
@@ -91,10 +98,7 @@ public static class KdlSerializer
 
         foreach (var prop in props)
         {
-            var nodeName =
-                prop.GetCustomAttribute<KdlNodeAttribute>()?.Name
-                ?? prop.GetCustomAttribute<KdlChildrenAttribute>()?.ChildNodeName
-                ?? null;
+            var nodeName = prop.GetCustomAttribute<KdlNodeAttribute>()?.Name;
 
             if (nodeName == null)
                 continue;
@@ -178,17 +182,55 @@ public static class KdlSerializer
                 SetPropValue(prop, instance, kdlProp);
             }
 
-            var childAttr = prop.GetCustomAttribute<KdlChildrenAttribute>();
+            var childAttr = prop.GetCustomAttribute<KdlNodeAttribute>();
             if (childAttr is not null)
             {
-                var nodeName = childAttr.ChildNodeName ?? prop.Name.ToLowerInvariant();
-                var groupedChildNodes = node.Children?.Nodes.GroupBy(n => n.Name) ?? [];
-                foreach (var childNode in groupedChildNodes)
+                // // Usually a collection
+                var nodeName = childAttr.Name ?? prop.Name.ToLowerInvariant();
+                // var groupedChildNodes = node.Children?.Nodes.GroupBy(n => n.Name) ?? [];
+                // foreach (var childNode in groupedChildNodes)
+                // {
+                //     if (childNode.Key.Value == nodeName)
+                //     {
+                //         SetCollectionPropValue(prop, instance, childNode);
+                //     }
+                // }
+
+                var matchingNodes = node
+                    .Children?.Nodes.Where(n =>
+                        n.Name.Value.Equals(nodeName, StringComparison.OrdinalIgnoreCase)
+                    )
+                    .ToList();
+
+                if (matchingNodes == null || matchingNodes.Count == 0)
+                    continue;
+
+                if (prop.PropertyType.IsIEnumerable)
                 {
-                    if (childNode.Key.Value == nodeName)
-                    {
-                        SetCollectionPropValue(prop, instance, childNode);
-                    }
+                    SetCollectionPropValue(prop, instance, matchingNodes);
+                }
+                // CASE B: Scalar (string, int, etc.) -> Map Arg(0)
+                else if (!prop.PropertyType.IsComplexType)
+                {
+                    // Expect exactly one node
+                    if (matchingNodes.Count > 1)
+                        throw new KuddleSerializationException(
+                            $"Expected single node '{nodeName}' for scalar property, found {matchingNodes.Count}"
+                        );
+
+                    // Extract Arg 0
+                    var val = matchingNodes[0].Arg(0);
+                    SetPropValue(prop, instance, val!);
+                }
+                // CASE C: Complex Object -> Recursion
+                else
+                {
+                    if (matchingNodes.Count > 1)
+                        throw new KuddleSerializationException(
+                            $"Expected single node '{nodeName}' for object property, found {matchingNodes.Count}"
+                        );
+
+                    SetSingleComplexPropValue(prop, instance, matchingNodes[0]);
                 }
             }
         }
@@ -396,7 +438,7 @@ public static class KdlSerializer
         var block = new KdlBlock();
         foreach (var (prop, childAttr) in childProps)
         {
-            var childNodeName = childAttr.ChildNodeName ?? prop.Name.ToLowerInvariant();
+            var childNodeName = childAttr.Name ?? prop.Name.ToLowerInvariant();
             if (prop.PropertyType.IsDictionary)
                 throw new NotSupportedException();
 
