@@ -1,4 +1,3 @@
-using System.Net.WebSockets;
 using Kuddle.AST;
 using Kuddle.Serialization;
 
@@ -502,7 +501,7 @@ public class ObjectMapperTests
             reference "my-dep1" version="2.1.0"
             node "my-dep2" version="3.2.1"
             """;
-        var result = KdlSerializer.Deserialize<Dictionary<string, Package>>(kdl);
+
         // Act & Assert
         await Assert
             .That(() => KdlSerializer.Deserialize<Dictionary<string, Package>>(kdl))

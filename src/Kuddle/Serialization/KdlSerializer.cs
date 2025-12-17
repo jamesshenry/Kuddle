@@ -8,8 +8,16 @@ using Kuddle.Extensions;
 
 namespace Kuddle.Serialization;
 
+/// <summary>
+/// Serializes and deserializes C# objects to/from KDL format.
+/// </summary>
 public static class KdlSerializer
 {
+    #region Deserialization
+
+    /// <summary>
+    /// Deserializes a KDL document containing multiple nodes of type T.
+    /// </summary>
     public static IEnumerable<T> DeserializeMany<T>(
         string text,
         KdlSerializerOptions? options = null
@@ -17,267 +25,422 @@ public static class KdlSerializer
         where T : new()
     {
         var doc = KdlReader.Read(text);
-        var list = new List<T>(doc.Nodes.Count);
-
-        var expectedName = GetExpectedNodeName(typeof(T));
+        var metadata = TypeMetadata.For<T>();
 
         foreach (var node in doc.Nodes)
         {
-            if (expectedName != null && node.Name.Value != expectedName)
+            if (!node.Name.Value.Equals(metadata.NodeName, StringComparison.OrdinalIgnoreCase))
+            {
                 throw new KuddleSerializationException(
-                    $"Expected node '{expectedName}', found '{node.Name.Value}'"
+                    $"Expected node '{metadata.NodeName}', found '{node.Name.Value}'."
                 );
+            }
 
             var item = new T();
-            MapToInstance(node, item);
-            list.Add(item);
-        }
-
-        return list;
-    }
-
-    private static string? GetExpectedNodeName(Type type)
-    {
-        var kdlTypeAttr = type.GetCustomAttribute<KdlTypeAttribute>();
-
-        if (kdlTypeAttr is null)
-        {
-            return type.Name.ToLowerInvariant();
-        }
-        else
-        {
-            return kdlTypeAttr.Name;
+            MapNodeToObject(node, item, metadata);
+            yield return item;
         }
     }
 
+    /// <summary>
+    /// Deserializes a KDL document to a single object of type T.
+    /// </summary>
     public static T Deserialize<T>(string text, KdlSerializerOptions? options = null)
         where T : new()
     {
         var document = KdlReader.Read(text);
-        var type = typeof(T);
+        var metadata = TypeMetadata.For<T>();
 
-        if (type.IsNodeDefinition)
+        // Reject dictionary types
+        if (metadata.IsDictionary)
         {
+            throw new KuddleSerializationException(
+                $"Dictionary deserialization is not supported. Type: {metadata.Type.Name}"
+            );
+        }
+
+        // Reject IEnumerable types (use DeserializeMany instead)
+        if (metadata.IsIEnumerable)
+        {
+            throw new KuddleSerializationException(
+                $"Cannot deserialize to collection type '{metadata.Type.Name}'. Use DeserializeMany<T>() instead."
+            );
+        }
+
+        if (metadata.IsNodeDefinition)
+        {
+            // Type maps to a single KDL node
             if (document.Nodes.Count != 1)
             {
                 throw new KuddleSerializationException(
-                    "Kdl document must have a single root node to map to an instance T"
+                    $"Expected exactly 1 root node for type '{typeof(T).Name}', found {document.Nodes.Count}."
                 );
             }
 
             var rootNode = document.Nodes[0];
-            var expectedName = GetExpectedNodeName(type);
-
-            if (
-                expectedName != null
-                && !rootNode.Name.Value.Equals(expectedName, StringComparison.OrdinalIgnoreCase)
-            )
+            if (!rootNode.Name.Value.Equals(metadata.NodeName, StringComparison.OrdinalIgnoreCase))
             {
                 throw new KuddleSerializationException(
-                    $"Node name '{rootNode.Name.Value}' does not match target type name '{typeof(T).Name}'."
+                    $"Expected node '{metadata.NodeName}', found '{rootNode.Name.Value}'."
                 );
             }
+
             var instance = new T();
-            MapToInstance(rootNode, instance);
+            MapNodeToObject(rootNode, instance, metadata);
             return instance;
         }
         else
         {
+            // Type maps to a document with child nodes as properties
             var instance = new T();
-            MapNodesToProperties(document.Nodes, instance);
+            MapDocumentToObject(document.Nodes, instance, metadata);
             return instance;
         }
     }
 
-    private static void MapNodesToProperties<T>(List<KdlNode> nodes, T instance)
+    /// <summary>
+    /// Maps a KDL node's entries and children to an object instance.
+    /// </summary>
+    private static void MapNodeToObject(KdlNode node, object instance, TypeMetadata metadata)
     {
-        var props = instance!
-            .GetType()
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanWrite && p.GetCustomAttribute<KdlIgnoreAttribute>() == null);
-
-        foreach (var prop in props)
+        // Map arguments
+        foreach (var mapping in metadata.Arguments)
         {
-            var nodeName = prop.GetCustomAttribute<KdlNodeAttribute>()?.Name;
+            var argValue = node.Arg(mapping.Argument!.Index);
+            if (argValue is null)
+            {
+                throw new KuddleSerializationException(
+                    $"Missing required argument at index {mapping.Argument.Index} for property '{mapping.Property.Name}'."
+                );
+            }
 
-            if (nodeName == null)
-                continue;
+            SetPropertyValue(mapping.Property, instance, argValue);
+        }
 
+        // Map properties
+        foreach (var mapping in metadata.Properties)
+        {
+            var propKey = mapping.GetPropertyKey();
+            var propValue = node.Prop(propKey);
+
+            if (propValue is null)
+            {
+                continue; // Optional property, use default
+            }
+
+            SetPropertyValue(mapping.Property, instance, propValue);
+        }
+
+        // Map child nodes
+        MapChildNodes(node.Children?.Nodes, instance, metadata);
+    }
+
+    /// <summary>
+    /// Maps document-level nodes to object properties (for non-node-definition types).
+    /// </summary>
+    private static void MapDocumentToObject(
+        List<KdlNode> nodes,
+        object instance,
+        TypeMetadata metadata
+    )
+    {
+        MapChildNodes(nodes, instance, metadata);
+    }
+
+    /// <summary>
+    /// Maps child KDL nodes to properties marked with [KdlNode].
+    /// </summary>
+    private static void MapChildNodes(
+        IReadOnlyList<KdlNode>? nodes,
+        object instance,
+        TypeMetadata metadata
+    )
+    {
+        if (nodes is null || nodes.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var mapping in metadata.Children)
+        {
+            var nodeName = mapping.GetChildNodeName();
             var matchingNodes = nodes
                 .Where(n => n.Name.Value.Equals(nodeName, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (matchingNodes.Count == 0)
-                continue;
-
-            if (prop.PropertyType.IsIEnumerable)
             {
-                SetCollectionPropValue(prop, instance, matchingNodes);
+                continue;
+            }
+
+            var propType = mapping.Property.PropertyType;
+            var propMeta = TypeMetadata.For(propType);
+
+            if (propMeta.IsIEnumerable)
+            {
+                SetCollectionProperty(mapping.Property, instance, matchingNodes);
+            }
+            else if (propMeta.IsComplexType)
+            {
+                if (matchingNodes.Count > 1)
+                {
+                    throw new KuddleSerializationException(
+                        $"Expected single node '{nodeName}' for property '{mapping.Property.Name}', found {matchingNodes.Count}."
+                    );
+                }
+
+                SetComplexProperty(mapping.Property, instance, matchingNodes[0]);
             }
             else
             {
+                // Scalar property - extract from first argument
                 if (matchingNodes.Count > 1)
+                {
                     throw new KuddleSerializationException(
-                        $"Property '{prop.Name}' expects a single node named '{nodeName}', but found {matchingNodes.Count}."
+                        $"Expected single node '{nodeName}' for scalar property '{mapping.Property.Name}', found {matchingNodes.Count}."
                     );
+                }
 
-                SetSingleComplexPropValue(prop, instance, matchingNodes[0]);
+                var argValue = matchingNodes[0].Arg(0);
+                if (argValue is not null)
+                {
+                    SetPropertyValue(mapping.Property, instance, argValue);
+                }
             }
         }
     }
 
-    private static void SetSingleComplexPropValue(PropertyInfo prop, object instance, KdlNode node)
+    private static void SetPropertyValue(PropertyInfo property, object instance, KdlValue kdlValue)
     {
-        var type = prop.PropertyType;
-        if (!type.IsComplexType)
-        {
-            throw new KuddleSerializationException(
-                $"Property '{prop.Name}' matches a Node, so it must be a complex class."
-            );
-        }
+        var result = KdlValueConverter.FromKdlOrThrow(
+            kdlValue,
+            property.PropertyType,
+            $"Property: {property.DeclaringType?.Name}.{property.Name}"
+        );
 
+        property.SetValue(instance, result);
+    }
+
+    private static void SetComplexProperty(PropertyInfo property, object instance, KdlNode node)
+    {
         var childInstance =
-            Activator.CreateInstance(type) ?? throw new Exception($"Could not create {type}");
+            Activator.CreateInstance(property.PropertyType)
+            ?? throw new KuddleSerializationException(
+                $"Failed to create instance of '{property.PropertyType.Name}' for property '{property.Name}'."
+            );
 
-        MapToInstance(node, childInstance);
+        var childMetadata = TypeMetadata.For(property.PropertyType);
+        MapNodeToObject(node, childInstance, childMetadata);
 
-        prop.SetValue(instance, childInstance);
+        property.SetValue(instance, childInstance);
     }
 
-    private static void MapToInstance<T>(KdlNode node, T instance)
-    {
-        var rootType = typeof(T);
-
-        var props = instance!
-            .GetType()
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanWrite && p.GetCustomAttribute<KdlIgnoreAttribute>() == null);
-
-        foreach (var prop in props)
-        {
-            var argAttr = prop.GetCustomAttribute<KdlArgumentAttribute>();
-            if (argAttr is not null)
-            {
-                if (prop.PropertyType.IsComplexType)
-                    throw new KuddleSerializationException();
-
-                var targetArg =
-                    node.Arg(argAttr.Index)
-                    ?? throw new KuddleSerializationException(
-                        $"Expected Kdl argument at index {argAttr.Index} but found nothing"
-                    );
-                SetPropValue(prop, instance, targetArg);
-                continue;
-            }
-
-            var propAttr = prop.GetCustomAttribute<KdlPropertyAttribute>();
-            if (propAttr is not null)
-            {
-                var propKey = propAttr.Key ?? prop.Name.ToLowerInvariant();
-                var kdlProp = node.Prop(propKey);
-
-                if (kdlProp is null)
-                    continue;
-
-                SetPropValue(prop, instance, kdlProp);
-            }
-
-            var childAttr = prop.GetCustomAttribute<KdlNodeAttribute>();
-            if (childAttr is not null)
-            {
-                // // Usually a collection
-                var nodeName = childAttr.Name ?? prop.Name.ToLowerInvariant();
-                // var groupedChildNodes = node.Children?.Nodes.GroupBy(n => n.Name) ?? [];
-                // foreach (var childNode in groupedChildNodes)
-                // {
-                //     if (childNode.Key.Value == nodeName)
-                //     {
-                //         SetCollectionPropValue(prop, instance, childNode);
-                //     }
-                // }
-
-                var matchingNodes = node
-                    .Children?.Nodes.Where(n =>
-                        n.Name.Value.Equals(nodeName, StringComparison.OrdinalIgnoreCase)
-                    )
-                    .ToList();
-
-                if (matchingNodes == null || matchingNodes.Count == 0)
-                    continue;
-
-                if (prop.PropertyType.IsIEnumerable)
-                {
-                    SetCollectionPropValue(prop, instance, matchingNodes);
-                }
-                // CASE B: Scalar (string, int, etc.) -> Map Arg(0)
-                else if (!prop.PropertyType.IsComplexType)
-                {
-                    // Expect exactly one node
-                    if (matchingNodes.Count > 1)
-                        throw new KuddleSerializationException(
-                            $"Expected single node '{nodeName}' for scalar property, found {matchingNodes.Count}"
-                        );
-
-                    // Extract Arg 0
-                    var val = matchingNodes[0].Arg(0);
-                    SetPropValue(prop, instance, val!);
-                }
-                // CASE C: Complex Object -> Recursion
-                else
-                {
-                    if (matchingNodes.Count > 1)
-                        throw new KuddleSerializationException(
-                            $"Expected single node '{nodeName}' for object property, found {matchingNodes.Count}"
-                        );
-
-                    SetSingleComplexPropValue(prop, instance, matchingNodes[0]);
-                }
-            }
-        }
-    }
-
-    private static void SetCollectionPropValue(
-        PropertyInfo collectionProp,
+    private static void SetCollectionProperty(
+        PropertyInfo property,
         object instance,
-        IEnumerable<KdlNode> childNodeGroup
+        List<KdlNode> nodes
     )
     {
-        var type = collectionProp.PropertyType;
-        if (!type.IsIEnumerable)
+        var elementType = GetCollectionElementType(property.PropertyType);
+        var metadata = TypeMetadata.For(property.PropertyType);
+
+        if (!metadata.IsComplexType)
         {
-            throw new NotSupportedException(
-                $"{nameof(SetCollectionPropValue)} expects a collection type, but received a {type.Name}"
+            throw new KuddleSerializationException(
+                $"Collection element type '{elementType.Name}' must be a complex type for property '{property.Name}'."
             );
         }
-
-        var elementType = GetElementType(type);
-        if (!elementType.IsComplexType)
-            throw new KuddleSerializationException(
-                $"Collection element type '{elementType.Name}' must be a complex type"
-            );
 
         var listType = typeof(List<>).MakeGenericType(elementType);
         var list = (IList)Activator.CreateInstance(listType)!;
 
-        foreach (var childNode in childNodeGroup)
+        var elementMetadata = TypeMetadata.For(elementType);
+
+        foreach (var node in nodes)
         {
             var element =
                 Activator.CreateInstance(elementType)
                 ?? throw new KuddleSerializationException(
-                    $"Failed to create instance of '{elementType.Name}'"
+                    $"Failed to create instance of '{elementType.Name}'."
                 );
 
-            MapToInstance(childNode, element);
-
+            MapNodeToObject(node, element, elementMetadata);
             list.Add(element);
         }
 
-        object finalValue = MapCollection(type, elementType, list);
-
-        collectionProp.SetValue(instance, finalValue);
+        var finalValue = ConvertToTargetCollectionType(property.PropertyType, elementType, list);
+        property.SetValue(instance, finalValue);
     }
 
-    private static object MapCollection(Type targetType, Type elementType, IList list)
+    #endregion
+
+    #region Serialization
+
+    /// <summary>
+    /// Serializes an object to a KDL string.
+    /// </summary>
+    public static string Serialize<T>(T instance)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+
+        var type = typeof(T);
+        var metadata = TypeMetadata.For<T>();
+
+        if (!metadata.IsComplexType)
+        {
+            throw new KuddleSerializationException(
+                $"Cannot serialize primitive type '{type.Name}'. Only complex types are supported."
+            );
+        }
+
+        var doc = new KdlDocument();
+
+        if (metadata.IsDictionary)
+        {
+            throw new NotSupportedException("Dictionary serialization is not yet supported.");
+        }
+
+        if (metadata.IsIEnumerable)
+        {
+            var nodes = SerializeCollection((IEnumerable)instance);
+            doc.Nodes.AddRange(nodes);
+        }
+        else
+        {
+            var node = SerializeToNode(instance);
+            doc.Nodes.Add(node);
+        }
+
+        return KdlWriter.Write(doc);
+    }
+
+    private static KdlNode SerializeToNode(object instance, string? overrideNodeName = null)
+    {
+        var type = instance.GetType();
+        var metadata = TypeMetadata.For(type);
+        var nodeName = overrideNodeName ?? metadata.NodeName;
+
+        var entries = new List<KdlEntry>();
+
+        // Serialize arguments (in order)
+        foreach (var mapping in metadata.Arguments)
+        {
+            var value = mapping.Property.GetValue(instance);
+            var kdlValue = KdlValueConverter.ToKdlOrThrow(
+                value,
+                $"Argument property: {mapping.Property.Name}"
+            );
+
+            entries.Add(new KdlArgument(kdlValue));
+        }
+
+        // Serialize properties
+        foreach (var mapping in metadata.Properties)
+        {
+            var value = mapping.Property.GetValue(instance);
+
+            if (!KdlValueConverter.TryToKdl(value, out var kdlValue))
+            {
+                continue; // Skip properties that can't be converted
+            }
+
+            var key = mapping.GetPropertyKey();
+            entries.Add(new KdlProperty(KdlValue.From(key), kdlValue));
+        }
+
+        // Serialize children
+        KdlBlock? childBlock = null;
+
+        foreach (var mapping in metadata.Children)
+        {
+            var propValue = mapping.Property.GetValue(instance);
+
+            if (propValue is null)
+            {
+                continue;
+            }
+
+            childBlock ??= new KdlBlock();
+            var childNodeName = mapping.GetChildNodeName();
+
+            var propType = mapping.Property.PropertyType;
+            var childMeta = TypeMetadata.For(propType);
+
+            if (childMeta.IsIEnumerable)
+            {
+                var childNodes = SerializeCollection((IEnumerable)propValue, childNodeName);
+                childBlock.Nodes.AddRange(childNodes);
+            }
+            else if (childMeta.IsComplexType)
+            {
+                var childNode = SerializeToNode(propValue, childNodeName);
+                childBlock.Nodes.Add(childNode);
+            }
+            else
+            {
+                // Scalar value as a child node with single argument
+                var kdlValue = KdlValueConverter.ToKdlOrThrow(
+                    propValue,
+                    $"Child scalar property: {mapping.Property.Name}"
+                );
+
+                var scalarNode = new KdlNode(KdlValue.From(childNodeName))
+                {
+                    Entries = [new KdlArgument(kdlValue)],
+                };
+                childBlock.Nodes.Add(scalarNode);
+            }
+        }
+
+        return new KdlNode(KdlValue.From(nodeName))
+        {
+            Entries = entries,
+            Children = childBlock?.Nodes.Count > 0 ? childBlock : null,
+        };
+    }
+
+    private static IEnumerable<KdlNode> SerializeCollection(
+        IEnumerable collection,
+        string? overrideNodeName = null
+    )
+    {
+        foreach (var item in collection)
+        {
+            if (item is null)
+            {
+                continue;
+            }
+
+            yield return SerializeToNode(item, overrideNodeName);
+        }
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private static Type GetCollectionElementType(Type collectionType)
+    {
+        if (collectionType.IsArray)
+        {
+            return collectionType.GetElementType()!;
+        }
+
+        if (collectionType.IsGenericType)
+        {
+            return collectionType.GetGenericArguments()[0];
+        }
+
+        throw new KuddleSerializationException(
+            $"Unsupported collection type '{collectionType.FullName}'."
+        );
+    }
+
+    private static object ConvertToTargetCollectionType(
+        Type targetType,
+        Type elementType,
+        IList list
+    )
     {
         if (targetType.IsArray)
         {
@@ -294,204 +457,10 @@ public static class KdlSerializer
         return list;
     }
 
-    static Type GetElementType(Type collectionType)
-    {
-        return collectionType.IsArray ? collectionType.GetElementType()!
-            : collectionType.IsGenericType ? collectionType.GetGenericArguments()[0]
-            : throw new KuddleSerializationException(
-                $"Unsupported collection type '{collectionType.FullName}'"
-            );
-    }
-
-    private static void SetPropValue(PropertyInfo prop, object instance, KdlValue kdlValue)
-    {
-        if (!TryConvertFromKdlValue(kdlValue, prop.PropertyType, out var result))
-        {
-            throw new KuddleSerializationException(
-                $"Cannot convert KDL value to property {prop.Name} ({prop.PropertyType})"
-            );
-        }
-
-        prop.SetValue(instance, result);
-    }
-
-    private static bool TryConvertFromKdlValue(
-        KdlValue kdlValue,
-        Type targetType,
-        out object? result
-    )
-    {
-        result = null;
-        if (kdlValue is KdlNull)
-        {
-            if (!targetType.IsNullable())
-                return false;
-            result = null;
-            return true;
-        }
-
-        Type underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
-
-        if (underlying == typeof(string) && kdlValue.TryGetString(out var stringVal))
-        {
-            result = stringVal;
-            return true;
-        }
-
-        if (underlying == typeof(int) && kdlValue.TryGetInt(out var intVal))
-        {
-            result = intVal;
-            return true;
-        }
-
-        if (underlying == typeof(double) && kdlValue.TryGetDouble(out var doubleVal))
-        {
-            result = doubleVal;
-            return true;
-        }
-
-        if (underlying == typeof(long) && kdlValue.TryGetLong(out var longVal))
-        {
-            result = longVal;
-            return true;
-        }
-
-        if (underlying == typeof(decimal) && kdlValue.TryGetDecimal(out var decimalVal))
-        {
-            result = decimalVal;
-            return true;
-        }
-
-        if (underlying == typeof(bool) && kdlValue.TryGetBool(out var boolVal))
-        {
-            result = boolVal;
-            return true;
-        }
-
-        if (underlying == typeof(Guid) && kdlValue.TryGetUuid(out var uuid))
-        {
-            result = uuid;
-            return true;
-        }
-        if (underlying == typeof(DateTimeOffset) && kdlValue.TryGetDateTime(out var datetime))
-        {
-            result = datetime;
-            return true;
-        }
-        return false;
-    }
-
-    public static string Serialize<T>(T original)
-    {
-        var doc = new KdlDocument();
-        var type = typeof(T);
-        if (!type.IsComplexType)
-            throw new KuddleSerializationException();
-
-        if (type.IsDictionary)
-            throw new NotSupportedException();
-        if (type.IsIEnumerable)
-        {
-            var nodes = SerializeCollection(original as IEnumerable);
-            doc.Nodes.AddRange(nodes);
-        }
-        else
-        {
-            var node = SerializeNode(original);
-            doc.Nodes.Add(node);
-        }
-
-        return KdlWriter.Write(doc);
-    }
-
-    private static KdlNode SerializeNode(object? instance, string? nodeName = null)
-    {
-        var type = instance?.GetType() ?? throw new ArgumentNullException();
-        nodeName ??=
-            type.GetCustomAttribute<KdlNodeAttribute>()?.Name ?? type.Name.ToLowerInvariant();
-
-        var entries = new List<KdlEntry>();
-        foreach (var argProp in type.GetKdlArgProps())
-        {
-            var value = argProp.Item1.GetValue(instance);
-
-            if (!TryConvertToKdlValue(value, out var kdlValue))
-                continue;
-
-            var arg = new KdlArgument(kdlValue);
-            entries.Add(arg);
-        }
-
-        var propProps = type.GetKdlPropProps();
-
-        foreach (var (prop, kdlAttr) in propProps)
-        {
-            var key = kdlAttr.Key ?? prop.Name.ToLowerInvariant();
-            if (!TryConvertToKdlValue(prop.GetValue(instance), out var value))
-                continue;
-
-            var kdlProp = new KdlProperty(KdlValue.From(key), value);
-            entries.Add(kdlProp);
-        }
-
-        var childProps = type.GetKdlChildProps();
-        var block = new KdlBlock();
-        foreach (var (prop, childAttr) in childProps)
-        {
-            var childNodeName = childAttr.Name ?? prop.Name.ToLowerInvariant();
-            if (prop.PropertyType.IsDictionary)
-                throw new NotSupportedException();
-
-            if (prop.PropertyType.IsIEnumerable)
-            {
-                var col = prop.GetValue(instance);
-                var nodes = SerializeCollection(col as IEnumerable);
-                block.Nodes.AddRange(nodes);
-            }
-        }
-        return new KdlNode(KdlValue.From(nodeName))
-        {
-            Entries = entries,
-            Children = block.Nodes.Count > 0 ? block : null,
-        };
-    }
-
-    private static bool TryConvertToKdlValue(object? input, out KdlValue kdlValue)
-    {
-        kdlValue = KdlValue.Null;
-        if (input is null)
-            return true;
-
-        var type = input.GetType();
-        if (type.IsComplexType)
-            throw new KuddleSerializationException("Kdl arguments should be simple scalar values");
-
-        kdlValue = input switch
-        {
-            string s => KdlValue.From(s),
-            int i => KdlValue.From(i),
-            double d => KdlValue.From(d),
-            long l => KdlValue.From(l),
-            decimal m => KdlValue.From(m),
-            bool b => KdlValue.From(b),
-            Guid uuid => KdlValue.From(uuid),
-            DateTimeOffset dto => KdlValue.From(dto),
-            _ => null!,
-        };
-        return kdlValue is not null;
-    }
-
-    private static IEnumerable<KdlNode> SerializeCollection(IEnumerable? original)
-    {
-        var nodes = new List<KdlNode>();
-        foreach (var item in original!)
-        {
-            var node = SerializeNode(item);
-            nodes.Add(node);
-        }
-
-        return nodes;
-    }
+    #endregion
 }
 
+/// <summary>
+/// Options for KDL serialization (reserved for future use).
+/// </summary>
 public record KdlSerializerOptions { }
