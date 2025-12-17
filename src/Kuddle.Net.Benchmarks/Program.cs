@@ -1,4 +1,4 @@
 using BenchmarkDotNet.Running;
-using Kuddle.Benchmarks;
+using Kuddle.Net.Benchmarks;
 
 BenchmarkRunner.Run<ParserBenchmarks>();

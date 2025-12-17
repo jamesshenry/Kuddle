@@ -114,7 +114,12 @@ public static class KdlSerializer
                 );
             }
 
-            SetPropertyValue(mapping.Property, instance, argValue);
+            SetPropertyValue(
+                mapping.Property,
+                instance,
+                argValue,
+                mapping.TypeAnnotation?.Annotation
+            );
         }
 
         // Map properties
@@ -128,7 +133,12 @@ public static class KdlSerializer
                 continue; // Optional property, use default
             }
 
-            SetPropertyValue(mapping.Property, instance, propValue);
+            SetPropertyValue(
+                mapping.Property,
+                instance,
+                propValue,
+                mapping.TypeAnnotation?.Annotation
+            );
         }
 
         // Map child nodes
@@ -204,18 +214,29 @@ public static class KdlSerializer
                 var argValue = matchingNodes[0].Arg(0);
                 if (argValue is not null)
                 {
-                    SetPropertyValue(mapping.Property, instance, argValue);
+                    SetPropertyValue(
+                        mapping.Property,
+                        instance,
+                        argValue,
+                        mapping.TypeAnnotation?.Annotation
+                    );
                 }
             }
         }
     }
 
-    private static void SetPropertyValue(PropertyInfo property, object instance, KdlValue kdlValue)
+    private static void SetPropertyValue(
+        PropertyInfo property,
+        object instance,
+        KdlValue kdlValue,
+        string? expectedTypeAnnotation = null
+    )
     {
         var result = KdlValueConverter.FromKdlOrThrow(
             kdlValue,
             property.PropertyType,
-            $"Property: {property.DeclaringType?.Name}.{property.Name}"
+            $"Property: {property.DeclaringType?.Name}.{property.Name}",
+            expectedTypeAnnotation
         );
 
         property.SetValue(instance, result);
@@ -326,9 +347,11 @@ public static class KdlSerializer
         foreach (var mapping in metadata.Arguments)
         {
             var value = mapping.Property.GetValue(instance);
+            var typeAnnotation = mapping.TypeAnnotation?.Annotation;
             var kdlValue = KdlValueConverter.ToKdlOrThrow(
                 value,
-                $"Argument property: {mapping.Property.Name}"
+                $"Argument property: {mapping.Property.Name}",
+                typeAnnotation
             );
 
             entries.Add(new KdlArgument(kdlValue));
@@ -338,8 +361,9 @@ public static class KdlSerializer
         foreach (var mapping in metadata.Properties)
         {
             var value = mapping.Property.GetValue(instance);
+            var typeAnnotation = mapping.TypeAnnotation?.Annotation;
 
-            if (!KdlValueConverter.TryToKdl(value, out var kdlValue))
+            if (!KdlValueConverter.TryToKdl(value, out var kdlValue, typeAnnotation))
             {
                 continue; // Skip properties that can't be converted
             }
@@ -379,9 +403,11 @@ public static class KdlSerializer
             else
             {
                 // Scalar value as a child node with single argument
+                var typeAnnotation = mapping.TypeAnnotation?.Annotation;
                 var kdlValue = KdlValueConverter.ToKdlOrThrow(
                     propValue,
-                    $"Child scalar property: {mapping.Property.Name}"
+                    $"Child scalar property: {mapping.Property.Name}",
+                    typeAnnotation
                 );
 
                 var scalarNode = new KdlNode(KdlValue.From(childNodeName))

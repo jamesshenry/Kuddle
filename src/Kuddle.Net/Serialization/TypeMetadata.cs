@@ -15,7 +15,8 @@ internal sealed record PropertyMapping(
     PropertyInfo Property,
     KdlArgumentAttribute? Argument,
     KdlPropertyAttribute? KdlProperty,
-    KdlNodeAttribute? ChildNode
+    KdlNodeAttribute? ChildNode,
+    KdlTypeAnnotationAttribute? TypeAnnotation
 )
 {
     public string GetPropertyKey() => KdlProperty?.Key ?? Property.Name.ToLowerInvariant();
@@ -63,7 +64,8 @@ internal sealed class TypeMetadata
                 p,
                 p.GetCustomAttribute<KdlArgumentAttribute>(),
                 p.GetCustomAttribute<KdlPropertyAttribute>(),
-                p.GetCustomAttribute<KdlNodeAttribute>()
+                p.GetCustomAttribute<KdlNodeAttribute>(),
+                p.GetCustomAttribute<KdlTypeAnnotationAttribute>()
             ))
             .ToList();
 

@@ -4,7 +4,7 @@ using Kuddle.AST;
 using Kuddle.Parser;
 using Parlot.Fluent;
 
-namespace Kuddle.Benchmarks;
+namespace Kuddle.Net.Benchmarks;
 
 [SimpleJob(RuntimeMoniker.Net10_0)]
 [MemoryDiagnoser]

@@ -12,7 +12,12 @@ internal static class KdlValueConverter
     /// <summary>
     /// Attempts to convert a KDL value to a CLR type.
     /// </summary>
-    public static bool TryFromKdl(KdlValue kdlValue, Type targetType, out object? result)
+    public static bool TryFromKdl(
+        KdlValue kdlValue,
+        Type targetType,
+        out object? result,
+        string? typeAnnotation = null
+    )
     {
         result = null;
 
@@ -99,7 +104,7 @@ internal static class KdlValueConverter
     /// <summary>
     /// Attempts to convert a CLR value to a KDL value.
     /// </summary>
-    public static bool TryToKdl(object? input, out KdlValue kdlValue)
+    public static bool TryToKdl(object? input, out KdlValue kdlValue, string? typeAnnotation = null)
     {
         if (input is null)
         {
@@ -122,15 +127,28 @@ internal static class KdlValueConverter
             _ => null!,
         };
 
+        if (kdlValue is not null && typeAnnotation is not null)
+        {
+            kdlValue = kdlValue with { TypeAnnotation = typeAnnotation };
+        }
+
         return kdlValue is not null;
     }
 
     /// <summary>
     /// Converts a KDL value to a CLR type, throwing on failure.
     /// </summary>
-    public static object? FromKdlOrThrow(KdlValue kdlValue, Type targetType, string context)
+    public static object? FromKdlOrThrow(
+        KdlValue kdlValue,
+        Type targetType,
+        string context,
+        string? expectedTypeAnnotation = null
+    )
     {
-        if (!TryFromKdl(kdlValue, targetType, out var result))
+        // Use the KDL value's type annotation if present, otherwise use the expected one from the attribute
+        var effectiveAnnotation = kdlValue.TypeAnnotation ?? expectedTypeAnnotation;
+
+        if (!TryFromKdl(kdlValue, targetType, out var result, effectiveAnnotation))
         {
             throw new KuddleSerializationException(
                 $"Cannot convert KDL value '{kdlValue}' to {targetType.Name}. {context}"
@@ -142,9 +160,13 @@ internal static class KdlValueConverter
     /// <summary>
     /// Converts a CLR value to a KDL value, throwing on failure.
     /// </summary>
-    public static KdlValue ToKdlOrThrow(object? input, string context)
+    public static KdlValue ToKdlOrThrow(
+        object? input,
+        string context,
+        string? typeAnnotation = null
+    )
     {
-        if (!TryToKdl(input, out var kdlValue))
+        if (!TryToKdl(input, out var kdlValue, typeAnnotation))
         {
             var typeName = input?.GetType().Name ?? "null";
             throw new KuddleSerializationException(
