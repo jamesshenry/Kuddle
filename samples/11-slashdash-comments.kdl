@@ -1,0 +1,31 @@
+// Slashdash comments out entire elements
+// The serializer should NOT see these in the parsed AST
+
+config {
+    // Regular comment - ignored
+    enabled #true
+    
+    /- disabled #true  // This entire node is commented out
+    
+    database {
+        host "localhost"
+        /- port 5432    // Commented out argument
+        port 3306       // This is the actual port
+        
+        credentials user="admin" /- password="secret" // password prop commented out
+    }
+    
+    /- slashdashed-node {
+        // Entire children block commented out
+        this "is" ignored=#true
+    }
+    
+    // Slashdash can span multiple lines
+    /-
+    experimental {
+        feature1 #true
+        feature2 #true
+    }
+    
+    production #true
+}

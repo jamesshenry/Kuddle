@@ -1,0 +1,62 @@
+// Deeply nested structure - common in config files
+
+application "enterprise-app" version="3.0.0" {
+    database "primary" {
+        connection {
+            host "db.example.com"
+            port 5432
+            ssl #true
+            
+            pool {
+                minSize 5
+                maxSize 50
+                idleTimeout 30000
+            }
+            
+            credentials {
+                username "app_user"
+                // In real config, this would be a reference
+                passwordEnvVar "DB_PASSWORD"
+            }
+        }
+        
+        replica "read-replica-1" {
+            host "replica1.example.com"
+            port 5432
+            readOnly #true
+        }
+        
+        replica "read-replica-2" {
+            host "replica2.example.com"
+            port 5432
+            readOnly #true
+        }
+    }
+    
+    cache "redis" {
+        host "cache.example.com"
+        port 6379
+        ttl 3600
+        
+        cluster {
+            enabled #true
+            nodes 3
+        }
+    }
+    
+    logging {
+        level "info"
+        format "json"
+        
+        output "console" {
+            colorize #true
+        }
+        
+        output "file" {
+            path "/var/log/app.log"
+            maxSize 10485760
+            maxFiles 5
+            compress #true
+        }
+    }
+}
