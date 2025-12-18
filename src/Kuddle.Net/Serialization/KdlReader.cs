@@ -44,17 +44,4 @@ public static class KdlReader
 
         return doc;
     }
-
-    // /// <summary>
-    // /// Reads a stream assuming UTF-8 encoding.
-    // /// </summary>
-    // public static async Task<KdlDocument> ReadAsync(
-    //     Stream stream,
-    //     KuddleReaderOptions? options = null
-    // )
-    // {
-    //     using var reader = new StreamReader(stream);
-    //     var text = await reader.ReadToEndAsync();
-    //     return await ReadASync(text, options);
-    // }
 }

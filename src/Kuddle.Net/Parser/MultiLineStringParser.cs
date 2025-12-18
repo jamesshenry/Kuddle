@@ -57,7 +57,6 @@ public class MultiLineStringParser : Parser<KdlString>
 
             int matchIndex = searchOffset + relativeIndex;
 
-            // Count preceding backslashes
             int backslashCount = 0;
             int backScan = matchIndex - 1;
 
@@ -90,15 +89,12 @@ public class MultiLineStringParser : Parser<KdlString>
         ParseContext context
     )
     {
-        // Fast path: empty content
         if (rawInput.IsEmpty)
             return new KdlString(string.Empty, StringKind.MultiLine);
 
-        // Check what processing we need
         bool hasCR = rawInput.Contains('\r');
         bool hasBackslash = rawInput.Contains('\\');
 
-        // If no special characters, we can take a faster path
         ReadOnlySpan<char> normalized;
         string? workingString = null;
 
@@ -112,14 +108,12 @@ public class MultiLineStringParser : Parser<KdlString>
             normalized = rawInput;
         }
 
-        // Handle whitespace escapes if present
         if (hasBackslash)
         {
             workingString = ResolveWsEscapes(workingString ?? normalized.ToString());
             normalized = workingString.AsSpan();
         }
 
-        // Find the last newline to extract the prefix (indentation)
         int lastNewLine = normalized.LastIndexOf('\n');
 
         ReadOnlySpan<char> prefix;
@@ -136,7 +130,6 @@ public class MultiLineStringParser : Parser<KdlString>
             contentBody = ReadOnlySpan<char>.Empty;
         }
 
-        // Validate prefix contains only whitespace
         foreach (char c in prefix)
         {
             if (!CharacterSets.IsWhiteSpace(c))
@@ -148,10 +141,8 @@ public class MultiLineStringParser : Parser<KdlString>
             }
         }
 
-        // Build dedented string
         string dedented = BuildDedentedString(contentBody, prefix, context);
 
-        // Unescape if needed
         string finalValue = hasBackslash ? UnescapeStandardKdl(dedented) : dedented;
 
         return new KdlString(finalValue, StringKind.MultiLine);
@@ -159,7 +150,6 @@ public class MultiLineStringParser : Parser<KdlString>
 
     private static string NormalizeNewlines(ReadOnlySpan<char> input)
     {
-        // Count output size first
         int outputLength = 0;
         for (int i = 0; i < input.Length; i++)
         {
@@ -207,12 +197,10 @@ public class MultiLineStringParser : Parser<KdlString>
         if (contentBody.IsEmpty)
             return string.Empty;
 
-        // Skip leading newline
         int startPos = 0;
         if (contentBody[0] == '\n')
             startPos = 1;
 
-        // Fast path: no prefix means no dedentation needed
         if (prefix.IsEmpty)
         {
             var body = contentBody.Slice(startPos);
@@ -221,7 +209,6 @@ public class MultiLineStringParser : Parser<KdlString>
             return body.ToString();
         }
 
-        // First pass: calculate output length and validate
         int outputLength = 0;
         int pos = startPos;
 
@@ -256,14 +243,12 @@ public class MultiLineStringParser : Parser<KdlString>
             pos = nextNewLine + 1;
         }
 
-        // Remove trailing newline
         if (outputLength > 0)
             outputLength--;
 
         if (outputLength <= 0)
             return string.Empty;
 
-        // Second pass: build string
         string prefixStr = prefix.ToString();
         string contentStr = contentBody.ToString();
 
@@ -326,12 +311,10 @@ public class MultiLineStringParser : Parser<KdlString>
 
     private static string ResolveWsEscapes(string input)
     {
-        // Fast path: no backslashes
         int backslashIdx = input.IndexOf('\\');
         if (backslashIdx == -1)
             return input;
 
-        // Check if any backslash is followed by whitespace/newline (ws-escape pattern)
         bool hasWsEscape = false;
         for (int i = backslashIdx; i < input.Length - 1; i++)
         {
@@ -349,8 +332,6 @@ public class MultiLineStringParser : Parser<KdlString>
         if (!hasWsEscape)
             return input;
 
-        // Need to process ws-escapes
-        // First pass: calculate output length
         int outputLength = 0;
         for (int i = 0; i < input.Length; i++)
         {
@@ -358,15 +339,13 @@ public class MultiLineStringParser : Parser<KdlString>
             {
                 int scanIdx = i + 1;
 
-                // Skip whitespace
                 while (scanIdx < input.Length && (input[scanIdx] == ' ' || input[scanIdx] == '\t'))
                     scanIdx++;
 
-                // Check for newline
                 if (scanIdx < input.Length && input[scanIdx] == '\n')
                 {
                     scanIdx++;
-                    // Skip whitespace after newline
+
                     while (
                         scanIdx < input.Length && (input[scanIdx] == ' ' || input[scanIdx] == '\t')
                     )
@@ -377,7 +356,6 @@ public class MultiLineStringParser : Parser<KdlString>
                 }
                 else if (scanIdx >= input.Length && scanIdx > i + 1)
                 {
-                    // Trailing ws-escape
                     i = scanIdx - 1;
                     continue;
                 }
@@ -428,12 +406,10 @@ public class MultiLineStringParser : Parser<KdlString>
 
     private static string UnescapeStandardKdl(string input)
     {
-        // Fast path: no backslashes
         int backslashIdx = input.IndexOf('\\');
         if (backslashIdx == -1)
             return input;
 
-        // First pass: calculate output length
         int outputLength = 0;
         for (int i = 0; i < input.Length; i++)
         {

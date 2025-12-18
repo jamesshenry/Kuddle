@@ -136,14 +136,13 @@ public static class KdlGrammar
                     )
                     .Then(s => new TextSpan(s))
             );
-        // 1. Define a parser for Surrogate Pairs (valid emojis/symbols outside BMP)
+
         var surrogatePair = Capture(
             Literals
                 .Pattern(char.IsHighSurrogate, 1, 1)
                 .And(Literals.Pattern(char.IsLowSurrogate, 1, 1))
         );
 
-        // 2. Define the standard character parser (checks for disallowed chars like lone surrogates)
         var singleChar = Literals.Pattern(
             c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c),
             1,
@@ -157,20 +156,16 @@ public static class KdlGrammar
         var singleLineStringBody = ZeroOrMany(StringCharacter)
             .Then(x =>
             {
-                // Fast path: no characters means empty string
                 if (x.Count == 0)
                     return new TextSpan(string.Empty);
 
-                // Fast path: single span can be returned directly
                 if (x.Count == 1)
                     return new TextSpan(x[0].Span.ToString());
 
-                // Calculate total length to avoid StringBuilder resizing
                 int totalLength = 0;
                 for (int i = 0; i < x.Count; i++)
                     totalLength += x[i].Length;
 
-                // Use string.Create for efficient concatenation
                 return new TextSpan(
                     string.Create(
                         totalLength,
@@ -265,7 +260,6 @@ public static class KdlGrammar
             .Then(
                 (context, span) =>
                 {
-                    // Use span-based comparison to avoid allocation for valid identifiers
                     return IsReservedKeyword(span.Span)
                         ? throw new ParseException(
                             $"The keyword '{span}' cannot be used as an unquoted identifier. Wrap it in quotes: \"{span}\".",
@@ -313,9 +307,7 @@ public static class KdlGrammar
                 .AndSkip(Literals.Text("0b"))
                 .And(Literals.Char('0').Or(Literals.Char('1')))
                 .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
-        )
-        // .When((context, x) => x.Span[^1] != '_')
-        ;
+        );
         Boolean = Literals
             .Text("#true")
             .Or(Literals.Text("#false"))
@@ -337,7 +329,6 @@ public static class KdlGrammar
         Number = OneOf(KeywordNumber, Hex, Octal, Binary, Decimal)
             .Then((context, value) => new KdlNumber(value.Span.ToString()));
 
-        // Comments
         var multiLineComment = Deferred<TextSpan>();
 
         var openComment = Literals.Text("/*");
@@ -358,7 +349,6 @@ public static class KdlGrammar
         var lineSpace = Deferred<TextSpan>();
         SlashDash = Capture(Literals.Text("/-").And(ZeroOrMany(lineSpace))).Debug("SlashDash");
 
-        // Whitespace
         Ws = Literals
             .Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1, maxSize: 1)
             .Or(MultiLineComment)
@@ -378,8 +368,6 @@ public static class KdlGrammar
         NodeSpace = nodeSpace.Debug("NodeSpace");
         lineSpace.Parser = NodeSpace.Or(singleNewLine).Or(SingleLineComment);
         LineSpace = lineSpace;
-
-        // Entries
 
         Type = Between(
             Literals.Char('('),
@@ -468,7 +456,7 @@ public static class KdlGrammar
             {
                 if (result.Item1.HasValue)
                     return null;
-                // Filter skipped entries - use single pass allocation
+
                 var entries = result.Item4;
                 var hasSkipped = false;
                 for (int i = 0; i < entries.Count; i++)
@@ -491,7 +479,6 @@ public static class KdlGrammar
                 }
                 else
                 {
-                    // No skipped entries - just copy to list
                     filteredEntries = new List<KdlEntry>(entries.Count);
                     for (int i = 0; i < entries.Count; i++)
                         filteredEntries.Add(entries[i]);
@@ -526,14 +513,12 @@ public static class KdlGrammar
             .AndSkip(ZeroOrMany(LineSpace))
             .Then(list =>
             {
-                // Single-pass filter to avoid Where().Select().ToList() triple allocation
                 List<KdlNode>? filtered = null;
                 for (int i = 0; i < list.Count; i++)
                 {
                     var node = list[i];
                     if (node is null)
                     {
-                        // First null found - need to build filtered list
                         if (filtered is null)
                         {
                             filtered = new List<KdlNode>(list.Count);

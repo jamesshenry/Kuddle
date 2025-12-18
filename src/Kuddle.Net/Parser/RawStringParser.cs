@@ -18,7 +18,6 @@ sealed class RawStringParser : Parser<KdlString>
         var startPos = cursor.Position;
         int currentOffset = startPos.Offset;
 
-        // Count opening hashes
         int hashCount = 0;
         while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '#')
         {
@@ -26,7 +25,6 @@ sealed class RawStringParser : Parser<KdlString>
             currentOffset++;
         }
 
-        // Count opening quotes
         int quoteCount = 0;
         while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '"')
         {
@@ -48,7 +46,6 @@ sealed class RawStringParser : Parser<KdlString>
 
         bool isMultiline = quoteCount == 3;
 
-        // Build closing delimiter: quotes followed by hashes
         int needleLength = quoteCount + hashCount;
         Span<char> needle =
             needleLength <= 256 ? stackalloc char[needleLength] : new char[needleLength];
@@ -70,7 +67,6 @@ sealed class RawStringParser : Parser<KdlString>
         var contentSpan = remainingBuffer.Slice(0, matchIndex);
         int totalLengthParsed = (currentOffset - startPos.Offset) + matchIndex + needleLength;
 
-        // Advance cursor
         for (int i = 0; i < totalLengthParsed; i++)
             cursor.Advance();
 
@@ -84,7 +80,6 @@ sealed class RawStringParser : Parser<KdlString>
         }
         else
         {
-            // Raw single-line strings have no escape processing
             content = contentSpan.ToString();
             style = StringKind.Quoted | StringKind.Raw;
         }
@@ -99,11 +94,9 @@ sealed class RawStringParser : Parser<KdlString>
     /// </summary>
     public static string ProcessMultiLineRawString(ReadOnlySpan<char> rawInput)
     {
-        // Fast path: empty content
         if (rawInput.IsEmpty)
             return string.Empty;
 
-        // Check if we need newline normalization
         bool hasCR = rawInput.Contains('\r');
 
         ReadOnlySpan<char> normalized;
@@ -111,7 +104,6 @@ sealed class RawStringParser : Parser<KdlString>
 
         if (hasCR)
         {
-            // Need to normalize - allocate once
             normalizedString = NormalizeNewlines(rawInput);
             normalized = normalizedString.AsSpan();
         }
@@ -120,7 +112,6 @@ sealed class RawStringParser : Parser<KdlString>
             normalized = rawInput;
         }
 
-        // Find the last newline to extract the prefix (indentation)
         int lastNewLine = normalized.LastIndexOf('\n');
 
         ReadOnlySpan<char> prefix;
@@ -137,7 +128,6 @@ sealed class RawStringParser : Parser<KdlString>
             contentBody = ReadOnlySpan<char>.Empty;
         }
 
-        // Validate prefix contains only whitespace
         foreach (char c in prefix)
         {
             if (c != ' ' && c != '\t')
@@ -149,32 +139,27 @@ sealed class RawStringParser : Parser<KdlString>
             }
         }
 
-        // If no content body, return empty
         if (contentBody.IsEmpty)
             return string.Empty;
 
-        // Skip leading newline
         int pos = 0;
         if (contentBody[0] == '\n')
             pos = 1;
 
-        // Fast path: no prefix means no dedentation needed
         if (prefix.IsEmpty)
         {
             var body = contentBody.Slice(pos);
-            // Remove trailing newline if present
+
             if (body.Length > 0 && body[^1] == '\n')
                 body = body.Slice(0, body.Length - 1);
             return body.ToString();
         }
 
-        // Need to process with dedentation
         return BuildDedentedString(contentBody, pos, prefix);
     }
 
     private static string NormalizeNewlines(ReadOnlySpan<char> input)
     {
-        // Count output size to avoid StringBuilder resizing
         int outputLength = 0;
         for (int i = 0; i < input.Length; i++)
         {
@@ -219,7 +204,6 @@ sealed class RawStringParser : Parser<KdlString>
         ReadOnlySpan<char> prefix
     )
     {
-        // First pass: calculate output length and validate
         int outputLength = 0;
         int pos = startPos;
 
@@ -254,14 +238,12 @@ sealed class RawStringParser : Parser<KdlString>
             pos = nextNewLine + 1;
         }
 
-        // Remove trailing newline
         if (outputLength > 0)
             outputLength--;
 
         if (outputLength <= 0)
             return string.Empty;
 
-        // Second pass: build the string
         string prefixStr = prefix.ToString();
         string contentStr = contentBody.ToString();
 
@@ -314,7 +296,6 @@ sealed class RawStringParser : Parser<KdlString>
 
     private static bool IsWhitespaceOnlyLine(ReadOnlySpan<char> line)
     {
-        // Check all chars except the trailing newline
         for (int i = 0; i < line.Length - 1; i++)
         {
             if (!char.IsWhiteSpace(line[i]))
