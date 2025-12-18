@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Kuddle.AST;
 using Kuddle.Extensions;
 
@@ -13,6 +14,8 @@ namespace Kuddle.Serialization;
 /// </summary>
 public static class KdlSerializer
 {
+    private const StringComparison NodeNameComparison = StringComparison.OrdinalIgnoreCase;
+
     #region Deserialization
 
     /// <summary>
@@ -20,7 +23,8 @@ public static class KdlSerializer
     /// </summary>
     public static IEnumerable<T> DeserializeMany<T>(
         string text,
-        KdlSerializerOptions? options = null
+        KdlSerializerOptions? options = null,
+        CancellationToken cancellationToken = default
     )
         where T : new()
     {
@@ -29,7 +33,9 @@ public static class KdlSerializer
 
         foreach (var node in doc.Nodes)
         {
-            if (!node.Name.Value.Equals(metadata.NodeName, StringComparison.OrdinalIgnoreCase))
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!node.Name.Value.Equals(metadata.NodeName, NodeNameComparison))
             {
                 throw new KuddleSerializationException(
                     $"Expected node '{metadata.NodeName}', found '{node.Name.Value}'."
@@ -78,7 +84,7 @@ public static class KdlSerializer
             }
 
             var rootNode = document.Nodes[0];
-            if (!rootNode.Name.Value.Equals(metadata.NodeName, StringComparison.OrdinalIgnoreCase))
+            if (!rootNode.Name.Value.Equals(metadata.NodeName, NodeNameComparison))
             {
                 throw new KuddleSerializationException(
                     $"Expected node '{metadata.NodeName}', found '{rootNode.Name.Value}'."
@@ -152,9 +158,7 @@ public static class KdlSerializer
         foreach (var mapping in metadata.Children)
         {
             var nodeName = mapping.GetChildNodeName();
-            var matchingNodes = nodes
-                .Where(n => n.Name.Value.Equals(nodeName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var matchingNodes = GetMatchingNodes(nodes, nodeName);
 
             if (matchingNodes.Count == 0)
             {
@@ -196,6 +200,19 @@ public static class KdlSerializer
                 }
             }
         }
+    }
+
+    private static List<KdlNode> GetMatchingNodes(IReadOnlyList<KdlNode> nodes, string nodeName)
+    {
+        var result = new List<KdlNode>();
+        foreach (var node in nodes)
+        {
+            if (node.Name.Value.Equals(nodeName, NodeNameComparison))
+            {
+                result.Add(node);
+            }
+        }
+        return result;
     }
 
     private static void SetPropertyValue(
@@ -273,7 +290,7 @@ public static class KdlSerializer
     /// <summary>
     /// Serializes an object to a KDL string.
     /// </summary>
-    public static string Serialize<T>(T instance)
+    public static string Serialize<T>(T instance, KdlSerializerOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -302,6 +319,36 @@ public static class KdlSerializer
         else
         {
             var node = SerializeToNode(instance);
+            doc.Nodes.Add(node);
+        }
+
+        return KdlWriter.Write(doc);
+    }
+
+    /// <summary>
+    /// Serializes multiple objects to a KDL string.
+    /// </summary>
+    public static string SerializeMany<T>(
+        IEnumerable<T> items,
+        KdlSerializerOptions? options = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        var metadata = TypeMetadata.For<T>();
+        var doc = new KdlDocument();
+
+        foreach (var item in items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (item is null)
+            {
+                continue;
+            }
+
+            var node = SerializeToNode(item);
             doc.Nodes.Add(node);
         }
 
@@ -460,6 +507,27 @@ public static class KdlSerializer
 }
 
 /// <summary>
-/// Options for KDL serialization (reserved for future use).
+/// Options for KDL serialization and deserialization.
 /// </summary>
-public record KdlSerializerOptions { }
+public record KdlSerializerOptions
+{
+    /// <summary>
+    /// Whether to ignore null values when serializing. Default is true.
+    /// </summary>
+    public bool IgnoreNullValues { get; init; } = true;
+
+    /// <summary>
+    /// Whether property/node name comparison is case-insensitive. Default is true.
+    /// </summary>
+    public bool CaseInsensitiveNames { get; init; } = true;
+
+    /// <summary>
+    /// Whether to include type annotations in output. Default is true.
+    /// </summary>
+    public bool WriteTypeAnnotations { get; init; } = true;
+
+    /// <summary>
+    /// Default options instance.
+    /// </summary>
+    public static KdlSerializerOptions Default { get; } = new();
+}

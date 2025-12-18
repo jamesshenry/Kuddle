@@ -34,7 +34,7 @@ public class TypeAnnotationTests
         public decimal Price { get; set; }
 
         [KdlProperty("stock", "u32")]
-        public int StockCount { get; set; }
+        public uint StockCount { get; set; }
     }
 
     public class EventWithChildAnnotations
@@ -42,10 +42,10 @@ public class TypeAnnotationTests
         [KdlArgument(0)]
         public string Name { get; set; } = "";
 
-        [KdlNode("timestamp")]
+        [KdlNode("timestamp", "date-time")]
         public DateTimeOffset Timestamp { get; set; }
 
-        [KdlNode("correlation-id")]
+        [KdlNode("correlation-id", "uuid")]
         public Guid CorrelationId { get; set; }
     }
 
@@ -131,7 +131,7 @@ public class TypeAnnotationTests
             .That(product.Sku)
             .IsEqualTo(Guid.Parse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
         await Assert.That(product.Price).IsEqualTo(99.99m);
-        await Assert.That(product.StockCount).IsEqualTo(42);
+        await Assert.That(product.StockCount).IsEqualTo(42u);
     }
 
     [Test]

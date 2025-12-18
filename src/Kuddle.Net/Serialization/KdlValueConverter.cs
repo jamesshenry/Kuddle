@@ -36,7 +36,7 @@ internal static class KdlValueConverter
             return true;
         }
 
-        // Integers
+        // Integers (signed)
         if (underlying == typeof(int) && kdlValue.TryGetInt(out var intVal))
         {
             value = intVal;
@@ -46,6 +46,43 @@ internal static class KdlValueConverter
         if (underlying == typeof(long) && kdlValue.TryGetLong(out var longVal))
         {
             value = longVal;
+            return true;
+        }
+
+        if (underlying == typeof(short) && kdlValue.TryGetInt(out var shortVal))
+        {
+            value = (short)shortVal;
+            return true;
+        }
+
+        if (underlying == typeof(sbyte) && kdlValue.TryGetInt(out var sbyteVal))
+        {
+            value = (sbyte)sbyteVal;
+            return true;
+        }
+
+        // Integers (unsigned)
+        if (underlying == typeof(uint) && kdlValue.TryGetLong(out var uintVal))
+        {
+            value = (uint)uintVal;
+            return true;
+        }
+
+        if (underlying == typeof(ulong) && kdlValue.TryGetLong(out var ulongVal))
+        {
+            value = (ulong)ulongVal;
+            return true;
+        }
+
+        if (underlying == typeof(ushort) && kdlValue.TryGetInt(out var ushortVal))
+        {
+            value = (ushort)ushortVal;
+            return true;
+        }
+
+        if (underlying == typeof(byte) && kdlValue.TryGetInt(out var byteVal))
+        {
+            value = (byte)byteVal;
             return true;
         }
 
@@ -113,6 +150,12 @@ internal static class KdlValueConverter
             string s => KdlValue.From(s),
             int i => KdlValue.From(i),
             long l => KdlValue.From(l),
+            short sh => KdlValue.From(sh),
+            sbyte sb => KdlValue.From(sb),
+            uint ui => KdlValue.From(ui),
+            ulong ul => KdlValue.From((long)ul),
+            ushort us => KdlValue.From(us),
+            byte by => KdlValue.From(by),
             double d => KdlValue.From(d),
             float f => KdlValue.From((double)f),
             decimal m => KdlValue.From(m),
