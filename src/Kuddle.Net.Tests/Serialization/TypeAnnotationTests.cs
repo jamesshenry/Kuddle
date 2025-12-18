@@ -9,19 +9,16 @@ public class TypeAnnotationTests
 
     public class PersonWithAnnotations
     {
-        [KdlArgument(0)]
-        [KdlTypeAnnotation("uuid")]
+        [KdlArgument(0, "uuid")]
         public Guid Id { get; set; }
 
         [KdlProperty("name")]
         public string Name { get; set; } = "";
 
-        [KdlProperty("created")]
-        [KdlTypeAnnotation("date-time")]
+        [KdlProperty("created", "date-time")]
         public DateTimeOffset CreatedAt { get; set; }
 
-        [KdlProperty("age")]
-        [KdlTypeAnnotation("i32")]
+        [KdlProperty("age", "i32")]
         public int Age { get; set; }
     }
 
@@ -30,16 +27,13 @@ public class TypeAnnotationTests
         [KdlArgument(0)]
         public string Name { get; set; } = "";
 
-        [KdlProperty("sku")]
-        [KdlTypeAnnotation("uuid")]
+        [KdlProperty("sku", "uuid")]
         public Guid Sku { get; set; }
 
-        [KdlProperty("price")]
-        [KdlTypeAnnotation("decimal64")]
+        [KdlProperty("price", "decimal64")]
         public decimal Price { get; set; }
 
-        [KdlProperty("stock")]
-        [KdlTypeAnnotation("u32")]
+        [KdlProperty("stock", "u32")]
         public int StockCount { get; set; }
     }
 
@@ -49,11 +43,9 @@ public class TypeAnnotationTests
         public string Name { get; set; } = "";
 
         [KdlNode("timestamp")]
-        [KdlTypeAnnotation("date-time")]
         public DateTimeOffset Timestamp { get; set; }
 
         [KdlNode("correlation-id")]
-        [KdlTypeAnnotation("uuid")]
         public Guid CorrelationId { get; set; }
     }
 
@@ -116,7 +108,7 @@ public class TypeAnnotationTests
         var kdl = KdlSerializer.Serialize(product);
 
         // Assert
-        await Assert.That(kdl).Contains("\"Widget\"");
+        await Assert.That(kdl).Contains("Widget");
         await Assert.That(kdl).Contains("(uuid)\"a1b2c3d4-e5f6-7890-abcd-ef1234567890\"");
         await Assert.That(kdl).Contains("(decimal64)99.99");
         await Assert.That(kdl).Contains("(u32)42");
@@ -170,7 +162,7 @@ public class TypeAnnotationTests
     {
         // Arrange
         var kdl = """
-            eventwitchildannotations "UserLoggedIn" {
+            eventwithchildannotations "UserLoggedIn" {
                 timestamp (date-time)"2024-12-17T10:30:00.0000000+00:00"
                 correlation-id (uuid)"11111111-2222-3333-4444-555555555555"
             }

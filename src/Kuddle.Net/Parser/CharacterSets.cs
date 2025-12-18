@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Kuddle.Parser;
 
@@ -71,18 +72,72 @@ public static class CharacterSets
         };
     }
 
-    // internal static bool IsDisallowedLiteralCodePoint(char c)
-    // {
-    //     return c switch
-    //     {
-    //         >= '\u0000' and <= '\u0008' => true, // various control characters
-    //         '\u007F' => true,
-    //         >= '\uD800' and <= '\uDFFF' => true, // unicode scalar value
-    //         (>= '\u200E' and <= '\u200F')
-    //         or (>= '\u202A' and <= '\u202E')
-    //         or (>= '\u2066' and <= '\u2069') => true, // unicode 'direction control' characters
-    //         '\uFEFF' => true, // unicode BOM
-    //         _ => false,
-    //     };
-    // }
+    public static readonly HashSet<string> ReservedTypes =
+    [
+        "i8",
+        "i16",
+        "i32",
+        "i64",
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "f32",
+        "f64",
+        "decimal64",
+        "decimal128",
+        "date-time",
+        "time",
+        "date",
+        "duration",
+        "decimal",
+        "currency",
+        "country-2",
+        "country-3",
+        "ipv4",
+        "ipv6",
+        "url",
+        "uuid",
+        "regex",
+        "base64",
+    ];
+
+    /// <summary>
+    /// Maps KDL type annotations to their corresponding CLR types.
+    /// Not all reserved types have CLR equivalents (e.g., country codes, IP addresses as validated strings).
+    /// </summary>
+    public static readonly Dictionary<string, Type> TypeAnnotationToClrType = new()
+    {
+        ["i8"] = typeof(sbyte),
+        ["i16"] = typeof(short),
+        ["i32"] = typeof(int),
+        ["i64"] = typeof(long),
+        ["u8"] = typeof(byte),
+        ["u16"] = typeof(ushort),
+        ["u32"] = typeof(uint),
+        ["u64"] = typeof(ulong),
+        ["f32"] = typeof(float),
+        ["f64"] = typeof(double),
+        ["decimal64"] = typeof(decimal),
+        ["decimal128"] = typeof(decimal),
+        ["decimal"] = typeof(decimal),
+        ["date-time"] = typeof(DateTimeOffset),
+        ["time"] = typeof(TimeOnly),
+        ["date"] = typeof(DateOnly),
+        ["duration"] = typeof(TimeSpan),
+        ["uuid"] = typeof(Guid),
+        ["url"] = typeof(Uri),
+        ["base64"] = typeof(byte[]),
+        // These remain as strings with semantic meaning:
+        // "currency", "country-2", "country-3", "ipv4", "ipv6", "regex"
+    };
+
+    /// <summary>
+    /// Gets the CLR type for a KDL type annotation, or null if no mapping exists.
+    /// </summary>
+    public static Type? GetClrType(string? typeAnnotation) =>
+        typeAnnotation is not null
+        && TypeAnnotationToClrType.TryGetValue(typeAnnotation, out var type)
+            ? type
+            : null;
 }

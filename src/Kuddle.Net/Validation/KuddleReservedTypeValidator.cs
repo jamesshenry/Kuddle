@@ -5,41 +5,12 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Kuddle.AST;
 using Kuddle.Exceptions;
+using Kuddle.Parser;
 
 namespace Kuddle.Validation;
 
 public static class KdlReservedTypeValidator
 {
-    private static readonly HashSet<string> ReservedTypes =
-    [
-        "i8",
-        "i16",
-        "i32",
-        "i64",
-        "u8",
-        "u16",
-        "u32",
-        "u64",
-        "f32",
-        "f64",
-        "decimal64",
-        "decimal128",
-        "date-time",
-        "time",
-        "date",
-        "duration",
-        "decimal",
-        "currency",
-        "country-2",
-        "country-3",
-        "ipv4",
-        "ipv6",
-        "url",
-        "uuid",
-        "regex",
-        "base64",
-    ];
-
     public static void Validate(KdlDocument doc)
     {
         var errors = new List<KuddleValidationError>();
@@ -82,7 +53,7 @@ public static class KdlReservedTypeValidator
     {
         if (val.TypeAnnotation == null)
             return;
-        if (!ReservedTypes.Contains(val.TypeAnnotation))
+        if (!CharacterSets.ReservedTypes.Contains(val.TypeAnnotation))
             return;
 
         try

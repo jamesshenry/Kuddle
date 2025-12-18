@@ -11,17 +11,25 @@ namespace Kuddle.Serialization;
 /// <summary>
 /// Represents a mapping from a C# property to a KDL entry (argument, property, or child node).
 /// </summary>
-internal sealed record PropertyMapping(
-    PropertyInfo Property,
-    KdlArgumentAttribute? Argument,
-    KdlPropertyAttribute? KdlProperty,
-    KdlNodeAttribute? ChildNode,
-    KdlTypeAnnotationAttribute? TypeAnnotation
-)
+internal sealed record KdlEntryMapping(PropertyInfo Property, KdlEntryAttribute? Entry)
 {
-    public string GetPropertyKey() => KdlProperty?.Key ?? Property.Name.ToLowerInvariant();
+    public bool IsArgument => Entry is KdlArgumentAttribute;
+    public bool IsProperty => Entry is KdlPropertyAttribute;
+    public bool IsChildNode => Entry is KdlNodeAttribute;
 
-    public string GetChildNodeName() => ChildNode?.Name ?? Property.Name.ToLowerInvariant();
+    public int ArgumentIndex => Entry is KdlArgumentAttribute arg ? arg.Index : -1;
+
+    public string GetPropertyKey() =>
+        Entry is KdlPropertyAttribute prop
+            ? prop.Key ?? Property.Name.ToLowerInvariant()
+            : Property.Name.ToLowerInvariant();
+
+    public string GetChildNodeName() =>
+        Entry is KdlNodeAttribute node
+            ? node.Name ?? Property.Name.ToLowerInvariant()
+            : Property.Name.ToLowerInvariant();
+
+    public string? TypeAnnotation => Entry?.TypeAnnotation;
 }
 
 /// <summary>
@@ -35,50 +43,37 @@ internal sealed class TypeMetadata
 
     public Type Type { get; }
     public string NodeName { get; }
-    public bool IsNodeDefinition => Arguments.Count > 0 || Properties.Count > 0;
+    public bool IsNodeDefinition => ArgumentAttributes.Count > 0 || Properties.Count > 0;
 
     /// <summary>Properties mapped to KDL arguments, sorted by index.</summary>
-    public IReadOnlyList<PropertyMapping> Arguments { get; }
+    public IReadOnlyList<KdlEntryMapping> ArgumentAttributes { get; }
 
     /// <summary>Properties mapped to KDL properties.</summary>
-    public IReadOnlyList<PropertyMapping> Properties { get; }
+    public IReadOnlyList<KdlEntryMapping> Properties { get; }
 
     /// <summary>Properties mapped to child nodes.</summary>
-    public IReadOnlyList<PropertyMapping> Children { get; }
+    public IReadOnlyList<KdlEntryMapping> Children { get; }
 
     /// <summary>All writable, non-ignored properties.</summary>
-    public IReadOnlyList<PropertyMapping> AllMappings { get; }
+    public IReadOnlyList<KdlEntryMapping> AllMappings { get; }
 
     private TypeMetadata(Type type)
     {
         Type = type;
 
-        // Determine node name from [KdlType] or fall back to type name
         var kdlTypeAttr = type.GetCustomAttribute<KdlTypeAttribute>();
         NodeName = kdlTypeAttr?.Name ?? type.Name.ToLowerInvariant();
 
-        // Gather all writable, non-ignored properties
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanWrite && p.GetCustomAttribute<KdlIgnoreAttribute>() == null)
-            .Select(p => new PropertyMapping(
-                p,
-                p.GetCustomAttribute<KdlArgumentAttribute>(),
-                p.GetCustomAttribute<KdlPropertyAttribute>(),
-                p.GetCustomAttribute<KdlNodeAttribute>(),
-                p.GetCustomAttribute<KdlTypeAnnotationAttribute>()
-            ))
+            .Select(p => new KdlEntryMapping(p, p.GetCustomAttribute<KdlEntryAttribute>()))
             .ToList();
 
         AllMappings = props;
 
-        Arguments = props
-            .Where(m => m.Argument is not null)
-            .OrderBy(m => m.Argument!.Index)
-            .ToList();
-
-        Properties = props.Where(m => m.KdlProperty is not null).ToList();
-
-        Children = props.Where(m => m.ChildNode is not null).ToList();
+        ArgumentAttributes = [.. props.Where(m => m.IsArgument).OrderBy(m => m.ArgumentIndex)];
+        Properties = [.. props.Where(m => m.IsProperty)];
+        Children = [.. props.Where(m => m.IsChildNode)];
     }
 
     /// <summary>

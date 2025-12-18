@@ -93,7 +93,7 @@ public static class KdlSerializer
         {
             // Type maps to a document with child nodes as properties
             var instance = new T();
-            MapDocumentToObject(document.Nodes, instance, metadata);
+            MapChildNodes(document.Nodes, instance, metadata);
             return instance;
         }
     }
@@ -104,57 +104,35 @@ public static class KdlSerializer
     private static void MapNodeToObject(KdlNode node, object instance, TypeMetadata metadata)
     {
         // Map arguments
-        foreach (var mapping in metadata.Arguments)
+        foreach (var mapping in metadata.ArgumentAttributes)
         {
-            var argValue = node.Arg(mapping.Argument!.Index);
+            var argValue = node.Arg(mapping.ArgumentIndex);
             if (argValue is null)
             {
                 throw new KuddleSerializationException(
-                    $"Missing required argument at index {mapping.Argument.Index} for property '{mapping.Property.Name}'."
+                    $"Missing required argument at index {mapping.ArgumentIndex}'."
                 );
             }
 
-            SetPropertyValue(
-                mapping.Property,
-                instance,
-                argValue,
-                mapping.TypeAnnotation?.Annotation
-            );
+            SetPropertyValue(mapping.Property, instance, argValue, mapping.TypeAnnotation);
         }
 
         // Map properties
         foreach (var mapping in metadata.Properties)
         {
             var propKey = mapping.GetPropertyKey();
-            var propValue = node.Prop(propKey);
+            var kdlValue = node.Prop(propKey);
 
-            if (propValue is null)
+            if (kdlValue is null)
             {
                 continue; // Optional property, use default
             }
 
-            SetPropertyValue(
-                mapping.Property,
-                instance,
-                propValue,
-                mapping.TypeAnnotation?.Annotation
-            );
+            SetPropertyValue(mapping.Property, instance, kdlValue, mapping.TypeAnnotation);
         }
 
         // Map child nodes
         MapChildNodes(node.Children?.Nodes, instance, metadata);
-    }
-
-    /// <summary>
-    /// Maps document-level nodes to object properties (for non-node-definition types).
-    /// </summary>
-    private static void MapDocumentToObject(
-        List<KdlNode> nodes,
-        object instance,
-        TypeMetadata metadata
-    )
-    {
-        MapChildNodes(nodes, instance, metadata);
     }
 
     /// <summary>
@@ -214,12 +192,7 @@ public static class KdlSerializer
                 var argValue = matchingNodes[0].Arg(0);
                 if (argValue is not null)
                 {
-                    SetPropertyValue(
-                        mapping.Property,
-                        instance,
-                        argValue,
-                        mapping.TypeAnnotation?.Annotation
-                    );
+                    SetPropertyValue(mapping.Property, instance, argValue, mapping.TypeAnnotation);
                 }
             }
         }
@@ -344,10 +317,10 @@ public static class KdlSerializer
         var entries = new List<KdlEntry>();
 
         // Serialize arguments (in order)
-        foreach (var mapping in metadata.Arguments)
+        foreach (var mapping in metadata.ArgumentAttributes)
         {
             var value = mapping.Property.GetValue(instance);
-            var typeAnnotation = mapping.TypeAnnotation?.Annotation;
+            var typeAnnotation = mapping.TypeAnnotation;
             var kdlValue = KdlValueConverter.ToKdlOrThrow(
                 value,
                 $"Argument property: {mapping.Property.Name}",
@@ -361,7 +334,7 @@ public static class KdlSerializer
         foreach (var mapping in metadata.Properties)
         {
             var value = mapping.Property.GetValue(instance);
-            var typeAnnotation = mapping.TypeAnnotation?.Annotation;
+            var typeAnnotation = mapping.TypeAnnotation;
 
             if (!KdlValueConverter.TryToKdl(value, out var kdlValue, typeAnnotation))
             {
@@ -403,7 +376,7 @@ public static class KdlSerializer
             else
             {
                 // Scalar value as a child node with single argument
-                var typeAnnotation = mapping.TypeAnnotation?.Annotation;
+                var typeAnnotation = mapping.TypeAnnotation;
                 var kdlValue = KdlValueConverter.ToKdlOrThrow(
                     propValue,
                     $"Child scalar property: {mapping.Property.Name}",

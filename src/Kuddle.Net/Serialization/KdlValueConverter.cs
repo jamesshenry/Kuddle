@@ -1,6 +1,7 @@
 using System;
 using Kuddle.AST;
 using Kuddle.Extensions;
+using Kuddle.Parser;
 
 namespace Kuddle.Serialization;
 
@@ -12,14 +13,9 @@ internal static class KdlValueConverter
     /// <summary>
     /// Attempts to convert a KDL value to a CLR type.
     /// </summary>
-    public static bool TryFromKdl(
-        KdlValue kdlValue,
-        Type targetType,
-        out object? result,
-        string? typeAnnotation = null
-    )
+    public static bool TryFromKdl(KdlValue kdlValue, Type targetType, out object? value)
     {
-        result = null;
+        value = default;
 
         if (kdlValue is KdlNull)
         {
@@ -27,7 +23,7 @@ internal static class KdlValueConverter
             {
                 return false;
             }
-            result = null;
+            value = null;
             return true;
         }
 
@@ -36,65 +32,65 @@ internal static class KdlValueConverter
         // String
         if (underlying == typeof(string) && kdlValue.TryGetString(out var stringVal))
         {
-            result = stringVal;
+            value = stringVal;
             return true;
         }
 
         // Integers
         if (underlying == typeof(int) && kdlValue.TryGetInt(out var intVal))
         {
-            result = intVal;
+            value = intVal;
             return true;
         }
 
         if (underlying == typeof(long) && kdlValue.TryGetLong(out var longVal))
         {
-            result = longVal;
+            value = longVal;
             return true;
         }
 
         // Floating point
         if (underlying == typeof(double) && kdlValue.TryGetDouble(out var doubleVal))
         {
-            result = doubleVal;
+            value = doubleVal;
             return true;
         }
 
         if (underlying == typeof(decimal) && kdlValue.TryGetDecimal(out var decimalVal))
         {
-            result = decimalVal;
+            value = decimalVal;
             return true;
         }
 
         if (underlying == typeof(float) && kdlValue.TryGetDouble(out var floatVal))
         {
-            result = (float)floatVal;
+            value = (float)floatVal;
             return true;
         }
 
         // Boolean
         if (underlying == typeof(bool) && kdlValue.TryGetBool(out var boolVal))
         {
-            result = boolVal;
+            value = boolVal;
             return true;
         }
 
         // Special types with type annotations
         if (underlying == typeof(Guid) && kdlValue.TryGetUuid(out var uuid))
         {
-            result = uuid;
+            value = uuid;
             return true;
         }
 
         if (underlying == typeof(DateTimeOffset) && kdlValue.TryGetDateTime(out var dto))
         {
-            result = dto;
+            value = dto;
             return true;
         }
 
         if (underlying == typeof(DateTime) && kdlValue.TryGetDateTime(out var dt))
         {
-            result = dt.DateTime;
+            value = dt.DateTime;
             return true;
         }
 
@@ -145,10 +141,11 @@ internal static class KdlValueConverter
         string? expectedTypeAnnotation = null
     )
     {
-        // Use the KDL value's type annotation if present, otherwise use the expected one from the attribute
-        var effectiveAnnotation = kdlValue.TypeAnnotation ?? expectedTypeAnnotation;
+        var finalTargetType =
+            CharacterSets.GetClrType(expectedTypeAnnotation ?? kdlValue.TypeAnnotation)
+            ?? targetType;
 
-        if (!TryFromKdl(kdlValue, targetType, out var result, effectiveAnnotation))
+        if (!TryFromKdl(kdlValue, finalTargetType, out var result))
         {
             throw new KuddleSerializationException(
                 $"Cannot convert KDL value '{kdlValue}' to {targetType.Name}. {context}"
