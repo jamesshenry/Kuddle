@@ -1,0 +1,87 @@
+// Real-world example: CI/CD pipeline configuration
+
+pipeline "main" {
+    trigger {
+        branch "main" "develop" "release/*"
+        path "src/**" "tests/**" ".github/**"
+        
+        // Exclude paths
+        exclude "**/*.md" "docs/**"
+    }
+    
+    variables {
+        variable "DOTNET_VERSION" "8.0.x"
+        variable "BUILD_CONFIGURATION" "Release"
+        variable "NUGET_FEED" "https://api.nuget.org/v3/index.json" secret=#false
+    }
+    
+    stage "build" {
+        displayName "Build and Test"
+        
+        job "build-windows" {
+            pool "windows-latest"
+            
+            step "checkout" {
+                uses "actions/checkout@v4"
+                with {
+                    fetch-depth 0
+                }
+            }
+            
+            step "setup-dotnet" {
+                uses "actions/setup-dotnet@v4"
+                with {
+                    dotnet-version "${{ variables.DOTNET_VERSION }}"
+                }
+            }
+            
+            step "restore" {
+                run "dotnet restore"
+            }
+            
+            step "build" {
+                run "dotnet build --configuration ${{ variables.BUILD_CONFIGURATION }} --no-restore"
+            }
+            
+            step "test" {
+                run "dotnet test --configuration ${{ variables.BUILD_CONFIGURATION }} --no-build --logger trx"
+                continueOnError #false
+            }
+        }
+        
+        job "build-linux" {
+            pool "ubuntu-latest"
+            dependsOn #null  // Runs in parallel
+            
+            step "checkout" uses="actions/checkout@v4"
+            step "setup-dotnet" uses="actions/setup-dotnet@v4"
+            step "restore" run="dotnet restore"
+            step "build" run="dotnet build -c Release"
+            step "test" run="dotnet test -c Release"
+        }
+    }
+    
+    stage "publish" {
+        displayName "Publish Package"
+        dependsOn "build"
+        condition "eq(variables['Build.SourceBranch'], 'refs/heads/main')"
+        
+        job "publish-nuget" {
+            pool "ubuntu-latest"
+            
+            step "download-artifact" {
+                uses "actions/download-artifact@v4"
+                with {
+                    name "nuget-package"
+                }
+            }
+            
+            step "push-nuget" {
+                run "dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source ${{ variables.NUGET_FEED }}"
+                env {
+                    NUGET_API_KEY "${{ secrets.NUGET_API_KEY }}"
+                }
+            }
+        }
+    }
+}

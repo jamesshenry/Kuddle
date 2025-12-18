@@ -1,0 +1,30 @@
+// Type annotations provide hints about value interpretation
+// Format: (type)value
+
+user alice {
+    id (uuid)"550e8400-e29b-41d4-a716-446655440000"
+    createdAt (date-time)"2024-01-15T10:30:00Z"
+    lastLogin (date-time)"2024-12-17T14:22:33.123Z"
+    
+    // Numeric type annotations
+    age (u8)28
+    balance (decimal)"1234567.89"
+    score (f64)98.5
+}
+
+// Type annotation on node name (context/role annotation)
+(admin)user "superuser" {
+    permissions "all"
+}
+
+// Various string type annotations from the spec
+metadata {
+    email (email)"user@example.com"
+    website (url)"https://example.com"
+    ip (ipv4)"192.168.1.1"
+    ipv6 (ipv6)"2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+    country (country-2)"US"
+    duration (duration)"P1Y2M3DT4H5M6S"
+    pattern (regex)"^[a-z]+$"
+    binary (base64)"SGVsbG8gV29ybGQh"
+}

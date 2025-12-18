@@ -1,4 +1,4 @@
-# Agent Guidelines for Kuddle
+# Agent Guidelines for Kuddle.Net
 
 ## Build Commands
 

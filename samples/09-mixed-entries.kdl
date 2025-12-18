@@ -1,0 +1,25 @@
+// Arguments and properties can be freely intermixed
+// This is valid KDL - order of args is preserved, props can appear anywhere
+
+// Properties between arguments
+node 1 key=value 2 another=prop 3
+
+// Real-world example: CLI-like syntax
+run "npm" "install" --save=#true "lodash" --dev=#false
+
+// Build configuration with mixed entries
+task "build" priority=high "src/**/*.ts" output="dist" "!src/**/*.test.ts" {
+    compiler "tsc"
+    watch #false
+}
+
+// HTTP request definition
+request "POST" "/api/users" content-type="application/json" {
+    header "Authorization" "Bearer token123"
+    header "X-Request-Id" (uuid)"550e8400-e29b-41d4-a716-446655440000"
+    
+    body {
+        name "John Doe"
+        email "john@example.com"
+    }
+}

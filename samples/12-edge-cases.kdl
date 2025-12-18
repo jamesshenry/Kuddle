@@ -1,0 +1,53 @@
+// Edge cases and tricky scenarios
+
+// Empty nodes (valid - just a name)
+empty-node
+
+// Node with only children, no args/props
+container {
+    child1
+    child2
+}
+
+// Same property multiple times - rightmost wins (per spec)
+settings priority=1 priority=2 priority=3  // priority should be 3
+
+// Unicode identifiers (bare strings)
+日本語ノード value="Japanese node name"
+émoji-🎉 value="Emoji in identifier"
+
+// Very long numbers
+bignum 999999999999999999999999999999
+
+// Numbers with many underscores
+formatted 1_000_000_000
+
+// Semicolon-separated nodes on one line
+a; b; c
+
+// Children on same line
+parent { child1; child2; child3 }
+
+// Line continuation
+very-long-node \
+    arg1 \
+    arg2 \
+    prop1="value1" \
+    prop2="value2" \
+    {
+        child
+    }
+
+// Property with same name as argument value (no conflict)
+node "key" key="different-value"
+
+// Nested type annotations
+typed-node (container)data {
+    item (u8)255
+    item (i8)-128
+}
+
+// Null in various positions
+nullable arg1=#null prop=#null {
+    child #null
+}

@@ -1,0 +1,47 @@
+// Real-world example: Package manifest (like package.json in KDL)
+
+package "kuddle" version="1.0.0" {
+    description "A KDL parser and serializer for .NET"
+    license "MIT"
+    
+    author "Henry" email="henry@example.com" {
+        url "https://github.com/henry"
+    }
+    
+    repository type="git" url="https://github.com/henry/kuddle"
+    
+    keywords "kdl" "parser" "serializer" "configuration" "dotnet"
+    
+    engines {
+        dotnet ">=8.0.0"
+    }
+    
+    scripts {
+        build "dotnet build"
+        test "dotnet test"
+        pack "dotnet pack"
+        publish "dotnet nuget push"
+    }
+    
+    dependency "Parlot" version="^1.0.0" {
+        optional #false
+    }
+    
+    devDependency "TUnit" version="^1.0.0"
+    devDependency "BenchmarkDotNet" version="^0.14.0"
+    
+    // Conditional dependencies
+    dependency "System.Text.Json" version=">=8.0.0" {
+        condition "net8.0"
+    }
+    
+    files "src/**/*.cs" "!src/**/*.Tests.cs" {
+        include "LICENSE"
+        include "README.md"
+    }
+    
+    exports {
+        main "./src/Kuddle/Kuddle.csproj"
+        types "./src/Kuddle/Kuddle.csproj"
+    }
+}

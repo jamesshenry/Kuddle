@@ -1,0 +1,4 @@
+// Simple node with arguments and properties
+// Maps to a single object with scalar values
+
+package "my-awesome-lib" version="2.1.0" description="A really cool library"
