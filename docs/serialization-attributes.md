@@ -1,16 +1,16 @@
-# KDL Serialization Attribute Guide
+# Attribute Usage
 
 This document describes how to use Kuddle's serialization attributes to map between KDL documents and C# types.
 
 ## Quick Reference
 
-| Attribute | Target | Purpose |
-|-----------|--------|---------|
-| `[KdlType]` | Class | Override the expected node name |
-| `[KdlArgument(index)]` | Property | Map to a positional argument |
-| `[KdlProperty(key?)]` | Property | Map to a named property |
-| `[KdlNode(name?)]` | Property | Map to child nodes |
-| `[KdlIgnore]` | Property | Exclude from serialization |
+| Attribute              | Target   | Purpose                         |
+| ---------------------- | -------- | ------------------------------- |
+| `[KdlType]`            | Class    | Override the expected node name |
+| `[KdlArgument(index)]` | Property | Map to a positional argument    |
+| `[KdlProperty(key?)]`  | Property | Map to a named property         |
+| `[KdlNode(name?)]`     | Property | Map to child nodes              |
+| `[KdlIgnore]`          | Property | Exclude from serialization      |
 
 ---
 
@@ -267,15 +267,15 @@ public class User
 
 ### Automatic Type Mapping
 
-| C# Type | KDL Representation |
-|---------|-------------------|
-| `string` | `"value"` or `bare-string` |
-| `int`, `long` | `123`, `0xFF`, `0o77`, `0b1010` |
-| `double`, `decimal` | `3.14`, `1.5e-10` |
-| `bool` | `#true`, `#false` |
-| `Guid` | `(uuid)"550e8400-..."` |
-| `DateTimeOffset` | `(date-time)"2024-01-15T10:30:00Z"` |
-| Nullable `T?` | Value or `#null` |
+| C# Type             | KDL Representation                  |
+| ------------------- | ----------------------------------- |
+| `string`            | `"value"` or `bare-string`          |
+| `int`, `long`       | `123`, `0xFF`, `0o77`, `0b1010`     |
+| `double`, `decimal` | `3.14`, `1.5e-10`                   |
+| `bool`              | `#true`, `#false`                   |
+| `Guid`              | `(uuid)"550e8400-..."`              |
+| `DateTimeOffset`    | `(date-time)"2024-01-15T10:30:00Z"` |
+| Nullable `T?`       | Value or `#null`                    |
 
 ### Type Annotations
 

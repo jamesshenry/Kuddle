@@ -25,3 +25,5 @@ KDL differs from other configuration languages like
 yaml or toml in that it is node-based. The top-level document can consist of a collection of nodes, not args (e.g. `#true`, `#false`, `0xAF`) or properties (`key=#false`). To adhere to this, the serialization API depends on the use of several provided attributes to facilitate mapping `KDL` constructs to user defined types:
 
 ### Attributes
+
+[how to use Kdl attributes](docs/serialization-attributes.md)

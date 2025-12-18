@@ -1,4 +1,4 @@
 using BenchmarkDotNet.Running;
 using Kuddle.Net.Benchmarks;
 
-BenchmarkRunner.Run<ParserBenchmarks>();
+BenchmarkRunner.Run<SerializerBenchmarks>();
