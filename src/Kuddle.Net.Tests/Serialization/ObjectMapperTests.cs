@@ -481,10 +481,48 @@ public class ObjectMapperTests
     {
         // Arrange
         var kdl = """
-            package "my-lib" version="1.0.0"
-            package "my-dep1" version="2.1.0"
-            package "my-dep2" version="3.2.1"
-            """;
+layouts {
+    classicFocus {
+        rows {
+            header height=3
+            typingArea ratio=3
+            footer height=1
+        }
+    }
+    dashboard {
+        columns {
+            gameInfo width=25
+            rows ratio=4 {
+                header height=3
+                typingArea ratio=3
+                footer height=1
+            }
+            typingInfo width=25
+        }
+    }
+}
+themes {
+    default {
+        // Global fallbacks
+        default borderColor="gray50" borderStyle="rounded"
+        typingArea {
+            borderColor "yellow"
+            headerText "[yellow]Type here[/]"
+            padding 1
+            alignment vertical="middle" horizontal="center"
+        }
+        header {
+            borderColor "blue"
+            headerText "[bold blue]Typical[/]"
+        }
+        gameInfo {
+            borderColor "blue"
+            headerText "Stats"
+            alignment vertical="middle"
+        }
+    }
+}
+""";
 
         // Act & Assert
         await Assert
@@ -492,21 +530,93 @@ public class ObjectMapperTests
             .Throws<KuddleSerializationException>();
     }
 
+    public class AppSettings
+    {
+        [KdlNode]
+        public LayoutPresetDict Layouts { get; set; } = [];
+    }
+
+    public class Theme : Dictionary<string, ElementStyle> { }
+
+    public class LayoutPresetDict : Dictionary<string, LayoutNode>;
+
+    public class ThemeDict : Dictionary<string, Theme> { }
+
+    public class ElementStyle
+    {
+        public string? BorderStyle { get; set; }
+
+        public bool Wrap { get; set; } = true;
+    }
+
+    [KdlType("layout")]
+    public class LayoutNode
+    {
+        public string Name { get; set; } = default!;
+        public int? Ratio { get; set; } = 1;
+
+        [KdlArgument(0)]
+        public string? SplitDirection { get; set; } = "Columns";
+
+        [KdlNode("panels")]
+        [KdlProperty("")]
+        public List<LayoutNode> Children { get; set; } = [];
+    }
+
     [Test]
-    public async Task DeserializeToDictionary_ThrowsException()
+    public async Task DeserializeToDictionary_MapsCorrectly()
     {
         // Arrange
+        // Arrange
         var kdl = """
-            package "my-lib" version="1.0.0"
-            reference "my-dep1" version="2.1.0"
-            node "my-dep2" version="3.2.1"
-            """;
+layouts {
+    classicFocus {
+        rows {
+            header height=3
+            typingArea ratio=3
+            footer height=1
+        }
+    }
+    dashboard {
+        columns {
+            gameInfo width=25
+            rows ratio=4 {
+                header height=3
+                typingArea ratio=3
+                footer height=1
+            }
+            typingInfo width=25
+        }
+    }
+}
+themes {
+    default {
+        // Global fallbacks
+        default borderColor="gray50" borderStyle="rounded"
+        typingArea {
+            borderColor "yellow"
+            headerText "[yellow]Type here[/]"
+            padding 1
+            alignment vertical="middle" horizontal="center"
+        }
+        header {
+            borderColor "blue"
+            headerText "[bold blue]Typical[/]"
+        }
+        gameInfo {
+            borderColor "blue"
+            headerText "Stats"
+            alignment vertical="middle"
+        }
+    }
+}
+""";
 
-        // Act & Assert
-        await Assert
-            .That(() => KdlSerializer.Deserialize<Dictionary<string, Package>>(kdl))
-            .Throws<KuddleSerializationException>()
-            .WithMessageContaining("not supported");
+        // Act
+        var result = KdlSerializer.Deserialize<AppSettings>(kdl);
+
+        // Assert
+        await Assert.That(result.Layouts["classicFocus"]).IsNotNull();
     }
 
     [Test]

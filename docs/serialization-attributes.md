@@ -424,26 +424,6 @@ public class Repository
 }
 ```
 
----
-
-## Decision Tree: Which Attribute to Use?
-
-```
-Is the data a positional value after the node name?
-├─ YES → [KdlArgument(index)]
-└─ NO
-    │
-    Is the data a key=value pair on the same line?
-    ├─ YES → [KdlProperty("key")]
-    └─ NO
-        │
-        Is the data inside a { } children block?
-        ├─ YES → [KdlNode("childNodeName")]
-        └─ NO → Not mappable with current attributes
-```
-
----
-
 ## Limitations & Notes
 
 1. **No dictionary support** — `Dictionary<K,V>` types are not currently supported
