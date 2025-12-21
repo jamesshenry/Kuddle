@@ -74,6 +74,66 @@ internal static class TypeExtensions
                 .Select(x => (x.Property, x.ChildAttr!))
                 .ToArray();
 
-        public bool IsNullable() => Nullable.GetUnderlyingType(type) != null;
+        internal DictionaryInfo? GetDictionaryInfo()
+        {
+            if (type == typeof(string))
+                return null;
+
+            var args = type.GetInterfaces()
+                .Append(type)
+                .FirstOrDefault(i =>
+                    i.IsGenericType
+                    && (
+                        i.GetGenericTypeDefinition() == typeof(IDictionary<,>)
+                        || i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)
+                    )
+                )
+                ?.GetGenericArguments();
+
+            return args is null ? null : new DictionaryInfo(args[0], args[1]);
+        }
+
+        internal Type? GetCollectionInfo()
+        {
+            if (type == typeof(string))
+                return null;
+
+            // Exclude dictionaries from being treated as simple collections
+            if (type.IsDictionary)
+                return null;
+
+            // Arrays
+            if (type.IsArray)
+                return type.GetElementType();
+
+            // IEnumerable<T>
+            var enumInterface = type.GetInterfaces()
+                .Append(type)
+                .FirstOrDefault(i =>
+                    i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)
+                );
+
+            if (enumInterface != null)
+            {
+                return enumInterface.GetGenericArguments()[0];
+            }
+
+            return null;
+        }
+
+        internal bool IsKdlScalar =>
+            type.IsPrimitive
+            || type == typeof(string)
+            || type == typeof(decimal)
+            || type == typeof(DateTime)
+            || type == typeof(DateTimeOffset)
+            || type == typeof(Guid);
+
+        public Type GetCollectionElementType() =>
+            type.IsArray ? type.GetElementType()!
+            : type.IsGenericType ? type.GetGenericArguments()[0]
+            : throw new KuddleSerializationException(
+                $"Unsupported collection type '{type.FullName}'."
+            );
     }
 }

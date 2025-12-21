@@ -29,6 +29,13 @@ internal static class KdlValueConverter
 
         var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
 
+        if (underlying.IsEnum)
+        {
+            kdlValue.TryGetString(out var enumString);
+            bool success = Enum.TryParse(underlying, enumString, true, out var result);
+            value = result;
+            return success;
+        }
         // String
         if (underlying == typeof(string) && kdlValue.TryGetString(out var stringVal))
         {
@@ -177,7 +184,7 @@ internal static class KdlValueConverter
     /// <summary>
     /// Converts a KDL value to a CLR type, throwing on failure.
     /// </summary>
-    public static object? FromKdlOrThrow(
+    public static object FromKdlOrThrow(
         KdlValue kdlValue,
         Type targetType,
         string context,
@@ -194,7 +201,7 @@ internal static class KdlValueConverter
                 $"Cannot convert KDL value '{kdlValue}' to {targetType.Name}. {context}"
             );
         }
-        return result;
+        return result ?? throw new Exception();
     }
 
     /// <summary>

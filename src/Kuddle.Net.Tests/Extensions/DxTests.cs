@@ -113,7 +113,6 @@ public class DxTests
         await Assert.That(success).IsTrue();
         await Assert.That(result).IsEqualTo(expected);
 
-        // Verify annotation didn't interfere
         await Assert.That(val.TypeAnnotation).IsEqualTo("uuid");
     }
 
@@ -123,13 +122,10 @@ public class DxTests
         var guid = Guid.NewGuid();
         var val = KdlValue.From(guid)!;
 
-        // 1. Check Runtime Type
         await Assert.That(val).IsOfType(typeof(KdlString));
 
-        // 2. Check Content
         await Assert.That(val.Value).IsEqualTo(guid.ToString());
 
-        // 3. Check Type Annotation (Crucial for KDL semantic correctness)
         await Assert.That(val.TypeAnnotation).IsEqualTo("uuid");
     }
 
@@ -137,7 +133,6 @@ public class DxTests
     public async Task TryGetDateTime_ValidIso8601_ReturnsTrue()
     {
         var now = DateTimeOffset.UtcNow;
-        // Round-trip format "O" is standard for KDL/JSON
         var kdl = $"node \"{now:O}\"";
         var doc = KdlReader.Read(kdl);
         var val = doc.Nodes[0].Arg(0)!;
@@ -145,7 +140,6 @@ public class DxTests
         bool success = val.TryGetDateTime(out var result);
 
         await Assert.That(success).IsTrue();
-        // Compare ticks to ensure precision is kept
         await Assert.That(result).IsEqualTo(now);
     }
 

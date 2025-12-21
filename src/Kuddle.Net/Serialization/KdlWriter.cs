@@ -230,7 +230,6 @@ public class KdlWriter
                     sb.Append("\\f");
                     break;
                 default:
-                    // KDL allows most unicode, but you might want to escape control codes
                     if (char.IsControl(c))
                     {
                         sb.Append($"\\u{(int)c:X4}");

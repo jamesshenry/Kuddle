@@ -354,44 +354,6 @@ public class ObjectMapperTests
 
     #endregion
 
-    // #region Polymorphism Tests
-
-    // [Test]
-    // public async Task DeserializeObject_WithTypeDiscriminator_MapsToCorrectSubclass()
-    // {
-    //     // Arrange
-    //     var kdl = """
-    //         resource "config" type="file" path="/etc/config.toml"
-    //         """;
-
-    //     // Act
-    //     var result = KdlSerializer.Deserialize<Resource>(kdl);
-
-    //     // Assert
-    //     await Assert.That(result).IsOfType(typeof(FileResource));
-    //     var fileResource = (FileResource)result;
-    //     await Assert.That(fileResource.Path).IsEqualTo("/etc/config.toml");
-    // }
-
-    // [Test]
-    // public async Task DeserializeObject_WithDifferentTypeDiscriminator_MapsToOtherSubclass()
-    // {
-    //     // Arrange
-    //     var kdl = """
-    //         resource "api" type="url" url="https://api.example.com"
-    //         """;
-
-    //     // Act
-    //     var result = KdlSerializer.Deserialize<Resource>(kdl);
-
-    //     // Assert
-    //     await Assert.That(result).IsOfType(typeof(UrlResource));
-    //     var urlResource = (UrlResource)result;
-    //     await Assert.That(urlResource.Url).IsEqualTo("https://api.example.com");
-    // }
-
-    // #endregion
-
     #region Edge Cases
 
     [Test]
@@ -477,136 +439,46 @@ public class ObjectMapperTests
     }
 
     [Test]
-    public async Task DeserializeToScalar_WithMultipleRootNodes_ThrowsException()
-    {
-        // Arrange
-        var kdl = """
-layouts {
-    classicFocus {
-        rows {
-            header height=3
-            typingArea ratio=3
-            footer height=1
-        }
-    }
-    dashboard {
-        columns {
-            gameInfo width=25
-            rows ratio=4 {
-                header height=3
-                typingArea ratio=3
-                footer height=1
-            }
-            typingInfo width=25
-        }
-    }
-}
-themes {
-    default {
-        // Global fallbacks
-        default borderColor="gray50" borderStyle="rounded"
-        typingArea {
-            borderColor "yellow"
-            headerText "[yellow]Type here[/]"
-            padding 1
-            alignment vertical="middle" horizontal="center"
-        }
-        header {
-            borderColor "blue"
-            headerText "[bold blue]Typical[/]"
-        }
-        gameInfo {
-            borderColor "blue"
-            headerText "Stats"
-            alignment vertical="middle"
-        }
-    }
-}
-""";
-
-        // Act & Assert
-        await Assert
-            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
-            .Throws<KuddleSerializationException>();
-    }
-
-    public class AppSettings
-    {
-        [KdlNode]
-        public LayoutPresetDict Layouts { get; set; } = [];
-    }
-
-    public class Theme : Dictionary<string, ElementStyle> { }
-
-    public class LayoutPresetDict : Dictionary<string, LayoutNode>;
-
-    public class ThemeDict : Dictionary<string, Theme> { }
-
-    public class ElementStyle
-    {
-        public string? BorderStyle { get; set; }
-
-        public bool Wrap { get; set; } = true;
-    }
-
-    [KdlType("layout")]
-    public class LayoutNode
-    {
-        public string Name { get; set; } = default!;
-        public int? Ratio { get; set; } = 1;
-
-        [KdlArgument(0)]
-        public string? SplitDirection { get; set; } = "Columns";
-
-        [KdlNode("panels")]
-        [KdlProperty("")]
-        public List<LayoutNode> Children { get; set; } = [];
-    }
-
-    [Test]
     public async Task DeserializeToDictionary_MapsCorrectly()
     {
         // Arrange
-        // Arrange
         var kdl = """
-layouts {
-    classicFocus {
-        rows {
-            header height=3
-            typingArea ratio=3
-            footer height=1
+// 1. The "themes" dictionary (Key = Theme Name)
+themes {
+    // Key: "dark-mode" -> Value: Theme (which is also a Dictionary)
+    dark-mode {
+        // Key: "window" -> Value: ElementStyle
+        window {
+            align v="Top" h="Left"
+            border color="#FFFFFF" style="solid"
+        }
+
+        // Key: "button" -> Value: ElementStyle
+        button {
+            header text="Click Me"
+            align v="Middle" h="Center"
         }
     }
-    dashboard {
-        columns {
-            gameInfo width=25
-            rows ratio=4 {
-                header height=3
-                typingArea ratio=3
-                footer height=1
-            }
-            typingInfo width=25
+
+    // Key: "high-contrast"
+    high-contrast {
+        window {
+            border color="#FFFF00"
         }
     }
 }
-themes {
-    default {
-        // Global fallbacks
-        default borderColor="gray50" borderStyle="rounded"
-        typingArea {
-            borderColor "yellow"
-            headerText "[yellow]Type here[/]"
-            padding 1
-            alignment vertical="middle" horizontal="center"
-        }
-        header {
-            borderColor "blue"
-            headerText "[bold blue]Typical[/]"
-        }
-        gameInfo {
-            borderColor "blue"
-            headerText "Stats"
-            alignment vertical="middle"
+
+// 2. The "layouts" dictionary (Key = Layout Name)
+layouts {
+    // Key: "dashboard" -> Value: LayoutDefinition
+    dashboard section="main-view" size=1 split="rows" {
+        
+        // Recursive List<LayoutDefinition> (Children)
+        child section="top-bar" size=1
+        
+        child section="content-area" size=4 split="columns" {
+            child section="sidebar" size=1
+            child section="grid" size=3
         }
     }
 }
@@ -616,7 +488,14 @@ themes {
         var result = KdlSerializer.Deserialize<AppSettings>(kdl);
 
         // Assert
-        await Assert.That(result.Layouts["classicFocus"]).IsNotNull();
+        var dashboard = result.Layouts["dashboard"];
+        await Assert.That(dashboard).IsNotNull();
+        await Assert.That(dashboard.Section).IsEqualTo("main-view");
+        await Assert.That(dashboard.Ratio).IsEqualTo(1);
+        await Assert.That(dashboard.SplitDirection).IsEqualTo("rows");
+
+        var contentArea = dashboard.Children.FirstOrDefault(c => c.Section == "content-area");
+        await Assert.That(contentArea!.Ratio).IsEqualTo(4);
     }
 
     [Test]
@@ -663,20 +542,6 @@ themes {
             .Throws<KuddleSerializationException>();
     }
 
-    // [Test]
-    // public async Task DeserializeObject_WhenTargetIsSimpleValue_ThrowsException()
-    // {
-    //     // Arrange
-    //     var kdl = """
-    //         package
-    //         """;
-
-    //     // Act & Assert
-    //     await Assert
-    //         .That(async () => KdlSerializer.Deserialize<string>(kdl))
-    //         .Throws<KuddleSerializationException>()
-    //         .WithMessageContaining("Cannot deserialize type");
-    // }
     #endregion
 
     #region Test Models

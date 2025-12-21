@@ -4,14 +4,6 @@ namespace Kuddle.Tests.Grammar;
 
 public class WhiteSpaceParsersTests
 {
-    // Note: These tests are stubs until WhiteSpaceParsers is implemented
-    // They represent the whitespace parsing rules from the KDL grammar:
-    // ws := unicode-space | multi-line-comment
-    // escline := '\\' ws* (single-line-comment | newline | eof)
-    // newline := See Table (All NewLine White_Space)
-    // line-space := node-space | newline | single-line-comment
-    // node-space := ws* escline ws* | ws+
-
     [Test]
     [Arguments('\u0009')]
     [Arguments('\u0020')]
@@ -125,16 +117,4 @@ public class WhiteSpaceParsersTests
         await Assert.That(success).IsTrue();
         await Assert.That(value.Span.ToString()).IsEqualTo(input);
     }
-
-    // [Test]
-    // public async Task NodeSpace_ParsesEscapedNewLine()
-    // {
-    //     var sut = KuddleGrammar.NodeSpace;
-
-    //     var input = "  \\\n  ";
-    //     bool success = sut.TryParse(input, out var value);
-
-    //     await Assert.That(success).IsTrue();
-    //     await Assert.That(value.Span.ToString()).IsEqualTo(input);
-    // }
 }
