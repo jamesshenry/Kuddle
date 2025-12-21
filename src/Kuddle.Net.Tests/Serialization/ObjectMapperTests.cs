@@ -1,5 +1,6 @@
 using Kuddle.AST;
 using Kuddle.Serialization;
+using Kuddle.Tests.Serialization.Models;
 
 namespace Kuddle.Tests.Serialization;
 

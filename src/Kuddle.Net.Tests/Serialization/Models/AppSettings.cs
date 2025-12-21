@@ -1,6 +1,6 @@
 using Kuddle.Serialization;
 
-namespace Kuddle.Tests.Serialization;
+namespace Kuddle.Tests.Serialization.Models;
 
 public class AppSettings
 {
