@@ -201,6 +201,39 @@ internal class ObjectSerializer
             }
         }
 
+        foreach (var mapping in metadata.Collections)
+        {
+            var val = mapping.Property.GetValue(instance);
+            if (val is null)
+                continue;
+
+            var collection = (IEnumerable)val;
+
+            // 1. Create the Container Node
+            var container = new KdlNode(KdlValue.From(mapping.Name));
+            var nodes = new List<KdlNode>();
+            // 2. Determine Item Name
+            var itemType = mapping.Property.PropertyType.GetCollectionElementType();
+            var itemMeta = KdlTypeInfo.For(itemType);
+            var targetName = mapping.CollectionElementName ?? itemMeta.NodeName;
+
+            // 3. Serialize Items as children of the Container
+            foreach (var item in collection)
+            {
+                if (item is null)
+                    continue;
+                // Recursively serialize, forcing the name to "event"
+                nodes.Add(SerializeToNode(item, targetName));
+            }
+
+            // 4. Attach
+            if (nodes.Count > 0)
+            {
+                container = container with { Children = new KdlBlock() { Nodes = nodes } };
+                AddChild(container);
+            }
+        }
+
         if (
             metadata.IsDictionary
             && metadata.DictionaryDef != null

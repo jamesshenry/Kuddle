@@ -43,6 +43,7 @@ internal sealed class KdlTypeInfo
 
     /// <summary>Properties mapped to child nodes.</summary>
     public IReadOnlyList<KdlMemberInfo> Children { get; }
+    public IReadOnlyList<KdlMemberInfo> Collections { get; }
     public IReadOnlyList<KdlMemberInfo> Dictionaries { get; }
 
     private KdlTypeInfo(Type type)
@@ -92,7 +93,7 @@ internal sealed class KdlTypeInfo
         ArgumentAttributes = args;
         Properties = allMappings.Where(m => m.IsProperty).ToList();
         Children = allMappings.Where(m => m.IsNode).ToList();
-
+        Collections = allMappings.Where(m => m.IsWrappedCollection).ToList();
         Dictionaries = allMappings
             .Where(m =>
                 m.IsNodeDictionary /* TODO: Add support for IsPropertyDictionary and IsKeyedNodeCollection */

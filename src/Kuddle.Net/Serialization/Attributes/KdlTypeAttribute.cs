@@ -7,7 +7,7 @@ namespace Kuddle.Serialization;
     AllowMultiple = false,
     Inherited = false
 )]
-public sealed class KdlTypeAttribute(string name) : Attribute
+public sealed class KdlTypeAttribute(string name) : KdlEntryAttribute
 {
     public string Name { get; set; } = name;
 }

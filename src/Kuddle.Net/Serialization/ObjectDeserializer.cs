@@ -115,10 +115,39 @@ internal class ObjectDeserializer
 
         MapDictionaries(node.Children?.Nodes, node, instance, metadata);
 
+        MapWrappedCollections(node.Children?.Nodes, instance, metadata);
+
         if (metadata.IsDictionary && metadata.DictionaryDef != null)
         {
             var (keyType, valueType) = metadata.DictionaryDef;
             PopulateNodeDictionary(node.Children?.Nodes, (IDictionary)instance, keyType, valueType);
+        }
+    }
+
+    private void MapWrappedCollections(List<KdlNode>? nodes, object instance, KdlTypeInfo metadata)
+    {
+        if (nodes is null || nodes.Count == 0)
+            return;
+
+        foreach (var mapping in metadata.Collections)
+        {
+            var container = nodes.LastOrDefault(n =>
+                n.Name.Value.Equals(mapping.Name, NodeNameComparison)
+            );
+
+            if (container?.Children?.Nodes is null)
+                continue;
+
+            var itemType = mapping.Property.PropertyType.GetCollectionElementType();
+            var itemInfo = KdlTypeInfo.For(itemType);
+
+            var targetName = mapping.CollectionElementName ?? itemInfo.NodeName;
+
+            var items = container
+                .Children.Nodes.Where(n => n.Name.Value.Equals(targetName, NodeNameComparison))
+                .ToList();
+
+            SetCollectionProperty(mapping.Property, instance, items);
         }
     }
 

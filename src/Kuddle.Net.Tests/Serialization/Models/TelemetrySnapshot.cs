@@ -19,7 +19,7 @@ public class TelemetrySnapshot
     // [KdlNode("env")]
     public EnvironmentInfo Environment { get; set; } = new();
 
-    // [KdlNode("event")]
+    [KdlNodeCollection("events", "event")]
     public List<EventRecord> Events { get; set; } = new();
 
     // Arbitrary metadata bucket

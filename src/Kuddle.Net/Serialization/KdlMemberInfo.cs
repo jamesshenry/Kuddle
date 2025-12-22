@@ -11,6 +11,8 @@ internal sealed record KdlMemberInfo(PropertyInfo Property, Attribute? Attribute
     public bool IsArgument => Attribute is KdlArgumentAttribute;
     public bool IsProperty => Attribute is KdlPropertyAttribute;
     public bool IsNode => Attribute is KdlNodeAttribute;
+    public bool IsWrappedCollection => Attribute is KdlNodeCollectionAttribute;
+    public string? CollectionElementName => (Attribute as KdlNodeCollectionAttribute)?.ElementName;
     public bool IsNodeDictionary => Attribute is KdlNodeDictionaryAttribute;
 
     //TODO: Add support for property dictionaries
@@ -27,6 +29,7 @@ internal sealed record KdlMemberInfo(PropertyInfo Property, Attribute? Attribute
             KdlPropertyAttribute p => p.Key ?? Property.Name.ToLowerInvariant(),
             KdlNodeAttribute n => n.Name ?? Property.Name.ToLowerInvariant(),
             KdlNodeDictionaryAttribute nd => nd.Name ?? Property.Name.ToLowerInvariant(),
+            KdlNodeCollectionAttribute nc => nc.NodeName ?? Property.Name.ToLowerInvariant(),
             _ => Property.Name.ToLowerInvariant(),
         };
 
