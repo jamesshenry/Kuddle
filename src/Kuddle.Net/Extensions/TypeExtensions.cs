@@ -123,6 +123,7 @@ internal static class TypeExtensions
 
         internal bool IsKdlScalar =>
             type.IsPrimitive
+            || type.IsEnum
             || type == typeof(string)
             || type == typeof(decimal)
             || type == typeof(DateTime)

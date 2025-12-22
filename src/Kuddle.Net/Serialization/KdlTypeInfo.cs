@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
+using Kuddle.Exceptions;
+using Kuddle.Extensions;
 
 namespace Kuddle.Serialization;
 
@@ -55,7 +58,11 @@ internal sealed class KdlTypeInfo
 
         foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (!prop.CanWrite || prop.GetCustomAttribute<KdlIgnoreAttribute>() != null)
+            if (
+                !prop.CanWrite
+                || prop.GetCustomAttribute<KdlIgnoreAttribute>() != null
+                || prop.GetIndexParameters().Length > 0 // Ignore indexers
+            )
                 continue;
 
             var attrs = prop.GetCustomAttributes()
@@ -67,10 +74,10 @@ internal sealed class KdlTypeInfo
                     $"Property '{type.Name}.{prop.Name}' has multiple KDL attributes. Only one mapping is allowed per property."
                 );
 
-            if (attrs.Count == 1)
-            {
-                allMappings.Add(new KdlMemberInfo(prop, attrs[0]));
-            }
+            if (attrs.Count == 0 && IsSystemCollectionProperty(prop))
+                continue;
+            Attribute mappingAttr = attrs.Count == 1 ? attrs[0] : InferAttribute(prop);
+            allMappings.Add(new KdlMemberInfo(prop, mappingAttr));
         }
 
         var args = allMappings.Where(m => m.IsArgument).OrderBy(m => m.ArgumentIndex).ToList();
@@ -86,8 +93,17 @@ internal sealed class KdlTypeInfo
         Properties = allMappings.Where(m => m.IsProperty).ToList();
         Children = allMappings.Where(m => m.IsNode).ToList();
 
-        Dictionaries = allMappings.Where(m => m.IsNodeDictionary).ToList();
+        Dictionaries = allMappings
+            .Where(m =>
+                m.IsNodeDictionary /* TODO: Add support for IsPropertyDictionary and IsKeyedNodeCollection */
+            )
+            .ToList();
     }
+
+    private static bool IsSystemCollectionProperty(PropertyInfo prop) =>
+        prop.DeclaringType != null
+        && prop.DeclaringType.Namespace != null
+        && prop.DeclaringType.Namespace.StartsWith("system");
 
     /// <summary>
     /// Gets or creates cached metadata for a type.
@@ -128,18 +144,15 @@ internal sealed class KdlTypeInfo
                     || i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)
                 )
             );
-}
 
-[Serializable]
-internal class KdlConfigurationException : Exception
-{
-    public KdlConfigurationException() { }
-
-    public KdlConfigurationException(string? message)
-        : base(message) { }
-
-    public KdlConfigurationException(string? message, Exception? innerException)
-        : base(message, innerException) { }
+    private static Attribute InferAttribute(PropertyInfo prop) =>
+        prop.PropertyType switch
+        {
+            { IsDictionary: true } => new KdlNodeDictionaryAttribute(prop.Name.ToKebabCase()),
+            { IsIEnumerable: true } => new KdlNodeAttribute(prop.Name.ToKebabCase()),
+            { IsKdlScalar: true } => new KdlPropertyAttribute(prop.Name.ToKebabCase()),
+            _ => new KdlNodeAttribute(prop.Name.ToKebabCase()),
+        };
 }
 
 internal sealed record DictionaryInfo(Type KeyType, Type ValueType);

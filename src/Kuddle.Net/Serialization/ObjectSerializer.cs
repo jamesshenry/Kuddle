@@ -67,8 +67,7 @@ internal class ObjectSerializer
 
     private KdlNode SerializeToNode(object instance, string? overrideNodeName = null)
     {
-        var type = instance.GetType();
-        var metadata = KdlTypeInfo.For(type);
+        var metadata = KdlTypeInfo.For(instance.GetType());
         var nodeName = overrideNodeName ?? metadata.NodeName;
 
         var entries = new List<KdlEntry>();
@@ -178,7 +177,7 @@ internal class ObjectSerializer
                 // themes { dark { ... } }
                 var container = new KdlNode(KdlValue.From(dictMap.Name));
                 var nodes = new List<KdlNode>();
-                SerializeDictionaryEntriesToBlock(nodes, dict, valueType);
+                SerializeDictionaryEntries(nodes, dict, valueType);
 
                 if (nodes.Count > 0)
                 {
@@ -201,6 +200,21 @@ internal class ObjectSerializer
                 }
             }
         }
+
+        if (
+            metadata.IsDictionary
+            && metadata.DictionaryDef != null
+            && instance is IDictionary selfDict
+        )
+        {
+            childBlock ??= new KdlBlock();
+
+            SerializeDictionaryEntries(
+                childBlock.Nodes,
+                selfDict,
+                metadata.DictionaryDef.ValueType
+            );
+        }
         return new KdlNode(KdlValue.From(nodeName))
         {
             Entries = entries,
@@ -212,7 +226,7 @@ internal class ObjectSerializer
     /// Helper to convert Dictionary entries into KDL Nodes.
     /// Used by [KdlNodeDictionary] and Implicit Dictionary logic.
     /// </summary>
-    private void SerializeDictionaryEntriesToBlock(
+    private void SerializeDictionaryEntries(
         List<KdlNode> targetList,
         IDictionary dict,
         Type valueType

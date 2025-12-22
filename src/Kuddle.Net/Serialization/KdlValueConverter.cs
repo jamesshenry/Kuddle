@@ -170,6 +170,7 @@ internal static class KdlValueConverter
             Guid uuid => KdlValue.From(uuid),
             DateTimeOffset dto => KdlValue.From(dto),
             DateTime dt => KdlValue.From(new DateTimeOffset(dt)),
+            Enum e => KdlValue.From(e),
             _ => null!,
         };
 

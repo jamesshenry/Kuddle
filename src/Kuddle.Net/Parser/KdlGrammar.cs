@@ -84,6 +84,7 @@ public static class KdlGrammar
 
         var openingHashes = Capture(OneOrMany(hash));
 
+        // TODO: Investigate using Runes instead of chars: https://learn.microsoft.com/en-us/dotnet/api/system.text.rune
         var identifierChar = Literals.Pattern(
             c =>
                 !CharacterSets.IsNewline(c)

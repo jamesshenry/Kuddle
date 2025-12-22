@@ -1,3 +1,4 @@
+using Kuddle.Exceptions;
 using Kuddle.Serialization;
 
 namespace Kuddle.Tests.Serialization;
