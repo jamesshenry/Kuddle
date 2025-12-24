@@ -28,7 +28,7 @@ public static class KdlSerializer
         where T : new()
     {
         var doc = KdlReader.Read(text);
-        var metadata = KdlTypeInfo.For<T>();
+        var metadata = KdlTypeMapping.For<T>();
 
         foreach (var node in doc.Nodes)
         {
@@ -86,11 +86,6 @@ public static class KdlSerializer
 
         return KdlWriter.Write(doc);
     }
-
-    #endregion
-
-    #region Helpers
-
 
     #endregion
 }

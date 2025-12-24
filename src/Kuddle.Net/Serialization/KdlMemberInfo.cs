@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Kuddle.Serialization;
 
@@ -34,4 +35,12 @@ internal sealed record KdlMemberInfo(PropertyInfo Property, Attribute? Attribute
         };
 
     public string? TypeAnnotation => null;
+}
+
+internal enum KdlMemberKind
+{
+    Argument,
+    Property,
+    ChildNode,
+    TypeAnnotation,
 }

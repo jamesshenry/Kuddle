@@ -11,10 +11,13 @@ internal static class ParserExtensions
     /// In Release builds, this is a no-op to enable Parlot compilation.
     /// </summary>
     [DebuggerStepThrough]
-    public static Parser<T> Debug<T>(this Parser<T> parser, string name)
+    public static Parser<T> Debug<T>(this Parser<T> parser, string name, bool enableDebug = false)
     {
 #if DEBUG
-        return new DebugParser<T>(parser, name);
+        if (enableDebug)
+            return new DebugParser<T>(parser, name);
+        else
+            return parser;
 #else
         return parser;
 #endif
