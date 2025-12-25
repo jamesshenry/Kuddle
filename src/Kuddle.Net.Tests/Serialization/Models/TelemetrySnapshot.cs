@@ -123,7 +123,7 @@ public class EventRecord
 
     // Heterogeneous dictionary
     // [KdlNode]
-    public Dictionary<string, object?> Context { get; set; } = new();
+    public Dictionary<string, object?>? Context { get; set; }
 }
 
 [KdlType("env-info")]

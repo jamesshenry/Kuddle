@@ -61,31 +61,31 @@ public static class KdlSerializer
         return KdlWriter.Write(doc);
     }
 
-    /// <summary>
-    /// Serializes multiple objects to a KDL string.
-    /// </summary>
-    public static string SerializeMany<T>(
-        IEnumerable<T> items,
-        KdlSerializerOptions? options = null,
-        CancellationToken cancellationToken = default
-    )
-    {
-        ArgumentNullException.ThrowIfNull(items);
+    // /// <summary>
+    // /// Serializes multiple objects to a KDL string.
+    // /// </summary>
+    // public static string SerializeMany<T>(
+    //     IEnumerable<T> items,
+    //     KdlSerializerOptions? options = null,
+    //     CancellationToken cancellationToken = default
+    // )
+    // {
+    //     ArgumentNullException.ThrowIfNull(items);
 
-        var doc = new KdlDocument();
+    //     var doc = new KdlDocument();
 
-        foreach (var item in items)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (item is null)
-                continue;
+    //     foreach (var item in items)
+    //     {
+    //         cancellationToken.ThrowIfCancellationRequested();
+    //         if (item is null)
+    //             continue;
 
-            var node = ObjectSerializer.SerializeNode(item, options);
-            doc.Nodes.Add(node);
-        }
+    //         var node = ObjectSerializer.SerializeNode(item, options);
+    //         doc.Nodes.Add(node);
+    //     }
 
-        return KdlWriter.Write(doc);
-    }
+    //     return KdlWriter.Write(doc);
+    // }
 
     #endregion
 }

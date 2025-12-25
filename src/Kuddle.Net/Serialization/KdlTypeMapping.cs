@@ -49,6 +49,7 @@ internal sealed record KdlTypeMapping
             }
         }
         ValidateMapping();
+        HasMembers = Arguments.Count + Properties.Count + Children.Count > 1;
     }
 
     private void ValidateMapping()
@@ -147,6 +148,7 @@ internal sealed record KdlTypeMapping
     public Type? ValueType { get; }
     public PropertyInfo? DictionaryKeyProperty { get; }
     public PropertyInfo? DictionaryValueProperty { get; }
+    public bool HasMembers { get; }
 
     /// <summary>
     /// Gets or creates cached metadata for a type.

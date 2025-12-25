@@ -84,6 +84,7 @@ public class TelemetrySnapshotTests
                     Message = "Slow start",
                 },
             },
+            Metadata = { ["a"] = "one", ["b"] = "two" },
         };
 
         var kdl = KdlSerializer.Serialize(original);
