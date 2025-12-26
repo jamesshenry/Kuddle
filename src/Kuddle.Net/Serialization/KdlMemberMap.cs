@@ -19,13 +19,14 @@ internal sealed record KdlMemberMap
         ArgumentIndex = argumentIndex;
         TypeAnnotation = typeAnnotation;
         IsDictionary = property.PropertyType.IsDictionary;
-        ElementType = property.PropertyType.GetCollectionElementType();
-        IsCollection = ElementType != null;
-        if (IsDictionary && ElementType != null)
+        var elementType = property.PropertyType.GetCollectionElementType();
+        IsCollection = elementType != null;
+        if (IsDictionary && elementType != null)
         {
-            DictionaryKeyProperty = ElementType.GetProperty("Key");
-            DictionaryValueProperty = ElementType.GetProperty("Value");
+            DictionaryKeyProperty = elementType.GetProperty("Key");
+            DictionaryValueProperty = elementType.GetProperty("Value");
         }
+        ElementType = elementType;
     }
 
     public PropertyInfo Property { get; }
@@ -36,7 +37,6 @@ internal sealed record KdlMemberMap
     public bool IsCollection { get; }
     public bool IsDictionary { get; }
     public string? TypeAnnotation { get; }
-
     public PropertyInfo? DictionaryKeyProperty { get; }
     public PropertyInfo? DictionaryValueProperty { get; }
 

@@ -49,8 +49,16 @@ internal sealed record KdlTypeMapping
             }
         }
         ValidateMapping();
-        HasMembers = Arguments.Count + Properties.Count + Children.Count > 1;
     }
+
+    public Type Type { get; init; }
+    public string NodeName { get; init; }
+    public bool IsDictionary { get; }
+    public List<KdlMemberMap> Properties { get; } = [];
+    public List<KdlMemberMap> Children { get; } = [];
+    internal List<KdlMemberMap> Arguments { get; } = [];
+    public PropertyInfo? DictionaryKeyProperty { get; }
+    public PropertyInfo? DictionaryValueProperty { get; }
 
     private void ValidateMapping()
     {
@@ -76,8 +84,6 @@ internal sealed record KdlTypeMapping
             attr = InferAttribute(prop);
         }
         var typeAnnotation = attr.TypeAnnotation;
-
-        // -- Explicit Mapping via Attributes --
 
         return attr switch
         {
@@ -136,19 +142,6 @@ internal sealed record KdlTypeMapping
             { IsKdlScalar: true } => new KdlPropertyAttribute(prop.Name.ToKebabCase()),
             _ => new KdlNodeAttribute(prop.Name.ToKebabCase()),
         };
-
-    public Type Type { get; init; }
-    public string NodeName { get; init; }
-    public bool IsDictionary { get; }
-    public List<KdlMemberMap> Properties { get; } = [];
-    public List<KdlMemberMap> Children { get; } = [];
-
-    internal List<KdlMemberMap> Arguments { get; } = [];
-    public Type? KeyType { get; }
-    public Type? ValueType { get; }
-    public PropertyInfo? DictionaryKeyProperty { get; }
-    public PropertyInfo? DictionaryValueProperty { get; }
-    public bool HasMembers { get; }
 
     /// <summary>
     /// Gets or creates cached metadata for a type.

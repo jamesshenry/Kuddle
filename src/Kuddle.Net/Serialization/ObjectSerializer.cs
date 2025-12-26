@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks.Dataflow;
 using Kuddle.AST;
 
 namespace Kuddle.Serialization;
@@ -51,90 +49,69 @@ internal class ObjectSerializer
         return doc;
     }
 
-    // public static KdlNode SerializeNode(object instance, KdlSerializerOptions? options)
-    // {
-    //     var worker = new ObjectSerializer(options);
-    //     return worker.SerializeObject(instance);
-    // }
-
     private KdlNode SerializeObject(object instance, string? overrideNodeName = null)
     {
         var mapping = KdlTypeMapping.For(instance.GetType());
         var node = new KdlNode(KdlValue.From(overrideNodeName ?? mapping.NodeName));
-        // Debug.WriteLine(node);
-        if (mapping.IsDictionary && !mapping.HasMembers)
+
+        foreach (var map in mapping.Arguments)
         {
-            var items = SerializeDictionaryContent(
-                (IEnumerable)instance,
+            var val = KdlValueConverter.ToKdlOrThrow(map.GetValue(instance), map.TypeAnnotation);
+            node.Entries.Add(new KdlArgument(val));
+        }
+
+        foreach (var map in mapping.Properties)
+        {
+            var raw = map.GetValue(instance);
+            if (raw == null && _options.IgnoreNullValues)
+                continue;
+
+            var val = KdlValueConverter.ToKdlOrThrow(raw, map.TypeAnnotation);
+            node.Entries.Add(new KdlProperty(KdlValue.From(map.KdlName), val));
+        }
+
+        var childNodes = new List<KdlNode>();
+        foreach (var map in mapping.Children)
+        {
+            var childData = map.GetValue(instance);
+            if (childData is null)
+                continue;
+
+            if (map.IsDictionary && childData is IEnumerable mapDict)
+            {
+                var container = new KdlNode(KdlValue.From(map.KdlName));
+                var items = SerializeDictionary(
+                    mapDict,
+                    map.DictionaryKeyProperty,
+                    map.DictionaryValueProperty
+                );
+                container = container with { Children = new KdlBlock { Nodes = items.ToList() } };
+                childNodes.Add(container);
+            }
+            else if (map.IsCollection && childData is IEnumerable childCol)
+            {
+                childNodes.AddRange(SerializeCollection(childCol, map));
+            }
+            else
+            {
+                childNodes.Add(SerializeObject(childData, map.KdlName));
+            }
+        }
+        if (mapping.IsDictionary && instance is IEnumerable enumerable)
+        {
+            var items = SerializeDictionary(
+                enumerable,
                 mapping.DictionaryKeyProperty,
                 mapping.DictionaryValueProperty
             );
-            return node with { Children = new KdlBlock { Nodes = items.ToList() } };
+            childNodes.AddRange(items);
         }
-        else
+
+        if (childNodes.Count > 0)
         {
-            foreach (var map in mapping.Arguments)
-            {
-                var val = KdlValueConverter.ToKdlOrThrow(
-                    map.GetValue(instance),
-                    map.TypeAnnotation
-                );
-                node.Entries.Add(new KdlArgument(val));
-            }
-
-            foreach (var map in mapping.Properties)
-            {
-                var raw = map.GetValue(instance);
-                if (raw == null && _options.IgnoreNullValues)
-                    continue;
-
-                var val = KdlValueConverter.ToKdlOrThrow(raw, map.TypeAnnotation);
-                node.Entries.Add(new KdlProperty(KdlValue.From(map.KdlName), val));
-            }
-
-            var childNodes = new List<KdlNode>();
-            if (mapping.Children.Count > 0)
-            {
-                foreach (var map in mapping.Children)
-                {
-                    var childData = map.GetValue(instance);
-                    if (childData is null)
-                        continue;
-
-                    if (map.IsDictionary)
-                    {
-                        // Debug.WriteLine($"Dictionary KdlMemberMap for {map.Property.PropertyType}:");
-
-                        // For dictionaries, we treat the Dictionary Keys as the Node Names
-                        var container = new KdlNode(KdlValue.From(map.KdlName));
-                        var items = SerializeDictionary((IEnumerable)childData, map);
-                        container = container with
-                        {
-                            Children = new KdlBlock { Nodes = items.ToList() },
-                        };
-                        // Debug.WriteLine(container);
-                        childNodes.Add(container);
-                        // childNodes.AddRange(SerializeDictionary((IDictionary)childData, map));
-                    }
-                    else if (map.IsCollection)
-                    {
-                        // For collections, we serialize each item as a child node
-                        childNodes.AddRange(SerializeCollection((IEnumerable)childData, map));
-                    }
-                    else
-                    {
-                        // Single complex object
-                        childNodes.Add(SerializeObject(childData, map.KdlName));
-                    }
-                }
-            }
-
-            if (childNodes.Count > 0)
-            {
-                node = node with { Children = new KdlBlock { Nodes = childNodes } };
-            }
-            return node;
+            node = node with { Children = new KdlBlock { Nodes = childNodes } };
         }
+        return node;
     }
 
     private IEnumerable<KdlNode> SerializeCollection(IEnumerable enumerable, KdlMemberMap map)
@@ -161,20 +138,7 @@ internal class ObjectSerializer
         }
     }
 
-    private IEnumerable<KdlNode> SerializeDictionary(IEnumerable dict, KdlMemberMap map)
-    {
-        foreach (var item in dict)
-        {
-            var key = map.DictionaryKeyProperty!.GetValue(item);
-            var val = map.DictionaryValueProperty!.GetValue(item);
-            if (key == null || val == null)
-                continue;
-
-            yield return MapToNode(val!, key.ToString()!, map.TypeAnnotation);
-        }
-    }
-
-    private IEnumerable<KdlNode> SerializeDictionaryContent(
+    private IEnumerable<KdlNode> SerializeDictionary(
         IEnumerable dict,
         PropertyInfo? keyProp,
         PropertyInfo? valProp,
@@ -188,8 +152,6 @@ internal class ObjectSerializer
             if (key == null || val == null)
                 continue;
 
-            // MapToNode handles the recursion:
-            // If 'val' is a dictionary, it calls SerializeObject, which triggers step (B) above.
             yield return MapToNode(val, key.ToString()!, typeAnno);
         }
     }

@@ -20,7 +20,9 @@ $outputPath = Join-Path $outputDir 'codebase.txt'
 Write-Host "Output path: $outputPath"
 
 # Build directory tree
-$directoryTree = Get-ChildItem -Directory -Path $sourceDirectory -Recurse -Exclude obj, bin | ForEach-Object {
+$directoryTree = Get-ChildItem -Directory -Path $sourceDirectory -Recurse -Exclude obj, bin | Where-Object {
+    (-not $_.FullName.Contains('Tests'))
+} | ForEach-Object {
     $indent = '  ' * ($_.FullName.Split('\').Length - $sourceDirectory.Split('\').Length)
     "$indent- $($_.Name)"
 } | Out-String
@@ -43,7 +45,9 @@ $languageMap = @{
 }
 
 # Grab all files except bin/obj
-$allFiles = Get-ChildItem -Path $sourceDirectory -Recurse -File -Include *.cs, *.ps1, *.json, *.xml, *.yml, *.yaml, *.md, *.sh, *.ts, *.js
+$allFiles = Get-ChildItem -Path $sourceDirectory -Recurse -File -Include *.cs, *.ps1, *.json, *.xml, *.yml, *.yaml, *.md, *.sh, *.ts, *.js | Where-Object {
+    -not $_.DirectoryName.ToLower().Contains('tests')
+}
 
 foreach ($file in $allFiles) {
     $relativePath = $file.FullName.Substring($PWD.Path.Length + 1)

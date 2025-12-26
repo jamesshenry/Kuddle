@@ -208,26 +208,6 @@ internal static class KdlValueConverter
     /// <summary>
     /// Converts a CLR value to a KDL value, throwing on failure.
     /// </summary>
-    [Obsolete]
-    public static KdlValue ToKdlOrThrow(
-        object? input,
-        string context,
-        string? typeAnnotation = null
-    )
-    {
-        if (!TryToKdl(input, out var kdlValue, typeAnnotation))
-        {
-            var typeName = input?.GetType().Name ?? "null";
-            throw new KuddleSerializationException(
-                $"Cannot convert CLR value of type '{typeName}' to KDL. {context}"
-            );
-        }
-        return kdlValue;
-    }
-
-    /// <summary>
-    /// Converts a CLR value to a KDL value, throwing on failure.
-    /// </summary>
     public static KdlValue ToKdlOrThrow(object? input, string? typeAnnotation = null)
     {
         if (!TryToKdl(input, out var kdlValue, typeAnnotation))

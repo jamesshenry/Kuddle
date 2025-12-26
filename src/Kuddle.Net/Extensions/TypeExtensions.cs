@@ -32,7 +32,10 @@ internal static class TypeExtensions
             || type == typeof(decimal)
             || type == typeof(DateTime)
             || type == typeof(DateTimeOffset)
-            || type == typeof(Guid);
+            || type == typeof(Guid)
+            || type == typeof(TimeSpan)
+            || type == typeof(DateOnly)
+            || type == typeof(TimeOnly);
 
         public Type? GetCollectionElementType()
         {

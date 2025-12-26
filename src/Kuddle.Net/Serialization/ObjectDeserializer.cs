@@ -30,18 +30,33 @@ internal class ObjectDeserializer
 
         if (mapping.Arguments.Count > 0 || mapping.Properties.Count > 0)
         {
-            if (doc.Nodes.Count == 0)
-                return instance;
+            var matches = doc
+                .Nodes.Where(n => n.Name.Value.Equals(mapping.NodeName, NodeNameComparison))
+                .ToList();
 
-            var rootNode =
-                doc.Nodes.FirstOrDefault(n =>
-                    n.Name.Value.Equals(mapping.NodeName, NodeNameComparison)
-                )
-                ?? throw new KuddleSerializationException(
-                    $"Root node '{mapping.NodeName}' not found in document."
+            if (matches.Count == 0)
+            {
+                // If the document has content, but none of it is the node we want, it's an error.
+                if (doc.Nodes.Count > 0)
+                {
+                    var foundNames = string.Join(", ", doc.Nodes.Select(n => $"'{n.Name.Value}'"));
+                    throw new KuddleSerializationException(
+                        $"Expected root node '{mapping.NodeName}', but found: {foundNames}."
+                    );
+                }
+                return instance; // Document is totally empty; return empty object
+            }
+
+            // THROW: Ambiguity check
+            if (matches.Count > 1)
+            {
+                throw new KuddleSerializationException(
+                    $"Found {matches.Count} nodes matching '{mapping.NodeName}', but only 1 was expected. "
+                        + "To deserialize a list of nodes, use KdlSerializer.DeserializeMany<T>()."
                 );
+            }
 
-            worker.MapNodeToObject(rootNode, instance, mapping);
+            worker.MapNodeToObject(matches[0], instance, mapping);
         }
         else
         {
@@ -172,8 +187,27 @@ internal class ObjectDeserializer
             }
             else
             {
-                var childInstance = DeserializeObject(matches.Last(), map.Property.PropertyType);
-                map.SetValue(instance, childInstance);
+                var last = matches.Last();
+                object? value;
+
+                if (map.Property.PropertyType.IsKdlScalar) // Use your extension
+                {
+                    var arg = last.Arg(0);
+                    value =
+                        arg != null
+                            ? KdlValueConverter.FromKdlOrThrow(
+                                arg,
+                                map.Property.PropertyType,
+                                last.Name.Value
+                            )
+                            : null;
+                }
+                else
+                {
+                    value = DeserializeObject(last, map.Property.PropertyType);
+                }
+
+                map.SetValue(instance, value);
             }
         }
     }
@@ -250,6 +284,7 @@ internal class ObjectDeserializer
 
     private object DeserializeObject(KdlNode node, Type type)
     {
+        if (type.IsKdlScalar) { }
         var instance =
             Activator.CreateInstance(type)
             ?? throw new KuddleSerializationException(

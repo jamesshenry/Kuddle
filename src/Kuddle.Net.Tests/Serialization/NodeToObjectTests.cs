@@ -60,10 +60,12 @@ public class NodeToObjectTests
     }
 
     [Test]
-    public async Task Deserialize_MismatchNodeName_Throws()
+    public async Task Deserialize_MismatchNodeName_ReturnsNull()
     {
         var kdl = "table \"production\" port=5432";
 
+        // var result = KdlSerializer.Deserialize<DbConfig>(kdl);
+        // await Assert.That(result).IsNull();
         await Assert.ThrowsAsync<KuddleSerializationException>(async () =>
         {
             KdlSerializer.Deserialize<DbConfig>(kdl);
@@ -78,7 +80,6 @@ public class NodeToObjectTests
             database ""primary"" port=5432
             database ""replica"" port=5433
         ";
-
         await Assert.ThrowsAsync<KuddleSerializationException>(async () =>
         {
             KdlSerializer.Deserialize<DbConfig>(kdl);
