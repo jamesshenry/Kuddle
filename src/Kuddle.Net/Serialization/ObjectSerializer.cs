@@ -66,8 +66,30 @@ internal class ObjectSerializer
             if (raw == null && _options.IgnoreNullValues)
                 continue;
 
-            var val = KdlValueConverter.ToKdlOrThrow(raw, map.TypeAnnotation);
-            node.Entries.Add(new KdlProperty(KdlValue.From(map.KdlName), val));
+            if (map.IsDictionary)
+            {
+                string prefix = string.IsNullOrEmpty(map.KdlName) ? "" : $"{map.KdlName}:";
+
+                var dict = raw as IEnumerable;
+                foreach (var item in dict!)
+                {
+                    var k = map.DictionaryKeyProperty?.GetValue(item);
+                    var v = map.DictionaryValueProperty?.GetValue(item);
+                    if (k == null)
+                        continue;
+                    node.Entries.Add(
+                        new KdlProperty(
+                            KdlValue.From($"{prefix}{k}"),
+                            KdlValueConverter.ToKdlOrThrow(v)
+                        )
+                    );
+                }
+            }
+            else
+            {
+                var val = KdlValueConverter.ToKdlOrThrow(raw, map.TypeAnnotation);
+                node.Entries.Add(new KdlProperty(KdlValue.From(map.KdlName), val));
+            }
         }
 
         var childNodes = new List<KdlNode>();

@@ -108,8 +108,8 @@ internal class ObjectDeserializer
                 map.SetValue(instance, val);
             }
         }
-
-        foreach (var map in mapping.Properties)
+        var consumedPropKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var map in mapping.Properties.Where(m => !m.IsDictionary))
         {
             var kdlValue = node.Prop(map.KdlName);
             if (kdlValue != null)
@@ -121,6 +121,48 @@ internal class ObjectDeserializer
                     map.TypeAnnotation
                 );
                 map.SetValue(instance, val);
+
+                consumedPropKeys.Add(map.KdlName);
+            }
+        }
+        foreach (var map in mapping.Properties.Where(m => m.IsDictionary))
+        {
+            var dict = EnsureInstance(instance, map) as IDictionary;
+            bool isNamespaced = !string.IsNullOrWhiteSpace(map.KdlName);
+            string prefix = isNamespaced ? $"{map.KdlName}:" : "";
+            // Iterate through all actual properties in the KDL node
+            foreach (var kdlProp in node.Properties)
+            {
+                string key = kdlProp.Key.Value;
+
+                if (isNamespaced)
+                {
+                    // NAMESPACED logic: continue if it doesn't match our prefix
+                    if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        string dictKey = key.Substring(prefix.Length);
+                        dict![dictKey] = KdlValueConverter.FromKdlOrThrow(
+                            kdlProp.Value,
+                            map.Property.PropertyType.GetGenericArguments()[1],
+                            key
+                        );
+                    }
+                }
+                else
+                {
+                    // Greedy: take anything that wasn't matched by an explicit property in Pass 1
+                    if (consumedPropKeys.Contains(key) || key.Contains(':'))
+                    {
+                        continue;
+                    }
+                    var valueType = map.Property.PropertyType.GetGenericArguments()[1];
+                    dict![key] = KdlValueConverter.FromKdlOrThrow(kdlProp.Value, valueType, key);
+                }
             }
         }
         if (node.Children != null)

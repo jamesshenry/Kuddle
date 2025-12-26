@@ -1,4 +1,5 @@
 using Kuddle.AST;
+using Kuddle.Exceptions;
 using Kuddle.Serialization;
 using Kuddle.Tests.Serialization.Models;
 
@@ -563,6 +564,80 @@ layouts {
         await Assert.That(deserialized.Version).IsEqualTo("2.5");
         await Assert.That(deserialized["timeout"]).IsEqualTo("5000");
         await Assert.That(deserialized.Count).IsEqualTo(2);
+    }
+
+    public class PropertyDictModel
+    {
+        [KdlProperty]
+        public Dictionary<string, string> Tags { get; set; } = new();
+
+        [KdlProperty("setting")]
+        public Dictionary<string, int> Settings { get; set; } = new();
+    }
+
+    public class InvalidPropertyDictModel
+    {
+        [KdlProperty]
+        public Dictionary<string, ComplexValue> Items { get; set; } = new();
+    }
+
+    public class ComplexValue
+    {
+        public string Name { get; set; }
+    }
+
+    [Test]
+    public async Task Serialize_PropertyDictionary_WritesFlatProperties()
+    {
+        // Arrange
+        var model = new PropertyDictModel();
+        model.Tags["env"] = "production";
+        model.Tags["region"] = "us-east-1";
+
+        // Using a prefix "setting"
+        model.Settings["timeout"] = 5000;
+        model.Settings["retries"] = 3;
+
+        // Act
+        var kdl = KdlSerializer.Serialize(model);
+
+        // Assert
+        // Simple dict: env="production" region="us-east-1"
+        await Assert.That(kdl).Contains("env=production");
+        await Assert.That(kdl).Contains("region=us-east-1");
+
+        // Prefixed dict: setting:timeout=5000 setting:retries=3
+        // (Assuming you implement the prefix: logic discussed)
+        await Assert.That(kdl).Contains("setting:timeout=5000");
+        await Assert.That(kdl).Contains("setting:retries=3");
+
+        // Ensure no child block was created for these
+        await Assert.That(kdl).DoesNotContain("{");
+    }
+
+    [Test]
+    public async Task Deserialize_PropertyDictionary_MapsFlatPropertiesBack()
+    {
+        // Arrange
+        var kdl = "property-dict-model env=\"dev\" setting:port=8080";
+
+        // Act
+        var result = KdlSerializer.Deserialize<PropertyDictModel>(kdl);
+
+        // Assert
+        await Assert.That(result.Tags["env"]).IsEqualTo("dev");
+        await Assert.That(result.Settings["port"]).IsEqualTo(8080);
+    }
+
+    [Test]
+    public async Task Mapping_InvalidPropertyDictionary_ThrowsConfigurationException()
+    {
+        // Act & Assert
+        // This should fail because [KdlProperty] is applied to a dictionary
+        // with a complex value type (ComplexValue), which is illegal in KDL.
+        await Assert
+            .That(() => KdlTypeMapping.For<InvalidPropertyDictModel>())
+            .Throws<KdlConfigurationException>();
     }
     #endregion
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Kuddle.AST;
@@ -75,6 +76,18 @@ internal sealed record KdlTypeMapping
 
         Arguments.Clear();
         Arguments.AddRange(sortedArgs);
+
+        foreach (var prop in Properties)
+        {
+            if (prop.IsDictionary && !prop.DictionaryValueProperty!.PropertyType.IsKdlScalar)
+            {
+                throw new KdlConfigurationException(
+                    $"Property '{prop.Property.PropertyType.Name}.{prop.Property.Name}' is marked with [KdlProperty], "
+                        + $"but its value type '{prop.DictionaryValueProperty!.Name}' is complex. "
+                        + "KDL properties only support scalar values. Use [KdlNode] instead."
+                );
+            }
+        }
     }
 
     private KdlMemberMap CreateMemberMap(PropertyInfo prop)
@@ -95,15 +108,15 @@ internal sealed record KdlTypeMapping
                 arg.Index,
                 typeAnnotation
             ),
-
             KdlPropertyAttribute p => new KdlMemberMap(
                 prop,
                 KdlMemberKind.Property,
-                p.Key ?? prop.Name.ToKebabCase(),
+                prop.PropertyType.IsDictionary
+                    ? (p.Key ?? string.Empty)
+                    : (p.Key ?? prop.Name.ToKebabCase()),
                 -1,
                 typeAnnotation
             ),
-
             KdlNodeAttribute n => new KdlMemberMap(
                 prop,
                 KdlMemberKind.ChildNode,
