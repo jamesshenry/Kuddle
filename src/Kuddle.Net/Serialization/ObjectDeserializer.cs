@@ -2,8 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using Kuddle.AST;
 using Kuddle.Extensions;
 
@@ -130,17 +128,21 @@ internal class ObjectDeserializer
             // Mode B: Document Mode or Intrinsic Dictionary at root
             if (mapping.IsDictionary)
             {
+                var explicitChildNames = mapping
+                    .Children.Select(c => c.KdlName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var dictionaryNodes = node.Children.Nodes.Where(n =>
+                    !explicitChildNames.Contains(n.Name.Value)
+                );
+
                 PopulateDictionary(
                     (IDictionary)instance,
-                    node.Children.Nodes,
+                    dictionaryNodes,
                     mapping.DictionaryKeyProperty!.PropertyType,
                     mapping.DictionaryValueProperty!.PropertyType
                 );
             }
-            else
-            {
-                MapChildren(node.Children.Nodes, instance, mapping);
-            }
+            MapChildren(node.Children.Nodes, instance, mapping);
         }
     }
 

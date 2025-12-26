@@ -59,6 +59,7 @@ internal sealed record KdlTypeMapping
     internal List<KdlMemberMap> Arguments { get; } = [];
     public PropertyInfo? DictionaryKeyProperty { get; }
     public PropertyInfo? DictionaryValueProperty { get; }
+    public bool HasMembers => Arguments.Count > 0 || Properties.Count > 0 || Children.Count > 0;
 
     private void ValidateMapping()
     {

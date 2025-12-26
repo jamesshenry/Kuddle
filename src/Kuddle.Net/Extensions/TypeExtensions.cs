@@ -12,6 +12,7 @@ internal static class TypeExtensions
         internal bool IsDictionary =>
             type.IsGenericType
             && type.GetInterfaces()
+                .Append(type)
                 .Any(i =>
                     i.IsGenericType
                     && (

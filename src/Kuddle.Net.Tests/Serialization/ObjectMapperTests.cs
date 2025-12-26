@@ -543,9 +543,35 @@ layouts {
     //         .Throws<KuddleSerializationException>();
     // }
 
+    [Test]
+    public async Task RoundTrip_HybridType_PreservesPropertiesAndDictionary()
+    {
+        var model = new HybridModel { Version = "2.5" };
+        model["timeout"] = "5000";
+        model["retry"] = "true";
+
+        var kdl = KdlSerializer.Serialize(model);
+
+        // Should look like:
+        // hybridmodel version="2.5" {
+        //   timeout "5000"
+        //   retry "true"
+        // }
+
+        var deserialized = KdlSerializer.Deserialize<HybridModel>(kdl);
+
+        await Assert.That(deserialized.Version).IsEqualTo("2.5");
+        await Assert.That(deserialized["timeout"]).IsEqualTo("5000");
+        await Assert.That(deserialized.Count).IsEqualTo(2);
+    }
     #endregion
 
     #region Test Models
+    public class HybridModel : Dictionary<string, string>
+    {
+        [KdlProperty("version")]
+        public string Version { get; set; } = "1.0";
+    }
 
     /// <summary>Simple class with properties and arguments.</summary>
     public class Package
