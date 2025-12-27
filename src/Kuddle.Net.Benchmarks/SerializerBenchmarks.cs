@@ -115,7 +115,7 @@ public class SerializerBenchmarks
                 }
             );
         }
-        _largePackageListKdl = KdlSerializer.SerializeMany(_largePackageList);
+        _largePackageListKdl = KdlSerializer.Serialize(_largePackageList);
     }
 
     [Benchmark]
@@ -170,7 +170,7 @@ public class SerializerBenchmarks
     [Benchmark]
     public string SerializeLargePackageList()
     {
-        return KdlSerializer.SerializeMany(_largePackageList);
+        return KdlSerializer.Serialize(_largePackageList);
     }
 
     // Deserialization benchmarks

@@ -66,4 +66,6 @@ public sealed record KdlNode(KdlString Name) : KdlObject
             }
         }
     }
+
+    public bool HasChildren => Children != null && Children.Nodes!.Count > 0;
 }

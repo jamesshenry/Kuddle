@@ -40,27 +40,22 @@ public class NodeParsersTests
     public async Task Node_ParsesComplexLine()
     {
         var sut = KdlGrammar.Node;
-        // Test: Name, Arg, Prop, Type Annotation
         var input = "(my-type)node 123 key=\"value\";";
 
         bool success = sut.TryParse(input, out var node);
 
         await Assert.That(success).IsTrue();
 
-        // Check Name & Type
         await Assert.That(node.Name.Value).IsEqualTo("node");
         await Assert.That(node.TypeAnnotation).IsEqualTo("my-type");
         await Assert.That(node.TerminatedBySemicolon).IsTrue();
 
-        // Check Entries
         await Assert.That(node.Entries).Count().IsEqualTo(2);
 
-        // Arg 1: 123
         var arg = node.Entries[0] as KdlArgument;
         await Assert.That(arg).IsNotNull();
         await Assert.That(((KdlNumber)arg!.Value).ToInt32()).IsEqualTo(123);
 
-        // Prop 2: key="value"
         var prop = node.Entries[1] as KdlProperty;
         await Assert.That(prop).IsNotNull();
         await Assert.That(prop!.Key.Value).IsEqualTo("key");

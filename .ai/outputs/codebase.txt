@@ -1,0 +1,4694 @@
+  - Kuddle.Net
+    - AST
+    - Exceptions
+    - Extensions
+    - Parser
+    - Serialization
+      - Attributes
+    - Validation
+  - Kuddle.Net.Benchmarks
+
+# --- Start of Code Files ---
+
+
+// File: src\Kuddle.Net\AST\KdlArgument.cs`$langnamespace Kuddle.AST;
+
+public sealed record KdlArgument(KdlValue Value) : KdlEntry;
+
+```
+// File: src\Kuddle.Net\AST\KdlBlock.cs`$langusing System.Collections.Generic;
+
+namespace Kuddle.AST;
+
+public sealed record KdlBlock : KdlObject
+{
+    public List<KdlNode> Nodes { get; init; } = [];
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlBool.cs`$langnamespace Kuddle.AST;
+
+public sealed record KdlBool(bool Value) : KdlValue;
+
+```
+// File: src\Kuddle.Net\AST\KdlDocument.cs`$langusing System.Collections.Generic;
+using Kuddle.Serialization;
+
+namespace Kuddle.AST;
+
+public sealed record KdlDocument : KdlObject
+{
+    public List<KdlNode> Nodes { get; init; } = [];
+
+    public string ToString(KdlWriterOptions? options = null)
+    {
+        return KdlWriter.Write(this, options);
+    }
+
+    public override string ToString()
+    {
+        return KdlWriter.Write(this);
+    }
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlEntry.cs`$langnamespace Kuddle.AST;
+
+public abstract record KdlEntry : KdlObject;
+
+```
+// File: src\Kuddle.Net\AST\KdlNode.cs`$langusing System.Collections.Generic;
+
+namespace Kuddle.AST;
+
+public sealed record KdlNode(KdlString Name) : KdlObject
+{
+    public List<KdlEntry> Entries { get; init; } = [];
+
+    public KdlBlock? Children { get; init; }
+
+    public bool TerminatedBySemicolon { get; init; }
+    public string? TypeAnnotation { get; init; }
+
+    /// <summary>
+    /// Gets the value of the last property with the specified name (per KDL spec, last wins).
+    /// Returns null if no property with that name exists.
+    /// </summary>
+    public KdlValue? this[string key]
+    {
+        get
+        {
+            for (var i = Entries.Count - 1; i >= 0; i--)
+            {
+                if (
+                    Entries[i] is KdlProperty { Key.Value: var propKey, Value: var value }
+                    && propKey == key
+                )
+                {
+                    return value;
+                }
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Gets all arguments (positional values) for this node.
+    /// </summary>
+    public IEnumerable<KdlValue> Arguments
+    {
+        get
+        {
+            foreach (var entry in Entries)
+            {
+                if (entry is KdlArgument arg)
+                {
+                    yield return arg.Value;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets all properties (key-value pairs) for this node.
+    /// </summary>
+    public IEnumerable<KdlProperty> Properties
+    {
+        get
+        {
+            foreach (var entry in Entries)
+            {
+                if (entry is KdlProperty prop)
+                {
+                    yield return prop;
+                }
+            }
+        }
+    }
+
+    public bool HasChildren => Children != null && Children.Nodes!.Count > 0;
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlNull.cs`$langnamespace Kuddle.AST;
+
+public sealed record KdlNull : KdlValue;
+
+```
+// File: src\Kuddle.Net\AST\KdlNumber.cs`$langusing System;
+using System.Globalization;
+
+namespace Kuddle.AST;
+
+public sealed record KdlNumber(string RawValue) : KdlValue
+{
+    public NumberBase GetBase()
+    {
+        ReadOnlySpan<char> span = RawValue.AsSpan();
+        if (span.IsEmpty)
+            return NumberBase.Decimal;
+
+        // Skip sign
+        if (span[0] == '+' || span[0] == '-')
+        {
+            if (span.Length == 1)
+                return NumberBase.Decimal;
+            span = span[1..];
+        }
+
+        // Check prefix
+        if (span.Length >= 2 && span[0] == '0')
+        {
+            char c = span[1];
+            if (c == 'x' || c == 'X')
+                return NumberBase.Hex;
+            if (c == 'o' || c == 'O')
+                return NumberBase.Octal;
+            if (c == 'b' || c == 'B')
+                return NumberBase.Binary;
+        }
+
+        return NumberBase.Decimal;
+    }
+
+    public long ToInt64()
+    {
+        if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
+            throw new FormatException($"Value '{RawValue}' is not a valid Integer.");
+        var (sanitised, radix, isNegative) = Sanitise(RawValue, GetBase());
+
+        try
+        {
+            ulong magnitude = Convert.ToUInt64(sanitised, radix);
+
+            if (isNegative)
+            {
+                if (magnitude == (ulong)long.MaxValue + 1)
+                {
+                    return long.MinValue;
+                }
+
+                if (magnitude > long.MaxValue)
+                {
+                    throw new OverflowException();
+                }
+
+                return -(long)magnitude;
+            }
+            else
+            {
+                if (magnitude > (ulong)long.MaxValue)
+                {
+                    throw new OverflowException();
+                }
+                return (long)magnitude;
+            }
+        }
+        catch (FormatException)
+        {
+            throw new FormatException($"Value '{RawValue}' is not a valid {GetBase()} integer.");
+        }
+    }
+
+    public int ToInt32() => checked((int)ToInt64());
+
+    public short ToInt16() => checked((short)ToInt64());
+
+    public sbyte ToSByte() => checked((sbyte)ToInt64());
+
+    public ulong ToUInt64()
+    {
+        if (RawValue.ContainsAny(['.', 'e', 'E']) || RawValue.StartsWith('#'))
+            throw new FormatException($"Value '{RawValue}' is not a valid Integer.");
+
+        var (magnitudeString, radix, isNegative) = Sanitise(RawValue, GetBase());
+
+        if (isNegative)
+            throw new OverflowException("Cannot convert negative value to UInt64.");
+
+        return Convert.ToUInt64(magnitudeString, radix);
+    }
+
+    public uint ToUInt32() => checked((uint)ToUInt64());
+
+    public ushort ToUInt16() => checked((ushort)ToUInt64());
+
+    public byte ToByte() => checked((byte)ToUInt64());
+
+    public double ToDouble()
+    {
+        var numberBase = GetBase();
+
+        if (RawValue.StartsWith('#'))
+        {
+            return (double)(
+                RawValue switch
+                {
+                    "#inf" => double.PositiveInfinity,
+                    "#-inf" => double.NegativeInfinity,
+                    "#nan" => double.NaN,
+                    _ => throw new NotSupportedException(),
+                }
+            );
+        }
+        var (sanitised, radix, isNegative) = Sanitise(RawValue, numberBase);
+
+        double result;
+        if (radix != 10)
+        {
+            result = Convert.ToUInt64(sanitised, radix);
+        }
+        else
+        {
+            result = Convert.ToDouble(sanitised);
+        }
+        return isNegative ? result * -1 : result;
+    }
+
+    public float ToFloat() => checked((float)ToDouble());
+
+    public decimal ToDecimal()
+    {
+        var numberBase = GetBase();
+        if (RawValue.StartsWith('#'))
+        {
+            throw new NotSupportedException();
+        }
+        var (sanitised, radix, isNegative) = Sanitise(RawValue, numberBase);
+
+        decimal result;
+        if (radix != 10)
+        {
+            result = Convert.ToUInt64(sanitised, radix);
+        }
+        else
+        {
+            result = decimal.Parse(sanitised, NumberStyles.Float, CultureInfo.InvariantCulture);
+        }
+        return isNegative ? result * -1 : result;
+    }
+
+    private static (string cleaned, int radix, bool isNegative) Sanitise(
+        string raw,
+        NumberBase baseKind
+    )
+    {
+        string s = raw.Replace("_", "");
+        if (string.IsNullOrEmpty(s))
+            return ("0", 10, false);
+
+        bool isNegative = s.StartsWith('-');
+        bool isPositive = s.StartsWith('+');
+
+        string sanitised = (isNegative || isPositive) ? s.Substring(1) : s;
+
+        int radix = 10;
+        if (baseKind == NumberBase.Hex)
+        {
+            radix = 16;
+            if (sanitised.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                sanitised = sanitised.Substring(2);
+        }
+        else if (baseKind == NumberBase.Octal)
+        {
+            radix = 8;
+            if (sanitised.StartsWith("0o", StringComparison.OrdinalIgnoreCase))
+                sanitised = sanitised.Substring(2);
+        }
+        else if (baseKind == NumberBase.Binary)
+        {
+            radix = 2;
+            if (sanitised.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
+                sanitised = sanitised.Substring(2);
+        }
+
+        return (sanitised, radix, isNegative);
+    }
+
+    internal string ToCanonicalString()
+    {
+        if (RawValue.StartsWith('#'))
+            return RawValue;
+
+        var numberBase = GetBase();
+        var (clean, radix, isNegative) = Sanitise(RawValue, numberBase);
+
+        if (numberBase == NumberBase.Decimal)
+        {
+            return isNegative ? '-' + clean : clean;
+        }
+        else
+        {
+            return TryDecimal() ?? TryBigInteger() ?? RawValue;
+        }
+
+        string? TryDecimal()
+        {
+            try
+            {
+                var dec = ToDecimal();
+                return dec.ToString(CultureInfo.InvariantCulture);
+            }
+            catch (OverflowException)
+            {
+                return null;
+            }
+        }
+        string? TryBigInteger()
+        {
+            try
+            {
+                var bi = System.Numerics.BigInteger.Parse(
+                    "0" + clean,
+                    radix switch
+                    {
+                        2 => NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
+                        8 => NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
+                        16 => NumberStyles.AllowHexSpecifier,
+                        _ => NumberStyles.Integer,
+                    }
+                );
+
+                if (isNegative)
+                    bi = -bi;
+
+                return bi.ToString(CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlObject.cs`$langnamespace Kuddle.AST;
+
+public record KdlObject
+{
+    public string LeadingTrivia { get; init; } = string.Empty;
+    public string TrailingTrivia { get; init; } = string.Empty;
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlProperty.cs`$langnamespace Kuddle.AST;
+
+public sealed record KdlProperty(KdlString Key, KdlValue Value) : KdlEntry
+{
+    public string EqualsTrivia { get; init; } = "=";
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlSkippedEntry.cs`$langnamespace Kuddle.AST;
+
+public sealed record KdlSkippedEntry(string RawText) : KdlEntry;
+
+```
+// File: src\Kuddle.Net\AST\KdlString.cs`$langnamespace Kuddle.AST;
+
+public sealed record KdlString(string Value, StringKind Kind) : KdlValue
+{
+    public override string ToString() => Value;
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlTrivia.cs`$langusing System.Collections.Immutable;
+
+namespace Kuddle.AST;
+
+public record KdlTrivia(string Value, TriviaKind Kind) : KdlValue { }
+
+public enum TriviaKind
+{
+    Unknown,
+    WhiteSpace,
+    NewLine,
+    Comment,
+}
+
+```
+// File: src\Kuddle.Net\AST\KdlValue.cs`$langusing System;
+using System.Globalization;
+using System.Linq;
+
+namespace Kuddle.AST;
+
+public abstract record KdlValue : KdlObject
+{
+    public string? TypeAnnotation { get; init; }
+
+    /// <summary>Gets a KdlNull value.</summary>
+    public static KdlValue Null => new KdlNull();
+
+    /// <summary>Creates a KdlString from a Guid with "uuid" type annotation.</summary>
+    public static KdlString From(Guid guid, StringKind stringKind = StringKind.Quoted)
+    {
+        return new KdlString(guid.ToString(), stringKind) { TypeAnnotation = "uuid" };
+    }
+
+    /// <summary>Creates a KdlString from a DateTimeOffset with "date-time" type annotation (ISO 8601).</summary>
+    public static KdlString From(DateTimeOffset date, StringKind stringKind = StringKind.Quoted)
+    {
+        return new KdlString(date.ToString("O"), stringKind) { TypeAnnotation = "date-time" };
+    }
+
+    /// <summary>Creates a KdlString from a string value.</summary>
+    public static KdlString From(string value, StringKind stringKind = StringKind.Bare)
+    {
+        foreach (char c in value)
+        {
+            if (char.IsWhiteSpace(c))
+                stringKind = StringKind.Quoted;
+        }
+        return new KdlString(value, stringKind);
+    }
+
+    /// <summary>Creates a KdlBool from a boolean value.</summary>
+    public static KdlBool From(bool value)
+    {
+        return new KdlBool(value);
+    }
+
+    /// <summary>Creates a KdlNumber from an integer value.</summary>
+    public static KdlNumber From(int value)
+    {
+        return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>Creates a KdlNumber from a long value.</summary>
+    public static KdlNumber From(long value)
+    {
+        return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>Creates a KdlNumber from a double value.</summary>
+    public static KdlNumber From(double value)
+    {
+        return new KdlNumber(value.ToString("G17", CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>Creates a KdlNumber from a decimal value.</summary>
+    public static KdlNumber From(decimal value)
+    {
+        return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
+    }
+
+    internal static KdlString From(Enum e)
+    {
+        return new KdlString(e.ToString(), StringKind.Bare);
+    }
+}
+
+```
+// File: src\Kuddle.Net\AST\NumberBase.cs`$langnamespace Kuddle.AST;
+
+public enum NumberBase
+{
+    Decimal,
+    Hex,
+    Octal,
+    Binary,
+}
+
+```
+// File: src\Kuddle.Net\AST\StringKind.cs`$langusing System;
+
+namespace Kuddle.AST;
+
+[Flags]
+public enum StringKind
+{
+    Bare = 1,
+    Quoted = 2,
+    Raw = 4,
+    MultiLine = 8,
+
+    MultiLineRaw = MultiLine | Raw,
+    QuotedRaw = Quoted | Raw,
+}
+
+```
+// File: src\Kuddle.Net\Exceptions\KdlConfigurationException.cs`$langusing System;
+
+namespace Kuddle.Exceptions;
+
+[Serializable]
+internal class KdlConfigurationException : Exception
+{
+    public KdlConfigurationException() { }
+
+    public KdlConfigurationException(string? message)
+        : base(message) { }
+
+    public KdlConfigurationException(string? message, Exception? innerException)
+        : base(message, innerException) { }
+}
+
+```
+// File: src\Kuddle.Net\Exceptions\KuddleParseException.cs`$langusing System;
+
+namespace Kuddle.Exceptions;
+
+[Serializable]
+public class KuddleParseException : Exception
+{
+    private readonly Exception? _ex = default;
+
+    public KuddleParseException() { }
+
+    public KuddleParseException(Exception ex)
+    {
+        _ex = ex;
+    }
+
+    public KuddleParseException(string? message)
+        : base(message) { }
+
+    public KuddleParseException(string? message, Exception? innerException)
+        : base(message, innerException) { }
+
+    public KuddleParseException(string? message, int? column, int? line, int? offset)
+        : this(message)
+    {
+        Column = column;
+        Line = line;
+        Offset = offset;
+    }
+
+    public int? Line { get; }
+    public int? Column { get; }
+    public int? Offset { get; }
+}
+
+```
+// File: src\Kuddle.Net\Exceptions\KuddleSerializationException.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[Serializable]
+internal class KuddleSerializationException : Exception
+{
+    private readonly Exception? _ex;
+
+    public KuddleSerializationException() { }
+
+    public KuddleSerializationException(Exception ex)
+    {
+        _ex = ex;
+    }
+
+    public KuddleSerializationException(string? message)
+        : base(message) { }
+
+    public KuddleSerializationException(string? message, Exception? innerException)
+        : base(message, innerException) { }
+}
+
+```
+// File: src\Kuddle.Net\Exceptions\KuddleValidationException.cs`$langusing System;
+using System.Collections.Generic;
+using Kuddle.AST;
+
+namespace Kuddle.Exceptions;
+
+public class KuddleValidationException : Exception
+{
+    public IEnumerable<KuddleValidationError> Errors { get; } = [];
+
+    public KuddleValidationException(List<KuddleValidationError> errors)
+        : base($"Found {errors.Count} validation errors in the KDL document.")
+    {
+        Errors = errors;
+    }
+
+    public KuddleValidationException() { }
+
+    public KuddleValidationException(string? message)
+        : base(message) { }
+
+    public KuddleValidationException(string? message, Exception? innerException)
+        : base(message, innerException) { }
+}
+
+public record KuddleValidationError(string Message, KdlObject Source);
+
+```
+// File: src\Kuddle.Net\Extensions\KdlNodeExtensions.cs`$langusing Kuddle.AST;
+
+namespace Kuddle.Extensions;
+
+public static class KdlNodeExtensions
+{
+    extension(KdlNode node)
+    {
+        public KdlValue? Prop(string key)
+        {
+            for (int i = node.Entries.Count - 1; i >= 0; i--)
+            {
+                if (node.Entries[i] is KdlProperty prop && prop.Key.Value == key)
+                    return prop.Value;
+            }
+            return null;
+        }
+
+        public KdlValue? Arg(int index)
+        {
+            int count = 0;
+            foreach (var entry in node.Entries)
+            {
+                if (entry is KdlArgument arg)
+                {
+                    if (count == index)
+                        return arg.Value;
+                    count++;
+                }
+            }
+            return null;
+        }
+
+        public bool TryGetProp<T>(string key, out T result)
+        {
+            result = default!;
+            var val = node.Prop(key);
+            if (val is null)
+            {
+                return false;
+            }
+
+            if (typeof(T) == typeof(int) && val.TryGetInt(out int i))
+            {
+                result = (T)(object)i;
+                return true;
+            }
+            if (typeof(T) == typeof(bool) && val.TryGetBool(out bool b))
+            {
+                result = (T)(object)b;
+                return true;
+            }
+            if (typeof(T) == typeof(string) && val.TryGetString(out string? s))
+            {
+                result = (T)(object)s;
+                return true;
+            }
+            // ... add other types
+
+            return false;
+        }
+    }
+}
+
+```
+// File: src\Kuddle.Net\Extensions\KdlValueExtensions.cs`$langusing System;
+using System.Diagnostics.CodeAnalysis;
+using Kuddle.AST;
+
+namespace Kuddle.Extensions;
+
+public static class KdlValueExtensions
+{
+    extension(KdlValue value)
+    {
+        public bool IsNull => value is KdlNull;
+        public bool IsNumber => value is KdlNumber;
+        public bool IsString => value is KdlString;
+        public bool IsBool => value is KdlBool;
+
+        public bool TryGetInt(out int result)
+        {
+            result = 0;
+            if (value is KdlNumber num)
+            {
+                try
+                {
+                    result = num.ToInt32();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        public bool TryGetLong(out long result)
+        {
+            result = 0;
+            if (value is KdlNumber num)
+            {
+                try
+                {
+                    result = num.ToInt64();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        // --- Floats ---
+
+        public bool TryGetDouble(out double result)
+        {
+            result = 0;
+            if (value is KdlNumber num)
+            {
+                try
+                {
+                    result = num.ToDouble();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        public bool TryGetDecimal(out decimal result)
+        {
+            result = 0;
+            if (value is KdlNumber num)
+            {
+                try
+                {
+                    result = num.ToDecimal();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        // --- Booleans ---
+
+        public bool TryGetBool(out bool result)
+        {
+            if (value is KdlBool b)
+            {
+                result = b.Value;
+                return true;
+            }
+            result = false;
+            return false;
+        }
+
+        // --- Strings ---
+
+        public bool TryGetString([NotNullWhen(true)] out string? result)
+        {
+            if (value is KdlString s)
+            {
+                result = s.Value;
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        // --- Complex Types (UUID, Date, IP) ---
+
+        public bool TryGetUuid(out Guid result)
+        {
+            result = Guid.Empty;
+            return value is KdlString s && Guid.TryParse(s.Value, out result);
+        }
+
+        public bool TryGetDateTime(out DateTimeOffset result)
+        {
+            result = default;
+            return value is KdlString s && DateTimeOffset.TryParse(s.Value, out result);
+        }
+    }
+}
+
+```
+// File: src\Kuddle.Net\Extensions\ParserExtensions.cs`$langusing System.Diagnostics;
+using Kuddle.Parser;
+using Parlot.Fluent;
+
+namespace Kuddle.Extensions;
+
+internal static class ParserExtensions
+{
+    /// <summary>
+    /// Wraps a parser with debug tracing. Only active in DEBUG builds.
+    /// In Release builds, this is a no-op to enable Parlot compilation.
+    /// </summary>
+    [DebuggerStepThrough]
+    public static Parser<T> Debug<T>(this Parser<T> parser, string name, bool enableDebug = false)
+    {
+#if DEBUG
+        if (enableDebug)
+            return new DebugParser<T>(parser, name);
+        else
+            return parser;
+#else
+        return parser;
+#endif
+    }
+}
+
+```
+// File: src\Kuddle.Net\Extensions\SpanExtensions.cs`$langusing System;
+using System.Text;
+
+namespace Kuddle.Extensions;
+
+public static class SpanExtensions
+{
+    extension<T>(ReadOnlySpan<T> span)
+    {
+        public int MaxConsecutive(T target)
+        {
+            int max = 0;
+            while (true)
+            {
+                int start = span.IndexOf(target);
+                if (start < 0)
+                    break;
+
+                span = span.Slice(start);
+
+                int length = span.IndexOfAnyExcept(target);
+                if (length < 0)
+                    length = span.Length;
+
+                if (length > max)
+                    max = length;
+
+                if (length == span.Length)
+                    break;
+                span = span.Slice(length);
+            }
+            return max;
+        }
+    }
+
+    extension(string input)
+    {
+        public string ToKebabCase()
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            StringBuilder result = new();
+
+            bool previousCharacterIsSeparator = true;
+
+            for (int i = 0; i < input.Length; i++)
+            {
+                char currentChar = input[i];
+
+                if (char.IsUpper(currentChar) || char.IsDigit(currentChar))
+                {
+                    if (
+                        !previousCharacterIsSeparator
+                        && (
+                            i > 0
+                            && (
+                                char.IsLower(input[i - 1])
+                                || (i < input.Length - 1 && char.IsLower(input[i + 1]))
+                            )
+                        )
+                    )
+                    {
+                        result.Append('-');
+                    }
+
+                    result.Append(char.ToLowerInvariant(currentChar));
+
+                    previousCharacterIsSeparator = false;
+                }
+                else if (char.IsLower(currentChar))
+                {
+                    result.Append(currentChar);
+
+                    previousCharacterIsSeparator = false;
+                }
+                else if (currentChar == ' ' || currentChar == '_' || currentChar == '-')
+                {
+                    if (!previousCharacterIsSeparator)
+                    {
+                        result.Append('-');
+                    }
+
+                    previousCharacterIsSeparator = true;
+                }
+            }
+
+            return result.ToString();
+        }
+    }
+}
+
+```
+// File: src\Kuddle.Net\Extensions\TypeExtensions.cs`$langusing System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Kuddle.Serialization;
+
+internal static class TypeExtensions
+{
+    extension(Type type)
+    {
+        internal bool IsDictionary =>
+            type.IsGenericType
+            && type.GetInterfaces()
+                .Any(i =>
+                    i.IsGenericType
+                    && (
+                        i.GetGenericTypeDefinition() == typeof(IDictionary<,>)
+                        || i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)
+                    )
+                );
+
+        internal bool IsIEnumerable =>
+            type != typeof(string)
+            && !type.IsDictionary
+            && type.IsAssignableTo(typeof(IEnumerable));
+
+        internal bool IsKdlScalar =>
+            type.IsPrimitive
+            || type.IsEnum
+            || type == typeof(string)
+            || type == typeof(decimal)
+            || type == typeof(DateTime)
+            || type == typeof(DateTimeOffset)
+            || type == typeof(Guid);
+
+        public Type? GetCollectionElementType()
+        {
+            if (type == typeof(string))
+                return null;
+            // Array
+            if (type.IsArray)
+                return type.GetElementType();
+
+            // IEnumerable<T>
+            var enumerable = type.GetInterfaces()
+                .Append(type)
+                .FirstOrDefault(i =>
+                    i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)
+                );
+
+            if (enumerable != null)
+                return enumerable.GetGenericArguments()[0];
+
+            // Not a collection
+            return null;
+        }
+    }
+}
+
+```
+// File: src\Kuddle.Net\Parser\CharacterSets.cs`$langusing System;
+using System.Collections.Generic;
+
+namespace Kuddle.Parser;
+
+public static class CharacterSets
+{
+    public static ReadOnlySpan<char> Digits => "0123456789";
+    public static ReadOnlySpan<char> DigitsAndUnderscore => "0123456789_";
+    public static ReadOnlySpan<char> StringExcludedChars =>
+        ['[', '"', '\\', 'b', 'f', 'n', 't', 'r', 's'];
+    public static ReadOnlySpan<char> WhiteSpaceChars =>
+        [
+            '\u0009',
+            '\u0020',
+            '\u00A0',
+            '\u1680',
+            '\u2000',
+            '\u2001',
+            '\u2002',
+            '\u2003',
+            '\u2004',
+            '\u2005',
+            '\u2006',
+            '\u2007',
+            '\u2008',
+            '\u2009',
+            '\u200A',
+            '\u202F',
+            '\u205F',
+            '\u3000',
+        ];
+
+    internal static bool IsWhiteSpace(char c)
+    {
+        return c switch
+        {
+            '\u0009' => true, // Character Tabulation
+            '\u0020' => true, // Space
+            '\u00A0' => true, // No-Break Space
+            '\u1680' => true, // Ogham Space Mark
+            '\u2000' => true, // En Quad
+            '\u2001' => true, // Em Quad
+            '\u2002' => true, // En Space
+            '\u2003' => true, // Em Space
+            '\u2004' => true, // Three-Per-Em Space
+            '\u2005' => true, // Four-Per-Em Space
+            '\u2006' => true, // Six-Per-Em Space
+            '\u2007' => true, // Figure Space
+            '\u2008' => true, // Punctuation Space
+            '\u2009' => true, // Thin Space
+            '\u200A' => true, // Hair Space
+            '\u202F' => true, // Narrow No-Break Space
+            '\u205F' => true, // Medium Mathematical Space
+            '\u3000' => true, // Ideographic Space
+            _ => false,
+        };
+    }
+
+    internal static bool IsNewline(char c)
+    {
+        return c switch
+        {
+            '\u000D' => true,
+            '\u000A' => true,
+            '\u0085' => true,
+            '\u000B' => true,
+            '\u000C' => true,
+            '\u2028' => true,
+            '\u2029' => true,
+            _ => false,
+        };
+    }
+
+    public static readonly HashSet<string> ReservedTypes =
+    [
+        "i8",
+        "i16",
+        "i32",
+        "i64",
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "f32",
+        "f64",
+        "decimal64",
+        "decimal128",
+        "date-time",
+        "time",
+        "date",
+        "duration",
+        "decimal",
+        "currency",
+        "country-2",
+        "country-3",
+        "ipv4",
+        "ipv6",
+        "url",
+        "uuid",
+        "regex",
+        "base64",
+    ];
+
+    /// <summary>
+    /// Maps KDL type annotations to their corresponding CLR types.
+    /// Not all reserved types have CLR equivalents (e.g., country codes, IP addresses as validated strings).
+    /// </summary>
+    public static readonly Dictionary<string, Type> TypeAnnotationToClrType = new()
+    {
+        ["i8"] = typeof(sbyte),
+        ["i16"] = typeof(short),
+        ["i32"] = typeof(int),
+        ["i64"] = typeof(long),
+        ["u8"] = typeof(byte),
+        ["u16"] = typeof(ushort),
+        ["u32"] = typeof(uint),
+        ["u64"] = typeof(ulong),
+        ["f32"] = typeof(float),
+        ["f64"] = typeof(double),
+        ["decimal64"] = typeof(decimal),
+        ["decimal128"] = typeof(decimal),
+        ["decimal"] = typeof(decimal),
+        ["date-time"] = typeof(DateTimeOffset),
+        ["time"] = typeof(TimeOnly),
+        ["date"] = typeof(DateOnly),
+        ["duration"] = typeof(TimeSpan),
+        ["uuid"] = typeof(Guid),
+        ["url"] = typeof(Uri),
+        ["base64"] = typeof(byte[]),
+        // These remain as strings with semantic meaning:
+        // "currency", "country-2", "country-3", "ipv4", "ipv6", "regex"
+    };
+
+    /// <summary>
+    /// Gets the CLR type for a KDL type annotation, or null if no mapping exists.
+    /// </summary>
+    public static Type? GetClrType(string? typeAnnotation) =>
+        typeAnnotation is not null
+        && TypeAnnotationToClrType.TryGetValue(typeAnnotation, out var type)
+            ? type
+            : null;
+}
+
+```
+// File: src\Kuddle.Net\Parser\DebugParser.cs`$langusing System;
+using Parlot;
+using Parlot.Fluent;
+
+namespace Kuddle.Parser;
+
+public class DebugParser<T> : Parser<T>
+{
+    private readonly Parser<T> _inner;
+    private readonly string _name;
+
+    public DebugParser(Parser<T> inner, string name)
+    {
+        _inner = inner;
+        _name = name;
+    }
+
+    public override bool Parse(ParseContext context, ref ParseResult<T> result)
+    {
+        var startCursor = context.Scanner.Cursor.Position;
+
+        // Peek at the next few chars to see what we are looking at
+        var peekPreview = context
+            .Scanner.Buffer.Substring(
+                startCursor.Offset,
+                Math.Min(20, context.Scanner.Buffer.Length - startCursor.Offset)
+            )
+            .Replace("\n", "\\n")
+            .Replace("\r", "\\r");
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[START] {_name} at {startCursor.Line}:{startCursor.Column} (Input: '{peekPreview}')"
+        );
+
+        if (_inner.Parse(context, ref result))
+        {
+            System.Diagnostics.Debug.WriteLine($"[MATCH] {_name} -> {result.Value}");
+            return true;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[FAIL ] {_name}");
+        return false;
+    }
+}
+
+```
+// File: src\Kuddle.Net\Parser\KdlGrammar.cs`$langusing System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Kuddle.AST;
+using Kuddle.Extensions;
+using Parlot;
+using Parlot.Fluent;
+using static Parlot.Fluent.Parsers;
+
+namespace Kuddle.Parser;
+
+public static class KdlGrammar
+{
+    internal static readonly Parser<KdlDocument> Document;
+
+    #region Numbers
+    internal static readonly Parser<TextSpan> Decimal;
+    internal static readonly Parser<TextSpan> Integer;
+    internal static readonly Parser<TextSpan> Sign;
+    internal static readonly Parser<TextSpan> Hex;
+    internal static readonly Parser<TextSpan> Octal;
+    internal static readonly Parser<TextSpan> Binary;
+    internal static readonly Parser<KdlNumber> Number;
+    #endregion
+
+    #region Keywords and booleans
+    internal static readonly Parser<KdlBool> Boolean;
+    internal static readonly Parser<TextSpan> KeywordNumber;
+    internal static readonly Parser<KdlValue> Keyword;
+    #endregion
+
+    #region Specific code points
+    internal static readonly Parser<char> Bom = Literals.Char('\uFEFF');
+    #endregion
+
+    #region Comments
+    internal static readonly Parser<TextSpan> SingleLineComment;
+    internal static readonly Parser<TextSpan> MultiLineComment;
+    internal static readonly Parser<TextSpan> SlashDash;
+    #endregion
+
+    #region WhiteSpace
+    internal static readonly Parser<TextSpan> Ws;
+    internal static readonly Parser<TextSpan> EscLine;
+    internal static readonly Parser<TextSpan> NodeSpace;
+    internal static readonly Parser<TextSpan> LineSpace = Deferred<TextSpan>();
+    internal static readonly Parser<KdlString> Type;
+    private static readonly Parser<KdlValue> Value;
+    internal static readonly Parser<TextSpan> UnambiguousIdent;
+    internal static readonly Parser<TextSpan> SignedIdent;
+    internal static readonly Parser<TextSpan> DottedIdent;
+    internal static readonly Parser<TextSpan> HexUnicode;
+    internal static readonly Parser<TextSpan> WsEscape;
+    internal static readonly Parser<TextSpan> StringCharacter;
+    internal static readonly Parser<KdlString> MultiLineQuoted;
+    internal static readonly Parser<KdlString> SingleLineQuoted;
+    internal static readonly Parser<KdlString> RawString;
+    internal static readonly Parser<KdlString> IdentifierString;
+    internal static readonly Parser<KdlString> QuotedString;
+    internal static readonly Parser<KdlString> String;
+    #endregion
+
+    internal static readonly Parser<KdlNode> FinalNode = Deferred<KdlNode>();
+    internal static readonly Parser<KdlNode?> Node;
+    internal static readonly Parser<IReadOnlyList<KdlNode>> Nodes = Deferred<
+        IReadOnlyList<KdlNode>
+    >();
+
+    static KdlGrammar()
+    {
+        var nodeSpace = Deferred<TextSpan>();
+
+        var singleNewLine = Capture(Literals.Text("\r\n").Or(Literals.Text("\n")))
+            .Debug("SingleNewLine");
+        var eof = Capture(Always().Eof());
+        Sign = Literals.AnyOf(['+', '-'], 1, 1);
+
+        //Strings
+
+        var singleQuote = Literals.Char('"');
+        var tripleQuote = Literals.Text("\"\"\"").Debug("tripleQuote");
+        var hash = Literals.Char('#');
+
+        var openingHashes = Capture(OneOrMany(hash));
+
+        // TODO: Investigate using Runes instead of chars: https://learn.microsoft.com/en-us/dotnet/api/system.text.rune
+        var identifierChar = Literals.Pattern(
+            c =>
+                !CharacterSets.IsNewline(c)
+                && !CharacterSets.IsWhiteSpace(c)
+                && !"\\/(){};[]\"#=".Contains(c),
+            1,
+            1
+        );
+        var unambiguousStartChar = identifierChar.When(
+            (_, c) => c.Span[^1] >= 'a' && c.Span[^1] <= 'z'
+        );
+        var literalCodePoint = Literals
+            .NoneOf("", minSize: 1, maxSize: 1)
+            .When((context, c) => !IsDisallowedLiteralCodePoint(c.Span[0]));
+
+        var hexSequence = Literals.Pattern(IsHexChar, 1, 6);
+        HexUnicode = hexSequence
+            .When((a, b) => !IsLoneSurrogate(b.Span[0]))
+            .Then(ts => new TextSpan(Regex.Unescape(ts.Span.ToString())));
+
+        WsEscape = Literals
+            .Char('\\')
+            .And(
+                Literals.Pattern(
+                    c => CharacterSets.IsNewline(c) || char.IsWhiteSpace(c),
+                    minSize: 1,
+                    maxSize: 0
+                )
+            )
+            .Then(x => new TextSpan())
+            .Debug("WsEscape");
+
+        var escapeSequence = Literals
+            .Char('\\')
+            .SkipAnd(
+                OneOf(
+                        Literals.Char('n').Then(_ => "\n"),
+                        Literals.Char('r').Then(_ => "\r"),
+                        Literals.Char('t').Then(_ => "\t"),
+                        Literals.Char('\\').Then(_ => "\\"),
+                        Literals.Char('"').Then(_ => "\""),
+                        Literals.Char('b').Then(_ => "\b"),
+                        Literals.Char('f').Then(_ => "\f"),
+                        Literals.Char('s').Then(_ => " "),
+                        Literals
+                            .Text("u{")
+                            .SkipAnd(HexUnicode)
+                            .AndSkip(Literals.Char('}'))
+                            .Then(ts => char.ConvertFromUtf32(Convert.ToInt32(ts.Buffer, 16)))
+                    )
+                    .Then(s => new TextSpan(s))
+            );
+
+        var surrogatePair = Capture(
+            Literals
+                .Pattern(char.IsHighSurrogate, 1, 1)
+                .And(Literals.Pattern(char.IsLowSurrogate, 1, 1))
+        );
+
+        var singleChar = Literals.Pattern(
+            c => c != '\\' && c != '"' && !IsDisallowedLiteralCodePoint(c),
+            1,
+            1
+        );
+        var plainCharacter = OneOf(surrogatePair, singleChar)
+            .Then((_, x) => x.Span[0] == '\r' ? new TextSpan() : x)
+            .Debug("plainCharacter");
+        StringCharacter = OneOf(escapeSequence, WsEscape, plainCharacter);
+
+        var singleLineStringBody = ZeroOrMany(StringCharacter)
+            .Then(x =>
+            {
+                if (x.Count == 0)
+                    return new TextSpan(string.Empty);
+
+                if (x.Count == 1)
+                    return new TextSpan(x[0].Span.ToString());
+
+                int totalLength = 0;
+                for (int i = 0; i < x.Count; i++)
+                    totalLength += x[i].Length;
+
+                return new TextSpan(
+                    string.Create(
+                        totalLength,
+                        x,
+                        static (span, items) =>
+                        {
+                            int pos = 0;
+                            for (int i = 0; i < items.Count; i++)
+                            {
+                                var itemSpan = items[i].Span;
+                                itemSpan.CopyTo(span.Slice(pos));
+                                pos += itemSpan.Length;
+                            }
+                        }
+                    )
+                );
+            });
+        MultiLineQuoted = new MultiLineStringParser().Debug("MultiLineQuoted");
+        SingleLineQuoted = Between(
+                Literals.Char('"'),
+                singleLineStringBody.Debug("singleLineStringBody"),
+                Literals.Char('"').ElseError("Expected a closing quote on string")
+            )
+            .Debug("SingleLineQuoted")
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Quoted));
+        QuotedString = OneOf(MultiLineQuoted, SingleLineQuoted);
+
+        DottedIdent = Capture(
+                Sign.Optional()
+                    .And(
+                        Literals
+                            .Char('.')
+                            .Debug("First identifierChar")
+                            .And(
+                                Literals
+                                    .Pattern(
+                                        c =>
+                                            !CharacterSets.IsNewline(c)
+                                            && !CharacterSets.IsWhiteSpace(c)
+                                            && !"\\/(){};[]\"#=".Contains(c),
+                                        0
+                                    )
+                                    .Optional()
+                                    .Debug("Remaining identifierChars")
+                            )
+                    )
+            )
+            .When(
+                (ctx, b) =>
+                {
+                    var span = b.Span;
+                    if (span.IsEmpty)
+                        return false;
+
+                    char c0 = span[0];
+                    bool isSign = c0 == '+' || c0 == '-';
+
+                    if (isSign && span.Length == 1)
+                        return true;
+
+                    ReadOnlySpan<char> slice = isSign ? span[1..] : span;
+
+                    if (char.IsDigit(slice[0]))
+                        return false;
+
+                    if (slice[0] == '.' && slice.Length > 1 && char.IsDigit(slice[1]))
+                        return false;
+
+                    return true;
+                }
+            )
+            .Debug("DottedIdent");
+
+        SignedIdent = Capture(
+            Sign.And(
+                ZeroOrOne(
+                    identifierChar
+                        .When((a, b) => !IsDigitChar(b.Span[0]) && b.Span[0] != '.')
+                        .And(ZeroOrMany(identifierChar))
+                )
+            )
+        );
+
+        UnambiguousIdent = Capture(
+                identifierChar
+                    .When(
+                        (a, b) =>
+                            !IsDigitChar(b.Span[0]) && !IsSigned(b.Span[0]) && b.Span[0] != '.'
+                    )
+                    .And(ZeroOrMany(identifierChar))
+            )
+            .Then(
+                (context, span) =>
+                {
+                    return IsReservedKeyword(span.Span)
+                        ? throw new ParseException(
+                            $"The keyword '{span}' cannot be used as an unquoted identifier. Wrap it in quotes: \"{span}\".",
+                            context.Scanner.Cursor.Position
+                        )
+                        : span;
+                }
+            );
+
+        IdentifierString = OneOf(DottedIdent, SignedIdent, UnambiguousIdent)
+            .Then(ts => new KdlString(ts.Span.ToString(), StringKind.Bare));
+        RawString = new RawStringParser();
+        String = OneOf(IdentifierString, RawString, QuotedString).Then((context, ks) => ks);
+
+        Integer = Literals
+            .Pattern(c => char.IsDigit(c) || c == '_')
+            .When((a, b) => b.Span[0] != '_');
+        var exponent = Literals.Char('e').Or(Literals.Char('E')).And(Sign.Optional()).And(Integer);
+        Decimal = Capture(
+            Sign.Optional()
+                .And(Integer)
+                .And(ZeroOrOne(Literals.Char('.').And(Integer)))
+                .And(exponent.Optional())
+        );
+        Hex = Capture(
+                Sign.Optional()
+                    .And(Literals.Text("0x"))
+                    .And(Literals.Pattern(IsHexChar, 1, 1))
+                    .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsHexChar(c))))
+            )
+            .When((context, x) => x.Span[^1] != '_');
+        Octal = Capture(
+                Sign.Optional()
+                    .AndSkip(Literals.Text("0o"))
+                    .And(
+                        Literals
+                            .Pattern(IsOctalChar)
+                            .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsOctalChar(c))))
+                    )
+            )
+            .When((context, x) => x.Span[^1] != '_');
+
+        Binary = Capture(
+            Sign.Optional()
+                .AndSkip(Literals.Text("0b"))
+                .And(Literals.Char('0').Or(Literals.Char('1')))
+                .And(ZeroOrMany(Literals.Pattern(c => c == '_' || IsBinaryChar(c))))
+        );
+        Boolean = Literals
+            .Text("#true")
+            .Or(Literals.Text("#false"))
+            .Then(value =>
+                value switch
+                {
+                    "#true" => new KdlBool(true),
+                    "#false" => new KdlBool(false),
+                    _ => throw new NotSupportedException(),
+                }
+            );
+        Keyword = Boolean.Or<KdlBool, KdlNull, KdlValue>(
+            Literals.Text("#null").Then(_ => new KdlNull())
+        );
+        KeywordNumber = Capture(
+            OneOf(Literals.Text("#inf"), Literals.Text("#-inf"), Literals.Text("#nan"))
+        );
+
+        Number = OneOf(KeywordNumber, Hex, Octal, Binary, Decimal)
+            .Then((context, value) => new KdlNumber(value.Span.ToString()));
+
+        var multiLineComment = Deferred<TextSpan>();
+
+        var openComment = Literals.Text("/*");
+        var closeComment = Literals.Text("*/");
+
+        SingleLineComment = Literals.Comments("//").Debug("SingleLineComment");
+        MultiLineComment = Recursive<TextSpan>(commentParser =>
+        {
+            var nestedComment = commentParser;
+
+            var otherContent = AnyCharBefore(openComment.Or(closeComment));
+            var fullContent = ZeroOrMany(nestedComment.Or(otherContent));
+            var fullCommentParser = openComment.And(fullContent).And(closeComment);
+
+            return Capture(fullCommentParser);
+        });
+
+        var lineSpace = Deferred<TextSpan>();
+        SlashDash = Capture(Literals.Text("/-").And(ZeroOrMany(lineSpace))).Debug("SlashDash");
+
+        Ws = Literals
+            .Pattern(c => CharacterSets.IsWhiteSpace(c), minSize: 1, maxSize: 1)
+            .Or(MultiLineComment)
+            .Debug("Ws");
+        EscLine = Capture(
+            Literals
+                .Text(@"\")
+                .And(ZeroOrMany(Ws))
+                .And(
+                    OneOf(SingleLineComment.AndSkip(OneOf(singleNewLine, eof)), singleNewLine, eof)
+                )
+                .Debug("EscLine")
+        );
+
+        nodeSpace.Parser = Capture(Ws.ZeroOrMany().And(EscLine).And(Ws.ZeroOrMany()))
+            .Or(Capture(Ws.OneOrMany()));
+        NodeSpace = nodeSpace.Debug("NodeSpace");
+        lineSpace.Parser = NodeSpace.Or(singleNewLine).Or(SingleLineComment);
+        LineSpace = lineSpace;
+
+        Type = Between(
+            Literals.Char('('),
+            ZeroOrMany(NodeSpace).SkipAnd(String).AndSkip(ZeroOrMany(NodeSpace)),
+            Literals.Char(')').ElseError("Expected closing brace on type annotation")
+        );
+
+        Value = Type.Optional()
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .And(OneOf(Keyword, Number, String))
+            .Then(x =>
+                x.Item1.HasValue ? (x.Item2 with { TypeAnnotation = x.Item1.Value.Value }) : x.Item2
+            );
+
+        var prop = String
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .AndSkip(Literals.Char('='))
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .And(Value.ElseError("Expected a value at end of input"))
+            .Then(x => new KdlProperty(x.Item1, x.Item2) as KdlEntry);
+        var arg = Value.Then(v => new KdlArgument(v) as KdlEntry);
+        var nodePropOrArg = OneOf(prop, arg);
+
+        var nodeTerminator = OneOf(
+                SingleLineComment,
+                singleNewLine,
+                Capture(Literals.AnyOf(";")),
+                eof
+            )
+            .Debug("NodeTerminator");
+
+        var skippedEntry = SlashDash
+            .And(Capture(nodePropOrArg))
+            .Then(x => new KdlSkippedEntry(x.Item2.ToString()) as KdlEntry)
+            .Debug("skippedEntry");
+
+        var entryParser = OneOrMany(NodeSpace)
+            .SkipAnd(OneOf(skippedEntry, nodePropOrArg))
+            .Debug("EntryParser");
+
+        var nodeChildren = Literals
+            .Char('{')
+            .SkipAnd(ZeroOrMany(LineSpace))
+            .SkipAnd(Nodes.And(FinalNode.Optional()))
+            .AndSkip(
+                Literals.Char('}').ElseError("Expected closing brace '}' for node children block.") // <--- COMMITMENT
+            )
+            .Then(x =>
+            {
+                var block = new KdlBlock { Nodes = [.. x.Item1] };
+                if (x.Item2.HasValue)
+                    block.Nodes.Add(x.Item2.Value!);
+                return block;
+            })
+            .Debug("nodeChildren");
+
+        var childrenValueParser = OneOf(
+                SlashDash.And(nodeChildren).Then(_ => (KdlBlock?)null),
+                nodeChildren.Then(b => (KdlBlock?)b)
+            )
+            .Debug("ChildrenValueParser");
+
+        var baseNode = SlashDash
+            .Optional()
+            .And(Type.Optional())
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .And(String.Debug("NodeName"))
+            .And(ZeroOrMany(entryParser))
+            .And(
+                ZeroOrMany(
+                    OneOf(
+                        OneOrMany(NodeSpace).SkipAnd(childrenValueParser),
+                        OneOf(Capture(Literals.Char('{')), Capture(Literals.Text("/-")))
+                            .Then<KdlBlock?>(
+                                (context, _) =>
+                                    throw new ParseException(
+                                        "Nodes must be separated from their children block by whitespace.",
+                                        context.Scanner.Cursor.Position
+                                    )
+                            )
+                    )
+                )
+            )
+            .AndSkip(ZeroOrMany(NodeSpace))
+            .Then(result =>
+            {
+                if (result.Item1.HasValue)
+                    return null;
+
+                var entries = result.Item4;
+                var hasSkipped = false;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is KdlSkippedEntry)
+                    {
+                        hasSkipped = true;
+                        break;
+                    }
+                }
+                List<KdlEntry> filteredEntries;
+                if (hasSkipped)
+                {
+                    filteredEntries = new List<KdlEntry>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                    {
+                        if (entries[i] is not KdlSkippedEntry)
+                            filteredEntries.Add(entries[i]);
+                    }
+                }
+                else
+                {
+                    filteredEntries = new List<KdlEntry>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                        filteredEntries.Add(entries[i]);
+                }
+                return new KdlNode(result.Item3)
+                {
+                    Entries = filteredEntries,
+                    Children = result.Item5.FirstOrDefault(b => b != null),
+                    TerminatedBySemicolon = false,
+                    TypeAnnotation = result.Item2.HasValue ? result.Item2.Value.Value : null,
+                };
+            })
+            .Debug("BaseNode");
+
+        Node = baseNode
+            .And(nodeTerminator)
+            .Then(x =>
+                x.Item1 is null
+                    ? null
+                    : x.Item1 with
+                    {
+                        TerminatedBySemicolon = x.Item2.Span.Contains(';'),
+                    }
+            )
+            .Debug("Node");
+
+        (FinalNode as Deferred<KdlNode?>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());
+
+        (Nodes as Deferred<IReadOnlyList<KdlNode>>)!.Parser = ZeroOrMany(
+                ZeroOrMany(LineSpace).SkipAnd(Node)
+            )
+            .AndSkip(ZeroOrMany(LineSpace))
+            .Then(list =>
+            {
+                List<KdlNode>? filtered = null;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var node = list[i];
+                    if (node is null)
+                    {
+                        if (filtered is null)
+                        {
+                            filtered = new List<KdlNode>(list.Count);
+                            for (int j = 0; j < i; j++)
+                            {
+                                if (list[j] is not null)
+                                    filtered.Add(list[j]!);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        filtered?.Add(node);
+                    }
+                }
+                return (IReadOnlyList<KdlNode>)(filtered ?? list!);
+            });
+
+        Document = Literals
+            .Char('\uFEFF')
+            .Optional()
+            .SkipAnd(Nodes)
+            .AndSkip(Always().Eof())
+            .ElseError(
+                "Unconsumed content at end of file. Syntax error likely occurred before this point."
+            )
+            .Then(nodes => new KdlDocument
+            {
+                Nodes = nodes is List<KdlNode> list ? list : [.. nodes],
+            });
+    }
+
+    private static bool IsBinaryChar(char c) => c == '0' || c == '1';
+
+    private static bool IsOctalChar(char c) => c >= '0' && c <= '7';
+
+    private static bool IsLoneSurrogate(char codePoint) =>
+        codePoint >= 0xD800 && codePoint <= 0xDFFF;
+
+    private static bool IsHexChar(char c) =>
+        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+
+    private static bool IsDigitChar(char c) => c >= '0' && c <= '9';
+
+    private static bool IsSigned(char c) => c == '+' || c == '-';
+
+    private static bool IsDisallowedLiteralCodePoint(char c)
+    {
+        return (c >= '\u0000' && c <= '\u0008')
+            || IsLoneSurrogate(c)
+            || (c >= '\u200E' && c <= '\u200F')
+            || (c >= '\u202A' && c <= '\u202E')
+            || (c >= '\u2066' && c <= '\u2069')
+            || c == '\uFEFF';
+    }
+
+    /// <summary>
+    /// Checks if a span matches a reserved keyword without allocating a string.
+    /// </summary>
+    private static bool IsReservedKeyword(ReadOnlySpan<char> span)
+    {
+        return span switch
+        {
+            "inf" => true,
+            "-inf" => true,
+            "nan" => true,
+            "true" => true,
+            "false" => true,
+            "null" => true,
+            _ => false,
+        };
+    }
+}
+
+```
+// File: src\Kuddle.Net\Parser\MultiLineStringParser.cs`$langusing System;
+using Kuddle.AST;
+using Parlot;
+using Parlot.Fluent;
+
+namespace Kuddle.Parser;
+
+public class MultiLineStringParser : Parser<KdlString>
+{
+    public override bool Parse(ParseContext context, ref ParseResult<KdlString> result)
+    {
+        var cursor = context.Scanner.Cursor;
+
+        if (!cursor.Match("\"\"\""))
+            return false;
+
+        var startPos = cursor.Position;
+
+        cursor.Advance();
+        cursor.Advance();
+        cursor.Advance();
+
+        bool hasNewline = false;
+
+        if (cursor.Match("\r\n"))
+        {
+            cursor.Advance();
+            cursor.Advance();
+            hasNewline = true;
+        }
+        else if (cursor.Current == '\n')
+        {
+            cursor.Advance();
+            hasNewline = true;
+        }
+
+        if (!hasNewline)
+        {
+            throw new ParseException(
+                "Multi-line strings must start with a newline immediately after the opening \"\"\".",
+                cursor.Position
+            );
+        }
+
+        var searchSpan = context.Scanner.Buffer.AsSpan(cursor.Position.Offset);
+
+        int searchOffset = 0;
+
+        while (true)
+        {
+            int relativeIndex = searchSpan.Slice(searchOffset).IndexOf("\"\"\"");
+
+            if (relativeIndex < 0)
+            {
+                throw new ParseException("Unterminated multi-line string.", startPos);
+            }
+
+            int matchIndex = searchOffset + relativeIndex;
+
+            int backslashCount = 0;
+            int backScan = matchIndex - 1;
+
+            while (backScan >= 0 && searchSpan[backScan] == '\\')
+            {
+                backslashCount++;
+                backScan--;
+            }
+
+            if (backslashCount % 2 == 0)
+            {
+                var contentSpan = searchSpan.Slice(0, matchIndex);
+
+                int charsToAdvance = matchIndex + 3;
+                for (int i = 0; i < charsToAdvance; i++)
+                    cursor.Advance();
+
+                KdlString kdlString = ProcessMultiLineString(contentSpan, context);
+
+                result.Set(startPos.Offset, cursor.Position.Offset - startPos.Offset, kdlString);
+                return true;
+            }
+
+            searchOffset = matchIndex + 1;
+        }
+    }
+
+    private static KdlString ProcessMultiLineString(
+        ReadOnlySpan<char> rawInput,
+        ParseContext context
+    )
+    {
+        if (rawInput.IsEmpty)
+            return new KdlString(string.Empty, StringKind.MultiLine);
+
+        bool hasCR = rawInput.Contains('\r');
+        bool hasBackslash = rawInput.Contains('\\');
+
+        ReadOnlySpan<char> normalized;
+        string? workingString = null;
+
+        if (hasCR)
+        {
+            workingString = NormalizeNewlines(rawInput);
+            normalized = workingString.AsSpan();
+        }
+        else
+        {
+            normalized = rawInput;
+        }
+
+        if (hasBackslash)
+        {
+            workingString = ResolveWsEscapes(workingString ?? normalized.ToString());
+            normalized = workingString.AsSpan();
+        }
+
+        int lastNewLine = normalized.LastIndexOf('\n');
+
+        ReadOnlySpan<char> prefix;
+        ReadOnlySpan<char> contentBody;
+
+        if (lastNewLine >= 0)
+        {
+            prefix = normalized.Slice(lastNewLine + 1);
+            contentBody = normalized.Slice(0, lastNewLine + 1);
+        }
+        else
+        {
+            prefix = normalized;
+            contentBody = ReadOnlySpan<char>.Empty;
+        }
+
+        foreach (char c in prefix)
+        {
+            if (!CharacterSets.IsWhiteSpace(c))
+            {
+                throw new ParseException(
+                    "Multi-line string closing delimiter must be on its own line.",
+                    TextPosition.Start
+                );
+            }
+        }
+
+        string dedented = BuildDedentedString(contentBody, prefix, context);
+
+        string finalValue = hasBackslash ? UnescapeStandardKdl(dedented) : dedented;
+
+        return new KdlString(finalValue, StringKind.MultiLine);
+    }
+
+    private static string NormalizeNewlines(ReadOnlySpan<char> input)
+    {
+        int outputLength = 0;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '\r')
+            {
+                outputLength++;
+                if (i + 1 < input.Length && input[i + 1] == '\n')
+                    i++;
+            }
+            else
+            {
+                outputLength++;
+            }
+        }
+
+        return string.Create(
+            outputLength,
+            input.ToString(),
+            static (span, inputStr) =>
+            {
+                int writePos = 0;
+                for (int i = 0; i < inputStr.Length; i++)
+                {
+                    if (inputStr[i] == '\r')
+                    {
+                        span[writePos++] = '\n';
+                        if (i + 1 < inputStr.Length && inputStr[i + 1] == '\n')
+                            i++;
+                    }
+                    else
+                    {
+                        span[writePos++] = inputStr[i];
+                    }
+                }
+            }
+        );
+    }
+
+    private static string BuildDedentedString(
+        ReadOnlySpan<char> contentBody,
+        ReadOnlySpan<char> prefix,
+        ParseContext context
+    )
+    {
+        if (contentBody.IsEmpty)
+            return string.Empty;
+
+        int startPos = 0;
+        if (contentBody[0] == '\n')
+            startPos = 1;
+
+        if (prefix.IsEmpty)
+        {
+            var body = contentBody.Slice(startPos);
+            if (body.Length > 0 && body[^1] == '\n')
+                body = body.Slice(0, body.Length - 1);
+            return body.ToString();
+        }
+
+        int outputLength = 0;
+        int pos = startPos;
+
+        while (pos < contentBody.Length)
+        {
+            int nextNewLine = contentBody.Slice(pos).IndexOf('\n');
+            if (nextNewLine < 0)
+                break;
+
+            nextNewLine += pos;
+            int lineLength = nextNewLine + 1 - pos;
+            var line = contentBody.Slice(pos, lineLength);
+
+            bool isWhitespaceOnly = IsWhitespaceOnlyLine(line);
+
+            if (isWhitespaceOnly)
+            {
+                outputLength++;
+            }
+            else
+            {
+                if (!line.StartsWith(prefix))
+                {
+                    throw new ParseException(
+                        "Multi-line string indentation mismatch.",
+                        context.Scanner.Cursor.Position
+                    );
+                }
+                outputLength += line.Length - prefix.Length;
+            }
+
+            pos = nextNewLine + 1;
+        }
+
+        if (outputLength > 0)
+            outputLength--;
+
+        if (outputLength <= 0)
+            return string.Empty;
+
+        string prefixStr = prefix.ToString();
+        string contentStr = contentBody.ToString();
+
+        return string.Create(
+            outputLength,
+            (contentStr, startPos, prefixStr),
+            static (span, state) =>
+            {
+                var (content, startIdx, prefixS) = state;
+                int writePos = 0;
+                int pos = startIdx;
+
+                while (pos < content.Length && writePos < span.Length)
+                {
+                    int nextNewLine = content.IndexOf('\n', pos);
+                    if (nextNewLine < 0)
+                        break;
+
+                    int lineLength = nextNewLine + 1 - pos;
+                    var line = content.AsSpan(pos, lineLength);
+
+                    bool isWhitespaceOnly = true;
+                    for (int i = 0; i < line.Length - 1; i++)
+                    {
+                        if (!CharacterSets.IsWhiteSpace(line[i]))
+                        {
+                            isWhitespaceOnly = false;
+                            break;
+                        }
+                    }
+
+                    if (isWhitespaceOnly)
+                    {
+                        if (writePos < span.Length)
+                            span[writePos++] = '\n';
+                    }
+                    else
+                    {
+                        var dedentedLine = line.Slice(prefixS.Length);
+                        int copyLen = Math.Min(dedentedLine.Length, span.Length - writePos);
+                        dedentedLine.Slice(0, copyLen).CopyTo(span.Slice(writePos));
+                        writePos += copyLen;
+                    }
+
+                    pos = nextNewLine + 1;
+                }
+            }
+        );
+    }
+
+    private static bool IsWhitespaceOnlyLine(ReadOnlySpan<char> line)
+    {
+        for (int i = 0; i < line.Length - 1; i++)
+        {
+            if (!CharacterSets.IsWhiteSpace(line[i]))
+                return false;
+        }
+        return true;
+    }
+
+    private static string ResolveWsEscapes(string input)
+    {
+        int backslashIdx = input.IndexOf('\\');
+        if (backslashIdx == -1)
+            return input;
+
+        bool hasWsEscape = false;
+        for (int i = backslashIdx; i < input.Length - 1; i++)
+        {
+            if (input[i] == '\\')
+            {
+                char next = input[i + 1];
+                if (next == ' ' || next == '\t' || next == '\n')
+                {
+                    hasWsEscape = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasWsEscape)
+            return input;
+
+        int outputLength = 0;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '\\')
+            {
+                int scanIdx = i + 1;
+
+                while (scanIdx < input.Length && (input[scanIdx] == ' ' || input[scanIdx] == '\t'))
+                    scanIdx++;
+
+                if (scanIdx < input.Length && input[scanIdx] == '\n')
+                {
+                    scanIdx++;
+
+                    while (
+                        scanIdx < input.Length && (input[scanIdx] == ' ' || input[scanIdx] == '\t')
+                    )
+                        scanIdx++;
+
+                    i = scanIdx - 1;
+                    continue;
+                }
+                else if (scanIdx >= input.Length && scanIdx > i + 1)
+                {
+                    i = scanIdx - 1;
+                    continue;
+                }
+            }
+            outputLength++;
+        }
+
+        return string.Create(
+            outputLength,
+            input,
+            static (span, inp) =>
+            {
+                int writePos = 0;
+                for (int i = 0; i < inp.Length; i++)
+                {
+                    if (inp[i] == '\\')
+                    {
+                        int scanIdx = i + 1;
+
+                        while (
+                            scanIdx < inp.Length && (inp[scanIdx] == ' ' || inp[scanIdx] == '\t')
+                        )
+                            scanIdx++;
+
+                        if (scanIdx < inp.Length && inp[scanIdx] == '\n')
+                        {
+                            scanIdx++;
+                            while (
+                                scanIdx < inp.Length
+                                && (inp[scanIdx] == ' ' || inp[scanIdx] == '\t')
+                            )
+                                scanIdx++;
+
+                            i = scanIdx - 1;
+                            continue;
+                        }
+                        else if (scanIdx >= inp.Length && scanIdx > i + 1)
+                        {
+                            i = scanIdx - 1;
+                            continue;
+                        }
+                    }
+                    span[writePos++] = inp[i];
+                }
+            }
+        );
+    }
+
+    private static string UnescapeStandardKdl(string input)
+    {
+        int backslashIdx = input.IndexOf('\\');
+        if (backslashIdx == -1)
+            return input;
+
+        int outputLength = 0;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '\\' && i + 1 < input.Length)
+            {
+                char next = input[i + 1];
+                switch (next)
+                {
+                    case 'n':
+                    case 'r':
+                    case 't':
+                    case '\\':
+                    case '"':
+                    case 'b':
+                    case 'f':
+                    case '/':
+                    case 's':
+                        outputLength++;
+                        i++;
+                        break;
+                    case ' ':
+                        i++;
+                        break;
+                    case 'u':
+                        if (i + 2 < input.Length && input[i + 2] == '{')
+                        {
+                            int endBrace = input.IndexOf('}', i + 3);
+                            if (endBrace > i + 2)
+                            {
+                                string hex = input.Substring(i + 3, endBrace - (i + 3));
+                                try
+                                {
+                                    int codePoint = Convert.ToInt32(hex, 16);
+                                    outputLength += char.ConvertFromUtf32(codePoint).Length;
+                                    i = endBrace;
+                                }
+                                catch
+                                {
+                                    outputLength++;
+                                }
+                            }
+                            else
+                            {
+                                outputLength++;
+                            }
+                        }
+                        else
+                        {
+                            outputLength++;
+                        }
+                        break;
+                    default:
+                        outputLength++;
+                        break;
+                }
+            }
+            else
+            {
+                outputLength++;
+            }
+        }
+
+        return string.Create(
+            outputLength,
+            input,
+            static (span, inp) =>
+            {
+                int writePos = 0;
+                for (int i = 0; i < inp.Length; i++)
+                {
+                    if (inp[i] == '\\' && i + 1 < inp.Length)
+                    {
+                        char next = inp[i + 1];
+                        switch (next)
+                        {
+                            case 'n':
+                                span[writePos++] = '\n';
+                                i++;
+                                break;
+                            case 'r':
+                                span[writePos++] = '\r';
+                                i++;
+                                break;
+                            case 't':
+                                span[writePos++] = '\t';
+                                i++;
+                                break;
+                            case '\\':
+                                span[writePos++] = '\\';
+                                i++;
+                                break;
+                            case '"':
+                                span[writePos++] = '"';
+                                i++;
+                                break;
+                            case 'b':
+                                span[writePos++] = '\b';
+                                i++;
+                                break;
+                            case 'f':
+                                span[writePos++] = '\f';
+                                i++;
+                                break;
+                            case '/':
+                                span[writePos++] = '/';
+                                i++;
+                                break;
+                            case 's':
+                                span[writePos++] = ' ';
+                                i++;
+                                break;
+                            case ' ':
+                                i++;
+                                break;
+                            case 'u':
+                                if (i + 2 < inp.Length && inp[i + 2] == '{')
+                                {
+                                    int endBrace = inp.IndexOf('}', i + 3);
+                                    if (endBrace > i + 2)
+                                    {
+                                        string hex = inp.Substring(i + 3, endBrace - (i + 3));
+                                        try
+                                        {
+                                            int codePoint = Convert.ToInt32(hex, 16);
+                                            string utf32 = char.ConvertFromUtf32(codePoint);
+                                            utf32.AsSpan().CopyTo(span.Slice(writePos));
+                                            writePos += utf32.Length;
+                                            i = endBrace;
+                                        }
+                                        catch
+                                        {
+                                            span[writePos++] = inp[i];
+                                        }
+                                    }
+                                    else
+                                    {
+                                        span[writePos++] = inp[i];
+                                    }
+                                }
+                                else
+                                {
+                                    span[writePos++] = inp[i];
+                                }
+                                break;
+                            default:
+                                span[writePos++] = inp[i];
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        span[writePos++] = inp[i];
+                    }
+                }
+            }
+        );
+    }
+}
+
+```
+// File: src\Kuddle.Net\Parser\RawStringParser.cs`$langusing System;
+using Kuddle.AST;
+using Parlot;
+using Parlot.Fluent;
+
+namespace Kuddle.Parser;
+
+sealed class RawStringParser : Parser<KdlString>
+{
+    public override bool Parse(ParseContext context, ref ParseResult<KdlString> result)
+    {
+        var cursor = context.Scanner.Cursor;
+        var bufferSpan = context.Scanner.Buffer.AsSpan();
+
+        if (cursor.Current != '#')
+            return false;
+
+        var startPos = cursor.Position;
+        int currentOffset = startPos.Offset;
+
+        int hashCount = 0;
+        while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '#')
+        {
+            hashCount++;
+            currentOffset++;
+        }
+
+        int quoteCount = 0;
+        while (currentOffset < bufferSpan.Length && bufferSpan[currentOffset] == '"')
+        {
+            quoteCount++;
+            currentOffset++;
+        }
+
+        if (quoteCount == 2)
+        {
+            quoteCount = 1;
+            currentOffset--;
+        }
+
+        if (quoteCount != 1 && quoteCount != 3)
+        {
+            cursor.ResetPosition(startPos);
+            return false;
+        }
+
+        bool isMultiline = quoteCount == 3;
+
+        int needleLength = quoteCount + hashCount;
+        Span<char> needle =
+            needleLength <= 256 ? stackalloc char[needleLength] : new char[needleLength];
+
+        needle.Slice(0, quoteCount).Fill('"');
+        needle.Slice(quoteCount, hashCount).Fill('#');
+
+        var remainingBuffer = bufferSpan.Slice(currentOffset);
+        int matchIndex = remainingBuffer.IndexOf(needle);
+
+        if (matchIndex < 0)
+        {
+            throw new ParseException(
+                $"Expected raw string to be terminated with sequence '{needle.ToString()}'",
+                startPos
+            );
+        }
+
+        var contentSpan = remainingBuffer.Slice(0, matchIndex);
+        int totalLengthParsed = (currentOffset - startPos.Offset) + matchIndex + needleLength;
+
+        for (int i = 0; i < totalLengthParsed; i++)
+            cursor.Advance();
+
+        string content;
+        StringKind style;
+
+        if (isMultiline)
+        {
+            content = ProcessMultiLineRawString(contentSpan);
+            style = StringKind.MultiLine | StringKind.Raw;
+        }
+        else
+        {
+            content = contentSpan.ToString();
+            style = StringKind.Quoted | StringKind.Raw;
+        }
+
+        result.Set(startPos.Offset, totalLengthParsed, new KdlString(content, style));
+        return true;
+    }
+
+    /// <summary>
+    /// Processes a multi-line raw string, handling newline normalization and dedentation.
+    /// Works directly with spans to minimize allocations.
+    /// </summary>
+    public static string ProcessMultiLineRawString(ReadOnlySpan<char> rawInput)
+    {
+        if (rawInput.IsEmpty)
+            return string.Empty;
+
+        bool hasCR = rawInput.Contains('\r');
+
+        ReadOnlySpan<char> normalized;
+        string? normalizedString = null;
+
+        if (hasCR)
+        {
+            normalizedString = NormalizeNewlines(rawInput);
+            normalized = normalizedString.AsSpan();
+        }
+        else
+        {
+            normalized = rawInput;
+        }
+
+        int lastNewLine = normalized.LastIndexOf('\n');
+
+        ReadOnlySpan<char> prefix;
+        ReadOnlySpan<char> contentBody;
+
+        if (lastNewLine >= 0)
+        {
+            prefix = normalized.Slice(lastNewLine + 1);
+            contentBody = normalized.Slice(0, lastNewLine + 1);
+        }
+        else
+        {
+            prefix = normalized;
+            contentBody = ReadOnlySpan<char>.Empty;
+        }
+
+        foreach (char c in prefix)
+        {
+            if (c != ' ' && c != '\t')
+            {
+                throw new ParseException(
+                    "Multi-line raw string closing delimiter must be on its own line, preceded only by whitespace.",
+                    TextPosition.Start
+                );
+            }
+        }
+
+        if (contentBody.IsEmpty)
+            return string.Empty;
+
+        int pos = 0;
+        if (contentBody[0] == '\n')
+            pos = 1;
+
+        if (prefix.IsEmpty)
+        {
+            var body = contentBody.Slice(pos);
+
+            if (body.Length > 0 && body[^1] == '\n')
+                body = body.Slice(0, body.Length - 1);
+            return body.ToString();
+        }
+
+        return BuildDedentedString(contentBody, pos, prefix);
+    }
+
+    private static string NormalizeNewlines(ReadOnlySpan<char> input)
+    {
+        int outputLength = 0;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '\r')
+            {
+                outputLength++;
+                if (i + 1 < input.Length && input[i + 1] == '\n')
+                    i++;
+            }
+            else
+            {
+                outputLength++;
+            }
+        }
+
+        return string.Create(
+            outputLength,
+            input.ToString(),
+            static (span, inputStr) =>
+            {
+                int writePos = 0;
+                for (int i = 0; i < inputStr.Length; i++)
+                {
+                    if (inputStr[i] == '\r')
+                    {
+                        span[writePos++] = '\n';
+                        if (i + 1 < inputStr.Length && inputStr[i + 1] == '\n')
+                            i++;
+                    }
+                    else
+                    {
+                        span[writePos++] = inputStr[i];
+                    }
+                }
+            }
+        );
+    }
+
+    private static string BuildDedentedString(
+        ReadOnlySpan<char> contentBody,
+        int startPos,
+        ReadOnlySpan<char> prefix
+    )
+    {
+        int outputLength = 0;
+        int pos = startPos;
+
+        while (pos < contentBody.Length)
+        {
+            int nextNewLine = contentBody.Slice(pos).IndexOf('\n');
+            if (nextNewLine < 0)
+                break;
+
+            nextNewLine += pos;
+            int lineLength = nextNewLine + 1 - pos;
+            var line = contentBody.Slice(pos, lineLength);
+
+            bool isWhitespaceOnly = IsWhitespaceOnlyLine(line);
+
+            if (isWhitespaceOnly)
+            {
+                outputLength++;
+            }
+            else
+            {
+                if (!line.StartsWith(prefix))
+                {
+                    throw new ParseException(
+                        "Multi-line string indentation error: Line does not match closing delimiter indentation.",
+                        TextPosition.Start
+                    );
+                }
+                outputLength += line.Length - prefix.Length;
+            }
+
+            pos = nextNewLine + 1;
+        }
+
+        if (outputLength > 0)
+            outputLength--;
+
+        if (outputLength <= 0)
+            return string.Empty;
+
+        string prefixStr = prefix.ToString();
+        string contentStr = contentBody.ToString();
+
+        return string.Create(
+            outputLength,
+            (contentStr, startPos, prefixStr),
+            static (span, state) =>
+            {
+                var (content, startIdx, prefixS) = state;
+                int writePos = 0;
+                int pos = startIdx;
+
+                while (pos < content.Length && writePos < span.Length)
+                {
+                    int nextNewLine = content.IndexOf('\n', pos);
+                    if (nextNewLine < 0)
+                        break;
+
+                    int lineLength = nextNewLine + 1 - pos;
+                    var line = content.AsSpan(pos, lineLength);
+
+                    bool isWhitespaceOnly = true;
+                    for (int i = 0; i < line.Length - 1; i++)
+                    {
+                        if (!char.IsWhiteSpace(line[i]))
+                        {
+                            isWhitespaceOnly = false;
+                            break;
+                        }
+                    }
+
+                    if (isWhitespaceOnly)
+                    {
+                        if (writePos < span.Length)
+                            span[writePos++] = '\n';
+                    }
+                    else
+                    {
+                        var dedentedLine = line.Slice(prefixS.Length);
+                        int copyLen = Math.Min(dedentedLine.Length, span.Length - writePos);
+                        dedentedLine.Slice(0, copyLen).CopyTo(span.Slice(writePos));
+                        writePos += copyLen;
+                    }
+
+                    pos = nextNewLine + 1;
+                }
+            }
+        );
+    }
+
+    private static bool IsWhitespaceOnlyLine(ReadOnlySpan<char> line)
+    {
+        for (int i = 0; i < line.Length - 1; i++)
+        {
+            if (!char.IsWhiteSpace(line[i]))
+                return false;
+        }
+        return true;
+    }
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlArgumentAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+public sealed class KdlArgumentAttribute(int index) : KdlEntryAttribute
+{
+    public int Index { get; } = index;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlEntryAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+/// <summary>
+/// Base class for KDL entry attributes. Only one entry attribute can be applied per property.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+public abstract class KdlEntryAttribute(string? typeAnnotation = null) : Attribute
+{
+    /// <summary>
+    /// Optional KDL type annotation (e.g., "uuid", "date-time", "i32").
+    /// </summary>
+    public string? TypeAnnotation { get; } = typeAnnotation;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlIgnoreAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[AttributeUsage(AttributeTargets.Property)]
+public class KdlIgnoreAttribute : Attribute;
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlNodeAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+public sealed class KdlNodeAttribute(string? name = null) : KdlEntryAttribute
+{
+    public string? Name { get; } = name;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlNodeCollectionAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+/// <summary>
+/// Maps a collection to a child node (container) that holds the items.
+/// </summary>
+/// <param name="nodeName">The name of the wrapper/container node.</param>
+/// <param name="elementName">The node name for items inside the container. If null, uses the type's default.</param>
+[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+public class KdlNodeCollectionAttribute(string nodeName, string? elementName = null)
+    : KdlEntryAttribute
+{
+    public string NodeName { get; } = nodeName;
+    public string? ElementName { get; } = elementName;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlNodeDictionaryAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+public class KdlNodeDictionaryAttribute(string? name = null) : KdlEntryAttribute
+{
+    public string? Name { get; } = name;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlPropertyAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+public sealed class KdlPropertyAttribute(string? key = null) : KdlEntryAttribute
+{
+    public string? Key { get; } = key;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\Attributes\KdlTypeAttribute.cs`$langusing System;
+
+namespace Kuddle.Serialization;
+
+[AttributeUsage(
+    AttributeTargets.Class | AttributeTargets.Property,
+    AllowMultiple = false,
+    Inherited = false
+)]
+public sealed class KdlTypeAttribute(string name) : KdlEntryAttribute
+{
+    public string Name { get; set; } = name;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlMemberKind.cs`$langnamespace Kuddle.Serialization;
+
+internal enum KdlMemberKind
+{
+    Argument,
+    Property,
+    ChildNode,
+    TypeAnnotation,
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlMemberMap.cs`$langusing System;
+using System.Reflection;
+
+namespace Kuddle.Serialization;
+
+internal sealed record KdlMemberMap
+{
+    public KdlMemberMap(
+        PropertyInfo property,
+        KdlMemberKind kind,
+        string kdlName,
+        int argumentIndex = -1,
+        string? typeAnnotation = null
+    )
+    {
+        Property = property;
+        Kind = kind;
+        KdlName = kdlName;
+        ArgumentIndex = argumentIndex;
+        TypeAnnotation = typeAnnotation;
+        IsDictionary = property.PropertyType.IsDictionary;
+        var elementType = property.PropertyType.GetCollectionElementType();
+        IsCollection = elementType != null;
+        if (IsDictionary && elementType != null)
+        {
+            DictionaryKeyProperty = elementType.GetProperty("Key");
+            DictionaryValueProperty = elementType.GetProperty("Value");
+        }
+        ElementType = elementType;
+    }
+
+    public PropertyInfo Property { get; }
+    public KdlMemberKind Kind { get; }
+    public string KdlName { get; }
+    public int ArgumentIndex { get; }
+    public Type? ElementType { get; }
+    public bool IsCollection { get; }
+    public bool IsDictionary { get; }
+    public string? TypeAnnotation { get; }
+    public PropertyInfo? DictionaryKeyProperty { get; }
+    public PropertyInfo? DictionaryValueProperty { get; }
+
+    public object? GetValue(object instance) => Property.GetValue(instance);
+
+    public void SetValue(object instance, object? value) => Property.SetValue(instance, value);
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlReader.cs`$langusing System;
+using Kuddle.AST;
+using Kuddle.Exceptions;
+using Kuddle.Parser;
+using Kuddle.Validation;
+using Parlot.Fluent;
+
+namespace Kuddle.Serialization;
+
+public static class KdlReader
+{
+    private static readonly Parser<KdlDocument> _parser = KdlGrammar.Document.Compile();
+
+    /// <summary>
+    /// Parses a KDL string into a KdlDocument AST.
+    /// </summary>
+    /// <param name="text"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    /// <exception cref="KuddleParseException"></exception>
+    public static KdlDocument Read(string text, KdlReaderOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        options ??= KdlReaderOptions.Default;
+
+        if (!_parser.TryParse(text, out var doc, out var error))
+        {
+            if (error != null)
+            {
+                throw new KuddleParseException(
+                    error.Message,
+                    error.Position.Column,
+                    error.Position.Line,
+                    error.Position.Offset
+                );
+            }
+            throw new KuddleParseException("Parsing failed unexpectedly.");
+        }
+
+        if (options.ValidateReservedTypes)
+        {
+            KdlReservedTypeValidator.Validate(doc);
+        }
+
+        return doc;
+    }
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlReaderOptions.cs`$langnamespace Kuddle.Serialization;
+
+public record KdlReaderOptions
+{
+    public static KdlReaderOptions Default => new() { ValidateReservedTypes = true };
+    public bool ValidateReservedTypes { get; init; } = true;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlSerializer.cs`$langusing System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using Kuddle.AST;
+using Kuddle.Extensions;
+
+namespace Kuddle.Serialization;
+
+/// <summary>
+/// Serializes and deserializes C# objects to/from KDL format.
+/// </summary>
+public static class KdlSerializer
+{
+    #region Deserialization
+
+    /// <summary>
+    /// Deserializes a KDL document containing multiple nodes of type T.
+    /// </summary>
+    public static IEnumerable<T> DeserializeMany<T>(
+        string text,
+        KdlSerializerOptions? options = null,
+        CancellationToken cancellationToken = default
+    )
+        where T : new()
+    {
+        var doc = KdlReader.Read(text);
+        var metadata = KdlTypeMapping.For<T>();
+
+        foreach (var node in doc.Nodes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return ObjectDeserializer.DeserializeNode<T>(node, options);
+        }
+    }
+
+    /// <summary>
+    /// Deserializes a KDL document to a single object of type T.
+    /// </summary>
+    public static T Deserialize<T>(string text, KdlSerializerOptions? options = null)
+        where T : new()
+    {
+        var doc = KdlReader.Read(text);
+
+        return ObjectDeserializer.DeserializeDocument<T>(doc, options);
+    }
+
+    #endregion
+
+    #region Serialization
+
+    /// <summary>
+    /// Serializes an object to a KDL string.
+    /// </summary>
+    public static string Serialize<T>(T instance, KdlSerializerOptions? options = null)
+    {
+        var doc = ObjectSerializer.SerializeDocument(instance, options);
+        return KdlWriter.Write(doc);
+    }
+
+    // /// <summary>
+    // /// Serializes multiple objects to a KDL string.
+    // /// </summary>
+    // public static string SerializeMany<T>(
+    //     IEnumerable<T> items,
+    //     KdlSerializerOptions? options = null,
+    //     CancellationToken cancellationToken = default
+    // )
+    // {
+    //     ArgumentNullException.ThrowIfNull(items);
+
+    //     var doc = new KdlDocument();
+
+    //     foreach (var item in items)
+    //     {
+    //         cancellationToken.ThrowIfCancellationRequested();
+    //         if (item is null)
+    //             continue;
+
+    //         var node = ObjectSerializer.SerializeNode(item, options);
+    //         doc.Nodes.Add(node);
+    //     }
+
+    //     return KdlWriter.Write(doc);
+    // }
+
+    #endregion
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlSerializerOptions.cs`$langnamespace Kuddle.Serialization;
+
+/// <summary>
+/// Options for KDL serialization and deserialization.
+/// </summary>
+public record KdlSerializerOptions
+{
+    /// <summary>
+    /// Whether to ignore null values when serializing. Default is true.
+    /// </summary>
+    public bool IgnoreNullValues { get; init; } = true;
+
+    /// <summary>
+    /// Whether property/node name comparison is case-insensitive. Default is true.
+    /// </summary>
+    public bool CaseInsensitiveNames { get; init; } = true;
+
+    /// <summary>
+    /// Whether to include type annotations in output. Default is true.
+    /// </summary>
+    public bool WriteTypeAnnotations { get; init; } = true;
+
+    /// <summary>
+    /// Default options instance.
+    /// </summary>
+    public static KdlSerializerOptions Default { get; } = new();
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlTypeMapping.cs`$langusing System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Kuddle.AST;
+using Kuddle.Exceptions;
+using Kuddle.Extensions;
+
+namespace Kuddle.Serialization;
+
+internal sealed record KdlTypeMapping
+{
+    private static readonly ConcurrentDictionary<Type, KdlTypeMapping> s_cache = new();
+
+    private KdlTypeMapping(Type type)
+    {
+        Type = type;
+
+        var typeAttr = type.GetCustomAttribute<KdlTypeAttribute>();
+        NodeName = typeAttr?.Name ?? type.Name.ToKebabCase();
+
+        IsDictionary = type.IsDictionary;
+        if (IsDictionary)
+        {
+            var elementType = type.GetCollectionElementType();
+            DictionaryKeyProperty = elementType?.GetProperty("Key");
+            DictionaryValueProperty = elementType?.GetProperty("Value");
+        }
+        var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        foreach (var prop in props)
+        {
+            if (!prop.IsKdlSerializable())
+                continue;
+
+            var map = CreateMemberMap(prop);
+
+            switch (map.Kind)
+            {
+                case KdlMemberKind.Argument:
+                    Arguments.Add(map);
+                    break;
+                case KdlMemberKind.Property:
+                    Properties.Add(map);
+                    break;
+                case KdlMemberKind.ChildNode:
+                    Children.Add(map);
+                    break;
+            }
+        }
+        ValidateMapping();
+    }
+
+    public Type Type { get; init; }
+    public string NodeName { get; init; }
+    public bool IsDictionary { get; }
+    public List<KdlMemberMap> Properties { get; } = [];
+    public List<KdlMemberMap> Children { get; } = [];
+    internal List<KdlMemberMap> Arguments { get; } = [];
+    public PropertyInfo? DictionaryKeyProperty { get; }
+    public PropertyInfo? DictionaryValueProperty { get; }
+
+    private void ValidateMapping()
+    {
+        // Sort arguments and check for continuity
+        var sortedArgs = Arguments.OrderBy(a => a.ArgumentIndex).ToList();
+        for (int i = 0; i < sortedArgs.Count; i++)
+        {
+            if (sortedArgs[i].ArgumentIndex != i)
+                throw new KdlConfigurationException(
+                    $"Type '{Type.Name}' has non-contiguous KDL arguments. Expected index {i}, found {sortedArgs[i].ArgumentIndex}."
+                );
+        }
+
+        Arguments.Clear();
+        Arguments.AddRange(sortedArgs);
+    }
+
+    private KdlMemberMap CreateMemberMap(PropertyInfo prop)
+    {
+        var all = prop.GetCustomAttributes<KdlEntryAttribute>();
+        if (prop.GetCustomAttribute<KdlEntryAttribute>() is not KdlEntryAttribute attr)
+        {
+            attr = InferAttribute(prop);
+        }
+        var typeAnnotation = attr.TypeAnnotation;
+
+        return attr switch
+        {
+            KdlArgumentAttribute arg => new KdlMemberMap(
+                prop,
+                KdlMemberKind.Argument,
+                "",
+                arg.Index,
+                typeAnnotation
+            ),
+
+            KdlPropertyAttribute p => new KdlMemberMap(
+                prop,
+                KdlMemberKind.Property,
+                p.Key ?? prop.Name.ToKebabCase(),
+                -1,
+                typeAnnotation
+            ),
+
+            KdlNodeAttribute n => new KdlMemberMap(
+                prop,
+                KdlMemberKind.ChildNode,
+                n.Name ?? prop.Name.ToKebabCase(),
+                -1,
+                typeAnnotation
+            ),
+            KdlNodeCollectionAttribute nc => new KdlMemberMap(
+                prop,
+                KdlMemberKind.ChildNode,
+                nc.NodeName,
+                -1,
+                typeAnnotation
+            ),
+            KdlNodeDictionaryAttribute nd => new KdlMemberMap(
+                prop,
+                KdlMemberKind.ChildNode,
+                nd.Name ?? prop.Name.ToKebabCase(),
+                -1,
+                typeAnnotation
+            ),
+            _ => new KdlMemberMap(
+                prop,
+                KdlMemberKind.ChildNode,
+                prop.Name.ToKebabCase(),
+                -1,
+                typeAnnotation
+            ),
+        };
+    }
+
+    private static KdlEntryAttribute InferAttribute(PropertyInfo prop) =>
+        prop.PropertyType switch
+        {
+            { IsDictionary: true } => new KdlNodeDictionaryAttribute(prop.Name.ToKebabCase()),
+            { IsIEnumerable: true } => new KdlNodeCollectionAttribute(prop.Name.ToKebabCase()),
+            { IsKdlScalar: true } => new KdlPropertyAttribute(prop.Name.ToKebabCase()),
+            _ => new KdlNodeAttribute(prop.Name.ToKebabCase()),
+        };
+
+    /// <summary>
+    /// Gets or creates cached metadata for a type.
+    /// </summary>
+    public static KdlTypeMapping For(Type type) =>
+        s_cache.GetOrAdd(type, t => new KdlTypeMapping(t));
+
+    /// <summary>
+    /// Gets or creates cached metadata for a type.
+    /// </summary>
+    public static KdlTypeMapping For<T>() => For(typeof(T));
+}
+
+public static class KdlTypeMappingExtensions
+{
+    extension(KdlValue value) { }
+
+    extension(PropertyInfo info)
+    {
+        internal bool IsKdlSerializable() =>
+            info.CanWrite
+            && info.GetCustomAttribute<KdlIgnoreAttribute>() == null
+            && info.GetIndexParameters().Length == 0;
+    }
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlValueConverter.cs`$langusing System;
+using Kuddle.AST;
+using Kuddle.Extensions;
+using Kuddle.Parser;
+
+namespace Kuddle.Serialization;
+
+/// <summary>
+/// Provides unified conversion between CLR values and KDL values.
+/// </summary>
+internal static class KdlValueConverter
+{
+    /// <summary>
+    /// Attempts to convert a KDL value to a CLR type.
+    /// </summary>
+    public static bool TryFromKdl(KdlValue kdlValue, Type targetType, out object? value)
+    {
+        value = default;
+
+        if (kdlValue is KdlNull)
+        {
+            if (!IsNullable(targetType))
+            {
+                return false;
+            }
+            value = null;
+            return true;
+        }
+
+        var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        if (underlying.IsEnum)
+        {
+            kdlValue.TryGetString(out var enumString);
+            bool success = Enum.TryParse(underlying, enumString, true, out var result);
+            value = result;
+            return success;
+        }
+        // String
+        if (underlying == typeof(string) && kdlValue.TryGetString(out var stringVal))
+        {
+            value = stringVal;
+            return true;
+        }
+
+        // Integers (signed)
+        if (underlying == typeof(int) && kdlValue.TryGetInt(out var intVal))
+        {
+            value = intVal;
+            return true;
+        }
+
+        if (underlying == typeof(long) && kdlValue.TryGetLong(out var longVal))
+        {
+            value = longVal;
+            return true;
+        }
+
+        if (underlying == typeof(short) && kdlValue.TryGetInt(out var shortVal))
+        {
+            value = (short)shortVal;
+            return true;
+        }
+
+        if (underlying == typeof(sbyte) && kdlValue.TryGetInt(out var sbyteVal))
+        {
+            value = (sbyte)sbyteVal;
+            return true;
+        }
+
+        // Integers (unsigned)
+        if (underlying == typeof(uint) && kdlValue.TryGetLong(out var uintVal))
+        {
+            value = (uint)uintVal;
+            return true;
+        }
+
+        if (underlying == typeof(ulong) && kdlValue.TryGetLong(out var ulongVal))
+        {
+            value = (ulong)ulongVal;
+            return true;
+        }
+
+        if (underlying == typeof(ushort) && kdlValue.TryGetInt(out var ushortVal))
+        {
+            value = (ushort)ushortVal;
+            return true;
+        }
+
+        if (underlying == typeof(byte) && kdlValue.TryGetInt(out var byteVal))
+        {
+            value = (byte)byteVal;
+            return true;
+        }
+
+        // Floating point
+        if (underlying == typeof(double) && kdlValue.TryGetDouble(out var doubleVal))
+        {
+            value = doubleVal;
+            return true;
+        }
+
+        if (underlying == typeof(decimal) && kdlValue.TryGetDecimal(out var decimalVal))
+        {
+            value = decimalVal;
+            return true;
+        }
+
+        if (underlying == typeof(float) && kdlValue.TryGetDouble(out var floatVal))
+        {
+            value = (float)floatVal;
+            return true;
+        }
+
+        // Boolean
+        if (underlying == typeof(bool) && kdlValue.TryGetBool(out var boolVal))
+        {
+            value = boolVal;
+            return true;
+        }
+
+        // Special types with type annotations
+        if (underlying == typeof(Guid) && kdlValue.TryGetUuid(out var uuid))
+        {
+            value = uuid;
+            return true;
+        }
+
+        if (underlying == typeof(DateTimeOffset) && kdlValue.TryGetDateTime(out var dto))
+        {
+            value = dto;
+            return true;
+        }
+
+        if (underlying == typeof(DateTime) && kdlValue.TryGetDateTime(out var dt))
+        {
+            value = dt.DateTime;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to convert a CLR value to a KDL value.
+    /// </summary>
+    public static bool TryToKdl(object? input, out KdlValue kdlValue, string? typeAnnotation = null)
+    {
+        if (input is null)
+        {
+            kdlValue = KdlValue.Null;
+            return true;
+        }
+
+        kdlValue = input switch
+        {
+            string s => KdlValue.From(s),
+            int i => KdlValue.From(i),
+            long l => KdlValue.From(l),
+            short sh => KdlValue.From(sh),
+            sbyte sb => KdlValue.From(sb),
+            uint ui => KdlValue.From(ui),
+            ulong ul => KdlValue.From((long)ul),
+            ushort us => KdlValue.From(us),
+            byte by => KdlValue.From(by),
+            double d => KdlValue.From(d),
+            float f => KdlValue.From((double)f),
+            decimal m => KdlValue.From(m),
+            bool b => KdlValue.From(b),
+            Guid uuid => KdlValue.From(uuid),
+            DateTimeOffset dto => KdlValue.From(dto),
+            DateTime dt => KdlValue.From(new DateTimeOffset(dt)),
+            Enum e => KdlValue.From(e),
+            _ => null!,
+        };
+
+        if (kdlValue is not null && typeAnnotation is not null)
+        {
+            kdlValue = kdlValue with { TypeAnnotation = typeAnnotation };
+        }
+
+        return kdlValue is not null;
+    }
+
+    /// <summary>
+    /// Converts a KDL value to a CLR type, throwing on failure.
+    /// </summary>
+    public static object FromKdlOrThrow(
+        KdlValue kdlValue,
+        Type targetType,
+        string context,
+        string? expectedTypeAnnotation = null
+    )
+    {
+        var finalTargetType =
+            CharacterSets.GetClrType(expectedTypeAnnotation ?? kdlValue.TypeAnnotation)
+            ?? targetType;
+
+        if (!TryFromKdl(kdlValue, finalTargetType, out var result))
+        {
+            throw new KuddleSerializationException(
+                $"Cannot convert KDL value '{kdlValue}' to {targetType.Name}. {context}"
+            );
+        }
+        return result ?? throw new Exception();
+    }
+
+    /// <summary>
+    /// Converts a CLR value to a KDL value, throwing on failure.
+    /// </summary>
+    [Obsolete]
+    public static KdlValue ToKdlOrThrow(
+        object? input,
+        string context,
+        string? typeAnnotation = null
+    )
+    {
+        if (!TryToKdl(input, out var kdlValue, typeAnnotation))
+        {
+            var typeName = input?.GetType().Name ?? "null";
+            throw new KuddleSerializationException(
+                $"Cannot convert CLR value of type '{typeName}' to KDL. {context}"
+            );
+        }
+        return kdlValue;
+    }
+
+    /// <summary>
+    /// Converts a CLR value to a KDL value, throwing on failure.
+    /// </summary>
+    public static KdlValue ToKdlOrThrow(object? input, string? typeAnnotation = null)
+    {
+        if (!TryToKdl(input, out var kdlValue, typeAnnotation))
+        {
+            var typeName = input?.GetType().Name ?? "null";
+            throw new KuddleSerializationException(
+                $"Cannot convert CLR value of type '{typeName}' to KDL."
+            );
+        }
+        return kdlValue;
+    }
+
+    private static bool IsNullable(Type type) =>
+        !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlWriter.cs`$langusing System;
+using System.Text;
+using Kuddle.AST;
+using Kuddle.Extensions;
+
+namespace Kuddle.Serialization;
+
+public class KdlWriter
+{
+    private readonly KdlWriterOptions _options;
+    private readonly StringBuilder _sb = new();
+    private int _depth = 0;
+
+    public KdlWriter(KdlWriterOptions? options = null)
+    {
+        _options ??= options ?? KdlWriterOptions.Default;
+    }
+
+    public static string Write(KdlDocument document, KdlWriterOptions? options = null)
+    {
+        var writer = new KdlWriter(options);
+        writer.WriteDocument(document);
+        return writer._sb.ToString();
+    }
+
+    private void WriteDocument(KdlDocument document)
+    {
+        foreach (var node in document.Nodes)
+        {
+            WriteNode(node);
+            _sb.Append(_options.NewLine);
+        }
+    }
+
+    private void WriteNode(KdlNode node)
+    {
+        if (node.TypeAnnotation != null)
+        {
+            _sb.Append('(');
+            WriteIdentifier(node.TypeAnnotation);
+            _sb.Append(')');
+        }
+
+        WriteString(node.Name);
+
+        foreach (var entry in node.Entries)
+        {
+            _sb.Append(_options.SpaceAfterProp);
+            WriteEntry(entry);
+        }
+
+        if (node.Children?.Nodes.Count > 0)
+        {
+            _sb.Append(" {");
+            _sb.Append(_options.NewLine);
+
+            _depth++;
+            foreach (var child in node.Children.Nodes)
+            {
+                WriteIndent();
+                WriteNode(child);
+                _sb.Append(_options.NewLine);
+            }
+            _depth--;
+
+            WriteIndent();
+            _sb.Append('}');
+        }
+
+        if (_options.RoundTrip && node.TerminatedBySemicolon)
+        {
+            _sb.Append(';');
+        }
+    }
+
+    private void WriteEntry(KdlEntry entry)
+    {
+        if (entry is KdlArgument arg)
+        {
+            WriteValue(arg.Value);
+        }
+        else if (entry is KdlProperty prop)
+        {
+            WriteString(prop.Key);
+            _sb.Append('=');
+            WriteValue(prop.Value);
+        }
+    }
+
+    private void WriteValue(KdlValue value)
+    {
+        if (value.TypeAnnotation != null)
+        {
+            _sb.Append('(');
+            WriteIdentifier(value.TypeAnnotation);
+            _sb.Append(')');
+        }
+
+        switch (value)
+        {
+            case KdlNumber n:
+                _sb.Append(n.ToCanonicalString());
+                break;
+            case KdlBool b:
+                _sb.Append(b.Value ? "#true" : "#false");
+                break;
+            case KdlNull:
+                _sb.Append("#null");
+                break;
+            case KdlString s:
+                WriteString(s);
+                break;
+        }
+    }
+
+    private void WriteIdentifier(string value)
+    {
+        if (IsValidBareIdentifier(value))
+        {
+            _sb.Append(value);
+        }
+        else
+        {
+            WriteQuotedString(value);
+        }
+    }
+
+    private void WriteString(KdlString s)
+    {
+        StringKind kind;
+
+        if (_options.RoundTrip)
+        {
+            kind = s.Kind;
+
+            if (kind == StringKind.Bare && !IsValidBareIdentifier(s.Value))
+            {
+                kind = StringKind.Quoted;
+            }
+        }
+        else
+        {
+            kind =
+                IsValidBareIdentifier(s.Value) || s.Kind == StringKind.Bare
+                    ? StringKind.Bare
+                    : StringKind.Quoted;
+        }
+
+        switch (kind)
+        {
+            case StringKind.Bare:
+                _sb.Append(s.Value);
+                return;
+            case StringKind.Quoted:
+                _sb.Append('"');
+                _sb.Append(EscapeString(s.Value));
+                _sb.Append('"');
+                return;
+        }
+
+        bool isRaw = s.Kind.HasFlag(StringKind.Raw);
+        bool isMulti = s.Kind.HasFlag(StringKind.MultiLine);
+
+        if (isRaw)
+        {
+            int hashCount = s.Value.AsSpan().MaxConsecutive('#') + 1;
+            string hashes = new('#', hashCount);
+
+            string quotes = isMulti ? new string('\"', 3) : new string('\"', 1);
+
+            _sb.Append(hashes).Append(quotes);
+
+            if (isMulti)
+                _sb.Append('\n');
+
+            _sb.Append(s.Value);
+
+            if (isMulti)
+                _sb.Append('\n');
+
+            _sb.Append(quotes).Append(hashes);
+        }
+        else
+        {
+            if (isMulti)
+            {
+                _sb.Append(new string('\"', 3));
+                _sb.Append(s.Value);
+                _sb.Append(new string('\"', 3));
+            }
+            else
+            {
+                _sb.Append(new string('\"', 1));
+                _sb.Append(EscapeString(s.Value));
+                _sb.Append(new string('\"', 1));
+            }
+        }
+    }
+
+    private static string EscapeString(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return "";
+
+        var sb = new StringBuilder(input.Length + 2);
+
+        foreach (char c in input)
+        {
+            switch (c)
+            {
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                case '\b':
+                    sb.Append("\\b");
+                    break;
+                case '\f':
+                    sb.Append("\\f");
+                    break;
+                default:
+                    if (char.IsControl(c))
+                    {
+                        sb.Append($"\\u{(int)c:X4}");
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                    break;
+            }
+        }
+        return sb.ToString();
+    }
+
+    private void WriteQuotedString(string val)
+    {
+        _sb.Append('"');
+        foreach (char c in val)
+        {
+            switch (c)
+            {
+                case '\\':
+                    _sb.Append("\\\\");
+                    break;
+                case '"':
+                    _sb.Append("\\\"");
+                    break;
+                case '\b':
+                    _sb.Append("\\b");
+                    break;
+                case '\f':
+                    _sb.Append("\\f");
+                    break;
+                case '\n':
+                    _sb.Append("\\n");
+                    break;
+                case '\r':
+                    _sb.Append("\\r");
+                    break;
+                case '\t':
+                    _sb.Append("\\t");
+                    break;
+                default:
+                    if (char.IsControl(c) || (_options.EscapeUnicode && c > 127))
+                    {
+                        _sb.Append($"\\u{(int)c:X4}");
+                    }
+                    else
+                    {
+                        _sb.Append(c);
+                    }
+                    break;
+            }
+        }
+        _sb.Append('"');
+    }
+
+    private void WriteIndent()
+    {
+        for (int i = 0; i < _depth; i++)
+            _sb.Append(_options.IndentChar);
+    }
+
+    private static bool IsValidBareIdentifier(string id)
+    {
+        if (string.IsNullOrEmpty(id))
+            return false;
+        if (id == "true" || id == "false" || id == "null")
+            return false;
+        if (char.IsDigit(id[0]))
+            return false;
+
+        foreach (char c in id)
+        {
+            if (char.IsWhiteSpace(c) || "()[]{}/\\\"#;=".Contains(c))
+                return false;
+        }
+        return true;
+    }
+}
+
+```
+// File: src\Kuddle.Net\Serialization\KdlWriterOptions.cs`$langnamespace Kuddle.Serialization;
+
+public record KdlWriterOptions
+{
+    public static KdlWriterOptions Default => new();
+
+    public string IndentChar { get; init; } = "    ";
+    public string NewLine { get; init; } = "\n";
+    public string SpaceAfterProp { get; init; } = " ";
+    public bool EscapeUnicode { get; init; } = false;
+    public bool RoundTrip { get; set; } = true;
+}
+
+```
+// File: src\Kuddle.Net\Serialization\ObjectDeserializer.cs`$langusing System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
+using Kuddle.AST;
+using Kuddle.Extensions;
+
+namespace Kuddle.Serialization;
+
+internal class ObjectDeserializer
+{
+    private const StringComparison NodeNameComparison = StringComparison.OrdinalIgnoreCase;
+
+    private readonly KdlSerializerOptions _options;
+
+    public ObjectDeserializer(KdlSerializerOptions? options = null)
+    {
+        _options = options ?? KdlSerializerOptions.Default;
+    }
+
+    internal static T DeserializeDocument<T>(KdlDocument doc, KdlSerializerOptions? options)
+        where T : new()
+    {
+        var worker = new ObjectDeserializer(options);
+
+        var mapping = KdlTypeMapping.For<T>();
+        var instance = new T();
+
+        if (mapping.Arguments.Count > 0 || mapping.Properties.Count > 0)
+        {
+            var matches = doc
+                .Nodes.Where(n => n.Name.Value.Equals(mapping.NodeName, NodeNameComparison))
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                // If the document has content, but none of it is the node we want, it's an error.
+                if (doc.Nodes.Count > 0)
+                {
+                    var foundNames = string.Join(", ", doc.Nodes.Select(n => $"'{n.Name.Value}'"));
+                    throw new KuddleSerializationException(
+                        $"Expected root node '{mapping.NodeName}', but found: {foundNames}."
+                    );
+                }
+                return instance; // Document is totally empty; return empty object
+            }
+
+            // THROW: Ambiguity check
+            if (matches.Count > 1)
+            {
+                throw new KuddleSerializationException(
+                    $"Found {matches.Count} nodes matching '{mapping.NodeName}', but only 1 was expected. "
+                        + "To deserialize a list of nodes, use KdlSerializer.DeserializeMany<T>()."
+                );
+            }
+
+            worker.MapNodeToObject(matches[0], instance, mapping);
+        }
+        else
+        {
+            // Mode B: Document Mode or Intrinsic Dictionary at root
+            if (mapping.IsDictionary)
+            {
+                worker.PopulateDictionary(
+                    (IDictionary)instance,
+                    doc.Nodes,
+                    mapping.DictionaryKeyProperty!.PropertyType,
+                    mapping.DictionaryValueProperty!.PropertyType
+                );
+            }
+            else
+            {
+                worker.MapChildren(doc.Nodes, instance, mapping);
+            }
+        }
+
+        return instance;
+    }
+
+    internal static T DeserializeNode<T>(KdlNode node, KdlSerializerOptions? options)
+        where T : new()
+    {
+        var worker = new ObjectDeserializer(options);
+        var metadata = KdlTypeMapping.For<T>();
+        ValidateNodeName(node, metadata.NodeName);
+
+        var instance = new T();
+        worker.MapNodeToObject(node, instance, metadata);
+        return instance;
+    }
+
+    /// <summary>
+    /// Maps a KDL node's entries and children to an object instance.
+    /// </summary>
+    private void MapNodeToObject(KdlNode node, object instance, KdlTypeMapping mapping)
+    {
+        foreach (var map in mapping.Arguments)
+        {
+            var kdlValue = node.Arg(map.ArgumentIndex);
+            if (kdlValue != null)
+            {
+                var val = KdlValueConverter.FromKdlOrThrow(
+                    kdlValue,
+                    map.Property.PropertyType,
+                    map.KdlName,
+                    map.TypeAnnotation
+                );
+                map.SetValue(instance, val);
+            }
+        }
+
+        foreach (var map in mapping.Properties)
+        {
+            var kdlValue = node.Prop(map.KdlName);
+            if (kdlValue != null)
+            {
+                var val = KdlValueConverter.FromKdlOrThrow(
+                    kdlValue,
+                    map.Property.PropertyType,
+                    map.KdlName,
+                    map.TypeAnnotation
+                );
+                map.SetValue(instance, val);
+            }
+        }
+        if (node.Children != null)
+        {
+            // Mode B: Document Mode or Intrinsic Dictionary at root
+            if (mapping.IsDictionary)
+            {
+                PopulateDictionary(
+                    (IDictionary)instance,
+                    node.Children.Nodes,
+                    mapping.DictionaryKeyProperty!.PropertyType,
+                    mapping.DictionaryValueProperty!.PropertyType
+                );
+            }
+            else
+            {
+                MapChildren(node.Children.Nodes, instance, mapping);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Maps child KDL nodes to properties marked with [KdlNode].
+    /// </summary>
+    private void MapChildren(List<KdlNode>? nodes, object instance, KdlTypeMapping mapping)
+    {
+        if (nodes is null || nodes.Count == 0)
+            return;
+
+        foreach (var map in mapping.Children)
+        {
+            List<KdlNode> matches = nodes
+                .Where(n => n.Name.Value.Equals(map.KdlName, NodeNameComparison))
+                .ToList();
+
+            if (matches is null || matches.Count == 0)
+                continue;
+
+            if (map.IsDictionary)
+            {
+                var container = matches.Last();
+                if (container.Children != null)
+                {
+                    var dict = EnsureInstance(instance, map) as IDictionary;
+                    PopulateDictionary(
+                        dict!,
+                        container.Children.Nodes,
+                        map.DictionaryKeyProperty!.PropertyType,
+                        map.DictionaryValueProperty!.PropertyType
+                    );
+                }
+            }
+            else if (map.IsCollection)
+            {
+                KdlNode container = matches.Last();
+
+                List<KdlNode> nodesToProcess = container.HasChildren
+                    ? container.Children?.Nodes!
+                    : matches;
+
+                PopulateCollection(instance, nodesToProcess, map);
+            }
+            else
+            {
+                var last = matches.Last();
+                object? value;
+
+                if (map.Property.PropertyType.IsKdlScalar) // Use your extension
+                {
+                    var arg = last.Arg(0);
+                    value =
+                        arg != null
+                            ? KdlValueConverter.FromKdlOrThrow(
+                                arg,
+                                map.Property.PropertyType,
+                                last.Name.Value
+                            )
+                            : null;
+                }
+                else
+                {
+                    value = DeserializeObject(last, map.Property.PropertyType);
+                }
+
+                map.SetValue(instance, value);
+            }
+        }
+    }
+
+    private void PopulateCollection(
+        object parentInstance,
+        IEnumerable<KdlNode> nodes,
+        KdlMemberMap map
+    )
+    {
+        var list = CreateList(map.ElementType!);
+        var elementMapping = KdlTypeMapping.For(map.ElementType!);
+
+        foreach (var node in nodes)
+        {
+            // If the element name matches (or we are in a wrapped block), deserialize it
+            object? item;
+            if (map.ElementType!.IsKdlScalar)
+            {
+                var kdlVal = node.Arg(0);
+                item =
+                    kdlVal != null
+                        ? KdlValueConverter.FromKdlOrThrow(
+                            kdlVal,
+                            map.ElementType!,
+                            node.Name.Value
+                        )
+                        : null;
+            }
+            else
+            {
+                item = DeserializeObject(node, map.ElementType!);
+            }
+
+            if (item != null)
+                list.Add(item);
+        }
+
+        map.SetValue(
+            parentInstance,
+            ConvertCollection(list, map.Property.PropertyType, map.ElementType!)
+        );
+    }
+
+    private void PopulateDictionary(
+        IDictionary dict,
+        IEnumerable<KdlNode> nodes,
+        Type keyType,
+        Type valueType
+    )
+    {
+        foreach (var node in nodes)
+        {
+            object key = Convert.ChangeType(node.Name.Value, keyType);
+            object? value;
+
+            if (valueType.IsKdlScalar)
+            {
+                var arg = node.Arg(0);
+                value =
+                    arg != null
+                        ? KdlValueConverter.FromKdlOrThrow(arg, valueType, key.ToString()!)
+                        : null;
+            }
+            else
+            {
+                value = DeserializeObject(node, valueType);
+            }
+
+            if (value != null)
+                dict[key] = value;
+        }
+    }
+
+    private object DeserializeObject(KdlNode node, Type type)
+    {
+        if (type.IsKdlScalar) { }
+        var instance =
+            Activator.CreateInstance(type)
+            ?? throw new KuddleSerializationException(
+                $"Failed to create instance of '{type.Name}'."
+            );
+
+        MapNodeToObject(node, instance, KdlTypeMapping.For(type));
+        return instance;
+    }
+
+    private static void ValidateNodeName(KdlNode node, string nodeName)
+    {
+        if (!node.Name.Value.Equals(nodeName, NodeNameComparison))
+        {
+            throw new KuddleSerializationException(
+                $"Expected node '{nodeName}', found '{node.Name.Value}'."
+            );
+        }
+    }
+
+    private object EnsureInstance(object parent, KdlMemberMap map)
+    {
+        var current = map.GetValue(parent);
+        if (current != null)
+            return current;
+
+        var newInstance = Activator.CreateInstance(map.Property.PropertyType)!;
+        map.SetValue(parent, newInstance);
+        return newInstance;
+    }
+
+    private IList CreateList(Type elementType)
+    {
+        var listType = typeof(List<>).MakeGenericType(elementType);
+        return (IList)Activator.CreateInstance(listType)!;
+    }
+
+    private object ConvertCollection(IList list, Type targetType, Type elementType)
+    {
+        if (targetType.IsArray)
+        {
+            var array = Array.CreateInstance(elementType, list.Count);
+            list.CopyTo(array, 0);
+            return array;
+        }
+        return list; // Assuming List<T> is compatible with target (IEnumerable/IReadOnlyList)
+    }
+}
+
+```
+// File: src\Kuddle.Net\Serialization\ObjectSerializer.cs`$langusing System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Kuddle.AST;
+
+namespace Kuddle.Serialization;
+
+internal class ObjectSerializer
+{
+    private readonly KdlSerializerOptions _options;
+
+    public ObjectSerializer(KdlSerializerOptions? options = null)
+    {
+        _options = options ?? KdlSerializerOptions.Default;
+    }
+
+    internal static KdlDocument SerializeDocument<T>(T? instance, KdlSerializerOptions? options)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+
+        var type = typeof(T);
+        var worker = new ObjectSerializer(options);
+
+        if (type.IsKdlScalar)
+        {
+            throw new KuddleSerializationException(
+                $"Cannot serialize primitive type '{type.Name}'. Only complex types are supported."
+            );
+        }
+
+        var doc = new KdlDocument();
+
+        // If the root object itself is a collection, we treat every item as a top-level node.
+        if (typeof(T).IsIEnumerable && instance is IEnumerable enumerable)
+        {
+            foreach (var item in enumerable)
+            {
+                if (item != null)
+                    doc.Nodes.Add(worker.SerializeObject(item));
+            }
+        }
+        else
+        {
+            doc.Nodes.Add(worker.SerializeObject(instance));
+        }
+
+        return doc;
+    }
+
+    private KdlNode SerializeObject(object instance, string? overrideNodeName = null)
+    {
+        var mapping = KdlTypeMapping.For(instance.GetType());
+        var node = new KdlNode(KdlValue.From(overrideNodeName ?? mapping.NodeName));
+
+        foreach (var map in mapping.Arguments)
+        {
+            var val = KdlValueConverter.ToKdlOrThrow(map.GetValue(instance), map.TypeAnnotation);
+            node.Entries.Add(new KdlArgument(val));
+        }
+
+        foreach (var map in mapping.Properties)
+        {
+            var raw = map.GetValue(instance);
+            if (raw == null && _options.IgnoreNullValues)
+                continue;
+
+            var val = KdlValueConverter.ToKdlOrThrow(raw, map.TypeAnnotation);
+            node.Entries.Add(new KdlProperty(KdlValue.From(map.KdlName), val));
+        }
+
+        var childNodes = new List<KdlNode>();
+        foreach (var map in mapping.Children)
+        {
+            var childData = map.GetValue(instance);
+            if (childData is null)
+                continue;
+
+            if (map.IsDictionary && childData is IEnumerable mapDict)
+            {
+                var container = new KdlNode(KdlValue.From(map.KdlName));
+                var items = SerializeDictionary(
+                    mapDict,
+                    map.DictionaryKeyProperty,
+                    map.DictionaryValueProperty
+                );
+                container = container with { Children = new KdlBlock { Nodes = items.ToList() } };
+                childNodes.Add(container);
+            }
+            else if (map.IsCollection && childData is IEnumerable childCol)
+            {
+                childNodes.AddRange(SerializeCollection(childCol, map));
+            }
+            else
+            {
+                childNodes.Add(SerializeObject(childData, map.KdlName));
+            }
+        }
+        if (mapping.IsDictionary && instance is IEnumerable enumerable)
+        {
+            var items = SerializeDictionary(
+                enumerable,
+                mapping.DictionaryKeyProperty,
+                mapping.DictionaryValueProperty
+            );
+            childNodes.AddRange(items);
+        }
+
+        if (childNodes.Count > 0)
+        {
+            node = node with { Children = new KdlBlock { Nodes = childNodes } };
+        }
+        return node;
+    }
+
+    private IEnumerable<KdlNode> SerializeCollection(IEnumerable enumerable, KdlMemberMap map)
+    {
+        foreach (var item in enumerable)
+        {
+            if (item is null)
+                continue;
+
+            yield return MapToNode(item, map.KdlName, map.TypeAnnotation);
+        }
+    }
+
+    private KdlNode MapToNode(object item, string kdlName, string? typeAnnotation)
+    {
+        if (item.GetType().IsKdlScalar)
+        {
+            var val = KdlValueConverter.ToKdlOrThrow(item, typeAnnotation);
+            return new KdlNode(KdlValue.From(kdlName)) { Entries = [new KdlArgument(val)] };
+        }
+        else
+        {
+            return SerializeObject(item, kdlName);
+        }
+    }
+
+    private IEnumerable<KdlNode> SerializeDictionary(
+        IEnumerable dict,
+        PropertyInfo? keyProp,
+        PropertyInfo? valProp,
+        string? typeAnno = null
+    )
+    {
+        foreach (var item in dict)
+        {
+            var key = keyProp?.GetValue(item);
+            var val = valProp?.GetValue(item);
+            if (key == null || val == null)
+                continue;
+
+            yield return MapToNode(val, key.ToString()!, typeAnno);
+        }
+    }
+}
+
+```
+// File: src\Kuddle.Net\Validation\KuddleReservedTypeValidator.cs`$langusing System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
+using System.Text.RegularExpressions;
+using Kuddle.AST;
+using Kuddle.Exceptions;
+using Kuddle.Parser;
+
+namespace Kuddle.Validation;
+
+public static class KdlReservedTypeValidator
+{
+    public static void Validate(KdlDocument doc)
+    {
+        var errors = new List<KuddleValidationError>();
+
+        foreach (var node in doc.Nodes)
+        {
+            ValidateNode(node, errors);
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new KuddleValidationException(errors);
+        }
+    }
+
+    private static void ValidateNode(KdlNode node, List<KuddleValidationError> errors)
+    {
+        foreach (var entry in node.Entries)
+        {
+            if (entry is KdlArgument arg)
+            {
+                ValidateValue(arg.Value, errors);
+            }
+            else if (entry is KdlProperty prop)
+            {
+                ValidateValue(prop.Value, errors);
+            }
+        }
+
+        if (node.Children != null)
+        {
+            foreach (var child in node.Children.Nodes)
+            {
+                ValidateNode(child, errors);
+            }
+        }
+    }
+
+    private static void ValidateValue(KdlValue val, List<KuddleValidationError> errors)
+    {
+        if (val.TypeAnnotation == null)
+            return;
+        if (!CharacterSets.ReservedTypes.Contains(val.TypeAnnotation))
+            return;
+
+        try
+        {
+            switch (val.TypeAnnotation)
+            {
+                // --- Integers ---
+                case "u8":
+                    EnsureNumber(val).ToByte();
+                    break;
+                case "u16":
+                    EnsureNumber(val).ToUInt16();
+                    break;
+                case "u32":
+                    EnsureNumber(val).ToUInt32();
+                    break;
+                case "u64":
+                    EnsureNumber(val).ToUInt64();
+                    break;
+                case "i8":
+                    EnsureNumber(val).ToSByte();
+                    break;
+                case "i16":
+                    EnsureNumber(val).ToInt16();
+                    break;
+                case "i32":
+                    EnsureNumber(val).ToInt32();
+                    break;
+                case "i64":
+                    EnsureNumber(val).ToInt64();
+                    break;
+
+                // --- Floats ---
+                case "f32":
+                    // ToFloat() handles the parsing. We just check if it throws.
+                    EnsureNumber(val).ToFloat();
+                    break;
+                case "f64":
+                    EnsureNumber(val).ToDouble();
+                    break;
+
+                // --- Strings ---
+                case "uuid":
+                    if (!Guid.TryParse(EnsureString(val), out _))
+                        throw new FormatException();
+                    break;
+                case "date-time":
+                    if (!DateTimeOffset.TryParse(EnsureString(val), out _))
+                        throw new FormatException();
+                    break;
+                case "ipv4":
+                    if (
+                        !IPAddress.TryParse(EnsureString(val), out var ip4)
+                        || ip4.AddressFamily != AddressFamily.InterNetwork
+                    )
+                        throw new FormatException();
+                    break;
+                case "ipv6":
+                    if (
+                        !IPAddress.TryParse(EnsureString(val), out var ip6)
+                        || ip6.AddressFamily != AddressFamily.InterNetworkV6
+                    )
+                        throw new FormatException();
+                    break;
+                case "url":
+                    if (!Uri.TryCreate(EnsureString(val), UriKind.Absolute, out _))
+                        throw new FormatException();
+                    break;
+                case "base64":
+                    Convert.FromBase64String(EnsureString(val));
+                    break;
+                case "regex":
+                    try
+                    {
+                        _ = new Regex(EnsureString(val));
+                    }
+                    catch
+                    {
+                        throw new FormatException();
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex) when (ex.Message.StartsWith("Expected a"))
+        {
+            errors.Add(new KuddleValidationError(ex.Message, val));
+        }
+        catch (Exception)
+        {
+            errors.Add(
+                new KuddleValidationError(
+                    $"Value '{val}' is not a valid '{val.TypeAnnotation}'.",
+                    val
+                )
+            );
+        }
+    }
+
+    private static KdlNumber EnsureNumber(KdlValue val) =>
+        val is KdlNumber num
+            ? num
+            : throw new FormatException(
+                $"Expected a Number for type '{val.TypeAnnotation}', got {val.GetType().Name}"
+            );
+
+    private static string EnsureString(KdlValue val) =>
+        val is KdlString str
+            ? str.Value
+            : throw new FormatException(
+                $"Expected a String for type '{val.TypeAnnotation}', got {val.GetType().Name}"
+            );
+}
+
+```
+// File: src\Kuddle.Net\GlobalSuppressions.cs`$lang// This file is used by Code Analysis to maintain SuppressMessage
+// attributes that are applied to this project.
+// Project-level suppressions either have no target or are given
+// a specific target and scoped to a namespace, type, member, etc.
+
+using System.Diagnostics.CodeAnalysis;
+
+[assembly: SuppressMessage(
+    "Style",
+    "IDE0130:Namespace does not match folder structure",
+    Justification = "<Pending>",
+    Scope = "namespace",
+    Target = "~N:Kuddle.Serialization"
+)]
+
+```
+// File: src\Kuddle.Net.Benchmarks\Program.cs`$langusing BenchmarkDotNet.Running;
+using Kuddle.Benchmarks;
+
+BenchmarkRunner.Run<SerializerBenchmarks>();
+
+```
+// File: src\Kuddle.Net.Benchmarks\SerializerBenchmarks.cs`$langusing BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
+using Kuddle.AST;
+using Kuddle.Parser;
+using Kuddle.Serialization;
+using Parlot.Fluent;
+
+namespace Kuddle.Benchmarks;
+
+[SimpleJob(RuntimeMoniker.Net10_0)]
+[MemoryDiagnoser]
+public class SerializerBenchmarks
+{
+    private string _simpleDocument = string.Empty;
+    private string _complexDocument = string.Empty;
+    private string _largeDocument = string.Empty;
+
+    private Parser<KdlDocument> _compiledParser = null!;
+    private Parser<KdlDocument> _nonCompiledParser = null!;
+
+    // Serialization benchmarks
+    private Package _simplePackage = null!;
+    private string _simplePackageKdl = string.Empty;
+
+    private Project _complexProject = null!;
+    private string _complexProjectKdl = string.Empty;
+
+    private List<Package> _largePackageList = null!;
+    private string _largePackageListKdl = string.Empty;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _simpleDocument = """
+            node1 "value1"
+            node2 123
+            node3 #true
+            """;
+
+        _complexDocument = """
+            package {
+                name "my-package"
+                version "1.0.0"
+                dependencies {
+                    dep1 "^2.0.0"
+                    dep2 "~1.5.0"
+                }
+            }
+
+            config (type)"production" {
+                host "example.com"
+                port 8080
+                ssl #true
+                features enabled=#true timeout=30
+            }
+
+            users {
+                user id=1 name="Alice" active=#true
+                user id=2 name="Bob" active=#false
+                user id=3 name="Charlie" active=#true
+            }
+            """;
+
+        var largeDocBuilder = new System.Text.StringBuilder();
+        for (int i = 0; i < 100; i++)
+        {
+            largeDocBuilder.AppendLine($"node{i} {{");
+            for (int j = 0; j < 10; j++)
+            {
+                largeDocBuilder.AppendLine($"    child{j} \"value{j}\" prop{j}={j}");
+            }
+            largeDocBuilder.AppendLine("}");
+        }
+        _largeDocument = largeDocBuilder.ToString();
+
+        _compiledParser = KdlGrammar.Document.Compile();
+        _nonCompiledParser = KdlGrammar.Document;
+
+        // Setup serialization objects
+        _simplePackage = new Package
+        {
+            Name = "my-lib",
+            Version = "1.0.0",
+            Description = "A library",
+        };
+        _simplePackageKdl = KdlSerializer.Serialize(_simplePackage);
+
+        _complexProject = new Project
+        {
+            Name = "my-app",
+            Version = "2.0.0",
+            Dependencies =
+            [
+                new Dependency { Package = "lodash", Version = "4.17.21" },
+                new Dependency { Package = "react", Version = "18.0.0" },
+                new Dependency { Package = "typescript", Version = "4.5.0" },
+            ],
+            DevDependencies =
+            [
+                new Dependency { Package = "jest", Version = "27.0.0" },
+                new Dependency { Package = "eslint", Version = "8.0.0" },
+            ],
+        };
+        _complexProjectKdl = KdlSerializer.Serialize(_complexProject);
+
+        _largePackageList = [];
+        for (int i = 0; i < 100; i++)
+        {
+            _largePackageList.Add(
+                new Package
+                {
+                    Name = $"package{i}",
+                    Version = $"1.{i}.0",
+                    Description = $"Description for package {i}",
+                }
+            );
+        }
+        _largePackageListKdl = KdlSerializer.SerializeMany(_largePackageList);
+    }
+
+    [Benchmark]
+    public KdlDocument? SimpleDocument_NonCompiled()
+    {
+        return _nonCompiledParser.Parse(_simpleDocument);
+    }
+
+    [Benchmark]
+    public KdlDocument? SimpleDocument_Compiled()
+    {
+        return _compiledParser.Parse(_simpleDocument);
+    }
+
+    [Benchmark]
+    public KdlDocument? ComplexDocument_NonCompiled()
+    {
+        return _nonCompiledParser.Parse(_complexDocument);
+    }
+
+    [Benchmark]
+    public KdlDocument? ComplexDocument_Compiled()
+    {
+        return _compiledParser.Parse(_complexDocument);
+    }
+
+    [Benchmark]
+    public KdlDocument? LargeDocument_NonCompiled()
+    {
+        return _nonCompiledParser.Parse(_largeDocument);
+    }
+
+    [Benchmark]
+    public KdlDocument? LargeDocument_Compiled()
+    {
+        return _compiledParser.Parse(_largeDocument);
+    }
+
+    // Serialization benchmarks
+    [Benchmark]
+    public string SerializeSimplePackage()
+    {
+        return KdlSerializer.Serialize(_simplePackage);
+    }
+
+    [Benchmark]
+    public string SerializeComplexProject()
+    {
+        return KdlSerializer.Serialize(_complexProject);
+    }
+
+    [Benchmark]
+    public string SerializeLargePackageList()
+    {
+        return KdlSerializer.SerializeMany(_largePackageList);
+    }
+
+    // Deserialization benchmarks
+    [Benchmark]
+    public Package? DeserializeSimplePackage()
+    {
+        return KdlSerializer.Deserialize<Package>(_simplePackageKdl);
+    }
+
+    [Benchmark]
+    public Project? DeserializeComplexProject()
+    {
+        return KdlSerializer.Deserialize<Project>(_complexProjectKdl);
+    }
+
+    [Benchmark]
+    public List<Package>? DeserializeLargePackageList()
+    {
+        return KdlSerializer.DeserializeMany<Package>(_largePackageListKdl).ToList();
+    }
+
+    // Test models
+    public class Package
+    {
+        [KdlArgument(0)]
+        public string Name { get; set; } = string.Empty;
+
+        [KdlProperty("version")]
+        public string? Version { get; set; }
+
+        [KdlProperty("description")]
+        public string? Description { get; set; }
+    }
+
+    public class Project
+    {
+        [KdlArgument(0)]
+        public string Name { get; set; } = string.Empty;
+
+        [KdlProperty("version")]
+        public string Version { get; set; } = "1.0.0";
+
+        [KdlNode("dependency")]
+        public List<Dependency> Dependencies { get; set; } = [];
+
+        [KdlNode("devDependency")]
+        public List<Dependency> DevDependencies { get; set; } = [];
+    }
+
+    public class Dependency
+    {
+        [KdlArgument(0)]
+        public string Package { get; set; } = string.Empty;
+
+        [KdlProperty("version")]
+        public string Version { get; set; } = "*";
+
+        [KdlProperty("optional")]
+        public bool Optional { get; set; }
+    }
+}
+
+```

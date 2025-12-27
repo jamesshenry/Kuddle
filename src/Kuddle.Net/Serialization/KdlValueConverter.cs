@@ -29,6 +29,13 @@ internal static class KdlValueConverter
 
         var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
 
+        if (underlying.IsEnum)
+        {
+            kdlValue.TryGetString(out var enumString);
+            bool success = Enum.TryParse(underlying, enumString, true, out var result);
+            value = result;
+            return success;
+        }
         // String
         if (underlying == typeof(string) && kdlValue.TryGetString(out var stringVal))
         {
@@ -163,6 +170,7 @@ internal static class KdlValueConverter
             Guid uuid => KdlValue.From(uuid),
             DateTimeOffset dto => KdlValue.From(dto),
             DateTime dt => KdlValue.From(new DateTimeOffset(dt)),
+            Enum e => KdlValue.From(e),
             _ => null!,
         };
 
@@ -177,7 +185,7 @@ internal static class KdlValueConverter
     /// <summary>
     /// Converts a KDL value to a CLR type, throwing on failure.
     /// </summary>
-    public static object? FromKdlOrThrow(
+    public static object FromKdlOrThrow(
         KdlValue kdlValue,
         Type targetType,
         string context,
@@ -194,23 +202,19 @@ internal static class KdlValueConverter
                 $"Cannot convert KDL value '{kdlValue}' to {targetType.Name}. {context}"
             );
         }
-        return result;
+        return result ?? throw new Exception();
     }
 
     /// <summary>
     /// Converts a CLR value to a KDL value, throwing on failure.
     /// </summary>
-    public static KdlValue ToKdlOrThrow(
-        object? input,
-        string context,
-        string? typeAnnotation = null
-    )
+    public static KdlValue ToKdlOrThrow(object? input, string? typeAnnotation = null)
     {
         if (!TryToKdl(input, out var kdlValue, typeAnnotation))
         {
             var typeName = input?.GetType().Name ?? "null";
             throw new KuddleSerializationException(
-                $"Cannot convert CLR value of type '{typeName}' to KDL. {context}"
+                $"Cannot convert CLR value of type '{typeName}' to KDL."
             );
         }
         return kdlValue;

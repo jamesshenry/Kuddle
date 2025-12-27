@@ -7,7 +7,7 @@ public class DocumentToObjectTests
 {
     class AppConfig
     {
-        [KdlNode("plugin")]
+        [KdlNode("plugin", Flatten = true)]
         public List<Plugin> Plugins { get; set; } = new();
 
         [KdlNode("logging")]
@@ -115,10 +115,8 @@ public class DocumentToObjectTests
             logging { level ""info"" }
             logging { level ""error"" }
         ";
+        var config = KdlSerializer.Deserialize<AppConfig>(kdl);
 
-        await Assert.ThrowsAsync<KuddleSerializationException>(async () =>
-        {
-            KdlSerializer.Deserialize<AppConfig>(kdl);
-        });
+        await Assert.That(config.Logging!.LogLevel).IsEqualTo("error");
     }
 }

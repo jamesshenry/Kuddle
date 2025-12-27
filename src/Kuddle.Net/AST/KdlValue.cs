@@ -63,4 +63,9 @@ public abstract record KdlValue : KdlObject
     {
         return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
     }
+
+    internal static KdlString From(Enum e)
+    {
+        return new KdlString(e.ToString(), StringKind.Bare);
+    }
 }

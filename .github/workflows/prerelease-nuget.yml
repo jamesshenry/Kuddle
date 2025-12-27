@@ -1,18 +1,17 @@
-name: Publish Stable Nuget
+name: Publish Preview Nuget
 
 on:
   push:
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-    branches:
-      - main
+      - "[0-9]*.[0-9]*.[0-9]*-*" # Matches semver tags with a suffix, e.g., 1.2.3-preview, 1.2.3-beta1
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release-nuget:
-    name: Publish NuGet Package
+  release-nuget-preview:
+    name: Publish Preview NuGet Package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

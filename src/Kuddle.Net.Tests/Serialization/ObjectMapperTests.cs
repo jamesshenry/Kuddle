@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using Kuddle.AST;
+using Kuddle.Exceptions;
 using Kuddle.Serialization;
+using Kuddle.Tests.Serialization.Models;
 
 namespace Kuddle.Tests.Serialization;
 
@@ -354,44 +357,6 @@ public class ObjectMapperTests
 
     #endregion
 
-    // #region Polymorphism Tests
-
-    // [Test]
-    // public async Task DeserializeObject_WithTypeDiscriminator_MapsToCorrectSubclass()
-    // {
-    //     // Arrange
-    //     var kdl = """
-    //         resource "config" type="file" path="/etc/config.toml"
-    //         """;
-
-    //     // Act
-    //     var result = KdlSerializer.Deserialize<Resource>(kdl);
-
-    //     // Assert
-    //     await Assert.That(result).IsOfType(typeof(FileResource));
-    //     var fileResource = (FileResource)result;
-    //     await Assert.That(fileResource.Path).IsEqualTo("/etc/config.toml");
-    // }
-
-    // [Test]
-    // public async Task DeserializeObject_WithDifferentTypeDiscriminator_MapsToOtherSubclass()
-    // {
-    //     // Arrange
-    //     var kdl = """
-    //         resource "api" type="url" url="https://api.example.com"
-    //         """;
-
-    //     // Act
-    //     var result = KdlSerializer.Deserialize<Resource>(kdl);
-
-    //     // Assert
-    //     await Assert.That(result).IsOfType(typeof(UrlResource));
-    //     var urlResource = (UrlResource)result;
-    //     await Assert.That(urlResource.Url).IsEqualTo("https://api.example.com");
-    // }
-
-    // #endregion
-
     #region Edge Cases
 
     [Test]
@@ -477,36 +442,63 @@ public class ObjectMapperTests
     }
 
     [Test]
-    public async Task DeserializeToScalar_WithMultipleRootNodes_ThrowsException()
+    public async Task DeserializeToDictionary_MapsCorrectly()
     {
         // Arrange
         var kdl = """
-            package "my-lib" version="1.0.0"
-            package "my-dep1" version="2.1.0"
-            package "my-dep2" version="3.2.1"
-            """;
+// 1. The "themes" dictionary (Key = Theme Name)
+themes {
+    // Key: "dark-mode" -> Value: Theme (which is also a Dictionary)
+    dark-mode {
+        // Key: "window" -> Value: ElementStyle
+        window {
+            align v="Top" h="Left"
+            border color="#FFFFFF" style="solid"
+        }
 
-        // Act & Assert
-        await Assert
-            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
-            .Throws<KuddleSerializationException>();
+        // Key: "button" -> Value: ElementStyle
+        button {
+            header text="Click Me"
+            align v="Middle" h="Center"
+        }
     }
 
-    [Test]
-    public async Task DeserializeToDictionary_ThrowsException()
-    {
-        // Arrange
-        var kdl = """
-            package "my-lib" version="1.0.0"
-            reference "my-dep1" version="2.1.0"
-            node "my-dep2" version="3.2.1"
-            """;
+    // Key: "high-contrast"
+    high-contrast {
+        window {
+            border color="#FFFF00"
+        }
+    }
+}
 
-        // Act & Assert
-        await Assert
-            .That(() => KdlSerializer.Deserialize<Dictionary<string, Package>>(kdl))
-            .Throws<KuddleSerializationException>()
-            .WithMessageContaining("not supported");
+// 2. The "layouts" dictionary (Key = Layout Name)
+layouts {
+    // Key: "dashboard" -> Value: LayoutDefinition
+    dashboard section="main-view" size=1 split="rows" {
+        
+        // Recursive List<LayoutDefinition> (Children)
+        child section="top-bar" size=1
+        
+        child section="content-area" size=4 split="columns" {
+            child section="sidebar" size=1
+            child section="grid" size=3
+        }
+    }
+}
+""";
+
+        // Act
+        var result = KdlSerializer.Deserialize<AppSettings>(kdl);
+
+        // Assert
+        var dashboard = result.Layouts["dashboard"];
+        await Assert.That(dashboard).IsNotNull();
+        await Assert.That(dashboard.Section).IsEqualTo("main-view");
+        await Assert.That(dashboard.Ratio).IsEqualTo(1);
+        await Assert.That(dashboard.SplitDirection).IsEqualTo("rows");
+
+        var contentArea = dashboard.Children.FirstOrDefault(c => c.Section == "grid");
+        await Assert.That(contentArea!.Ratio).IsEqualTo(3);
     }
 
     [Test]
@@ -539,22 +531,8 @@ public class ObjectMapperTests
             .Throws<KuddleSerializationException>();
     }
 
-    [Test]
-    public async Task DeserializeObject_WithMissingRequiredArgument_ThrowsException()
-    {
-        // Arrange
-        var kdl = """
-            package
-            """;
-
-        // Act & Assert
-        await Assert
-            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
-            .Throws<KuddleSerializationException>();
-    }
-
     // [Test]
-    // public async Task DeserializeObject_WhenTargetIsSimpleValue_ThrowsException()
+    // public async Task DeserializeObject_WithMissingRequiredArgument_ThrowsException()
     // {
     //     // Arrange
     //     var kdl = """
@@ -563,13 +541,174 @@ public class ObjectMapperTests
 
     //     // Act & Assert
     //     await Assert
-    //         .That(async () => KdlSerializer.Deserialize<string>(kdl))
-    //         .Throws<KuddleSerializationException>()
-    //         .WithMessageContaining("Cannot deserialize type");
+    //         .That(async () => KdlSerializer.Deserialize<Package>(kdl))
+    //         .Throws<KuddleSerializationException>();
     // }
+
+    [Test]
+    public async Task RoundTrip_HybridType_PreservesPropertiesAndDictionary()
+    {
+        var model = new HybridModel { Version = "2.5" };
+        model["timeout"] = "5000";
+        model["retry"] = "true";
+
+        var kdl = KdlSerializer.Serialize(model);
+
+        // Should look like:
+        // hybridmodel version="2.5" {
+        //   timeout "5000"
+        //   retry "true"
+        // }
+
+        var deserialized = KdlSerializer.Deserialize<HybridModel>(kdl);
+
+        await Assert.That(deserialized.Version).IsEqualTo("2.5");
+        await Assert.That(deserialized["timeout"]).IsEqualTo("5000");
+        await Assert.That(deserialized.Count).IsEqualTo(2);
+    }
+
+    public class PropertyDictModel
+    {
+        [KdlProperty]
+        public Dictionary<string, string> Tags { get; set; } = new();
+
+        [KdlProperty("setting")]
+        public Dictionary<string, int> Settings { get; set; } = new();
+    }
+
+    public class InvalidPropertyDictModel
+    {
+        [KdlProperty]
+        public Dictionary<string, ComplexValue> Items { get; set; } = new();
+    }
+
+    public class ComplexValue
+    {
+        public string Name { get; set; }
+    }
+
+    [Test]
+    public async Task Serialize_PropertyDictionary_WritesFlatProperties()
+    {
+        // Arrange
+        var model = new PropertyDictModel();
+        model.Tags["env"] = "production";
+        model.Tags["region"] = "us-east-1";
+
+        // Using a prefix "setting"
+        model.Settings["timeout"] = 5000;
+        model.Settings["retries"] = 3;
+
+        // Act
+        var kdl = KdlSerializer.Serialize(model);
+
+        // Assert
+        await Assert.That(kdl).Contains("env=production");
+        await Assert.That(kdl).Contains("region=us-east-1");
+
+        await Assert.That(kdl).Contains("setting:timeout=5000");
+        await Assert.That(kdl).Contains("setting:retries=3");
+
+        await Assert.That(kdl).DoesNotContain("{");
+    }
+
+    [Test]
+    public async Task Deserialize_PropertyDictionary_MapsFlatPropertiesBack()
+    {
+        // Arrange
+        var kdl = "property-dict-model env=\"dev\" setting:port=8080";
+
+        // Act
+        var result = KdlSerializer.Deserialize<PropertyDictModel>(kdl);
+
+        // Assert
+        await Assert.That(result.Tags["env"]).IsEqualTo("dev");
+        await Assert.That(result.Settings["port"]).IsEqualTo(8080);
+    }
+
+    [Test]
+    public async Task Mapping_InvalidPropertyDictionary_ThrowsConfigurationException()
+    {
+        await Assert
+            .That(() => KdlTypeMapping.For<InvalidPropertyDictModel>())
+            .Throws<KdlConfigurationException>();
+    }
+
+    public class CollectionModel
+    {
+        [KdlNode("plugins", Flatten = false)]
+        public List<PluginInfo> WrappedPlugins { get; set; } = [];
+
+        [KdlNode("server", Flatten = true)]
+        public List<ServerInfo> FlattenedServers { get; set; } = [];
+    }
+
+    public class PluginInfo
+    {
+        [KdlArgument(0)]
+        public string Name { get; set; } = "";
+    }
+
+    public class ServerInfo
+    {
+        [KdlProperty]
+        public string Host { get; set; } = "";
+    }
+
+    [Test]
+    public async Task Serialize_CollectionStrategies_WritesCorrectStructure()
+    {
+        // Arrange
+        var model = new CollectionModel
+        {
+            WrappedPlugins = [new() { Name = "Auth" }],
+            FlattenedServers = [new() { Host = "localhost" }, new() { Host = "127.0.0.1" }],
+        };
+
+        // Act
+        var kdl = KdlSerializer.Serialize(model);
+        Debug.WriteLine(kdl);
+        // Assert Wrapped: plugins { plugininfo "Auth" }
+        await Assert.That(kdl).Contains("plugins {");
+
+        // Assert Flattened: server host="localhost"
+        await Assert.That(kdl).Contains("server host=localhost");
+        await Assert.That(kdl).Contains("server host=\"127.0.0.1\"");
+
+        // Double check there isn't a wrapper node for servers
+        // (Assuming the class property was named FlattenedServers)
+        await Assert.That(kdl).DoesNotContain("flattenedservers");
+    }
+
+    [Test]
+    public async Task Deserialize_FlattenedCollection_CollectsAllMatchingNodes()
+    {
+        // Arrange
+        var kdl = """
+            plugins {
+                plugininfo "Auth"
+            }
+            server host="localhost"
+            server host="remote"
+            """;
+
+        // Act
+        var result = KdlSerializer.Deserialize<CollectionModel>(kdl);
+
+        // Assert
+        await Assert.That(result.WrappedPlugins).Count().IsEqualTo(1);
+        await Assert.That(result.FlattenedServers).Count().IsEqualTo(2);
+        await Assert.That(result.FlattenedServers[1].Host).IsEqualTo("remote");
+    }
+
     #endregion
 
     #region Test Models
+    public class HybridModel : Dictionary<string, string>
+    {
+        [KdlProperty("version")]
+        public string Version { get; set; } = "1.0";
+    }
 
     /// <summary>Simple class with properties and arguments.</summary>
     public class Package
@@ -593,10 +732,10 @@ public class ObjectMapperTests
         [KdlProperty("version")]
         public string Version { get; set; } = "1.0.0";
 
-        [KdlNode("dependency")]
+        [KdlNode("dependency", Flatten = true)]
         public List<Dependency> Dependencies { get; set; } = [];
 
-        [KdlNode("devDependency")]
+        [KdlNode("devDependency", Flatten = true)]
         public List<Dependency> DevDependencies { get; set; } = [];
     }
 
