@@ -112,7 +112,20 @@ internal class ObjectSerializer
             }
             else if (map.IsCollection && childData is IEnumerable childCol)
             {
-                childNodes.AddRange(SerializeCollection(childCol, map));
+                var items = SerializeCollection(childCol, map);
+
+                if (map.IsFlattened)
+                {
+                    childNodes.AddRange(items);
+                }
+                else
+                {
+                    var container = new KdlNode(KdlValue.From(map.KdlName))
+                    {
+                        Children = new KdlBlock { Nodes = items.ToList() },
+                    };
+                    childNodes.Add(container);
+                }
             }
             else
             {

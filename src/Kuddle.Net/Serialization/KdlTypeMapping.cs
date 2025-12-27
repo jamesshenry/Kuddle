@@ -122,14 +122,16 @@ internal sealed record KdlTypeMapping
                 KdlMemberKind.ChildNode,
                 n.Name ?? prop.Name.ToKebabCase(),
                 -1,
-                typeAnnotation
+                typeAnnotation,
+                n.Flatten
             ),
             KdlNodeCollectionAttribute nc => new KdlMemberMap(
                 prop,
                 KdlMemberKind.ChildNode,
                 nc.NodeName,
                 -1,
-                typeAnnotation
+                typeAnnotation,
+                false
             ),
             KdlNodeDictionaryAttribute nd => new KdlMemberMap(
                 prop,

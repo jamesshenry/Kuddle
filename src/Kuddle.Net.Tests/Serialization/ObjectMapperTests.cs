@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Kuddle.AST;
 using Kuddle.Exceptions;
 using Kuddle.Serialization;
@@ -602,16 +603,12 @@ layouts {
         var kdl = KdlSerializer.Serialize(model);
 
         // Assert
-        // Simple dict: env="production" region="us-east-1"
         await Assert.That(kdl).Contains("env=production");
         await Assert.That(kdl).Contains("region=us-east-1");
 
-        // Prefixed dict: setting:timeout=5000 setting:retries=3
-        // (Assuming you implement the prefix: logic discussed)
         await Assert.That(kdl).Contains("setting:timeout=5000");
         await Assert.That(kdl).Contains("setting:retries=3");
 
-        // Ensure no child block was created for these
         await Assert.That(kdl).DoesNotContain("{");
     }
 
@@ -632,13 +629,78 @@ layouts {
     [Test]
     public async Task Mapping_InvalidPropertyDictionary_ThrowsConfigurationException()
     {
-        // Act & Assert
-        // This should fail because [KdlProperty] is applied to a dictionary
-        // with a complex value type (ComplexValue), which is illegal in KDL.
         await Assert
             .That(() => KdlTypeMapping.For<InvalidPropertyDictModel>())
             .Throws<KdlConfigurationException>();
     }
+
+    public class CollectionModel
+    {
+        [KdlNode("plugins")]
+        public List<PluginInfo> WrappedPlugins { get; set; } = [];
+
+        [KdlNode("server", Flatten = true)]
+        public List<ServerInfo> FlattenedServers { get; set; } = [];
+    }
+
+    public class PluginInfo
+    {
+        [KdlArgument(0)]
+        public string Name { get; set; } = "";
+    }
+
+    public class ServerInfo
+    {
+        [KdlProperty]
+        public string Host { get; set; } = "";
+    }
+
+    [Test]
+    public async Task Serialize_CollectionStrategies_WritesCorrectStructure()
+    {
+        // Arrange
+        var model = new CollectionModel
+        {
+            WrappedPlugins = [new() { Name = "Auth" }],
+            FlattenedServers = [new() { Host = "localhost" }, new() { Host = "127.0.0.1" }],
+        };
+
+        // Act
+        var kdl = KdlSerializer.Serialize(model);
+        Debug.WriteLine(kdl);
+        // Assert Wrapped: plugins { plugininfo "Auth" }
+        await Assert.That(kdl).Contains("plugins {");
+
+        // Assert Flattened: server host="localhost"
+        await Assert.That(kdl).Contains("server host=localhost");
+        await Assert.That(kdl).Contains("server host=\"127.0.0.1\"");
+
+        // Double check there isn't a wrapper node for servers
+        // (Assuming the class property was named FlattenedServers)
+        await Assert.That(kdl).DoesNotContain("flattenedservers");
+    }
+
+    [Test]
+    public async Task Deserialize_FlattenedCollection_CollectsAllMatchingNodes()
+    {
+        // Arrange: KDL with multiple 'server' nodes at the same level as 'plugins'
+        var kdl = """
+            plugins {
+                plugininfo "Auth"
+            }
+            server host="localhost"
+            server host="remote"
+            """;
+
+        // Act
+        var result = KdlSerializer.Deserialize<CollectionModel>(kdl);
+
+        // Assert
+        await Assert.That(result.WrappedPlugins).Count().IsEqualTo(1);
+        await Assert.That(result.FlattenedServers).Count().IsEqualTo(2);
+        await Assert.That(result.FlattenedServers[1].Host).IsEqualTo("remote");
+    }
+
     #endregion
 
     #region Test Models

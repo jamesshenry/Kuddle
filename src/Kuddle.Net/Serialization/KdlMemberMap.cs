@@ -10,7 +10,8 @@ internal sealed record KdlMemberMap
         KdlMemberKind kind,
         string kdlName,
         int argumentIndex = -1,
-        string? typeAnnotation = null
+        string? typeAnnotation = null,
+        bool isFlattened = false
     )
     {
         Property = property;
@@ -18,6 +19,7 @@ internal sealed record KdlMemberMap
         KdlName = kdlName;
         ArgumentIndex = argumentIndex;
         TypeAnnotation = typeAnnotation;
+        IsFlattened = isFlattened;
         IsDictionary = property.PropertyType.IsDictionary;
         var elementType = property.PropertyType.GetCollectionElementType();
         IsCollection = elementType != null;
@@ -39,6 +41,7 @@ internal sealed record KdlMemberMap
     public string? TypeAnnotation { get; }
     public PropertyInfo? DictionaryKeyProperty { get; }
     public PropertyInfo? DictionaryValueProperty { get; }
+    public bool IsFlattened { get; }
 
     public object? GetValue(object instance) => Property.GetValue(instance);
 
