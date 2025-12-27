@@ -123,16 +123,10 @@ internal sealed record KdlTypeMapping
                 n.Name ?? prop.Name.ToKebabCase(),
                 -1,
                 typeAnnotation,
-                n.Flatten
+                n.Flatten,
+                collectionElementName: n.ElementName
             ),
-            KdlNodeCollectionAttribute nc => new KdlMemberMap(
-                prop,
-                KdlMemberKind.ChildNode,
-                nc.NodeName,
-                -1,
-                typeAnnotation,
-                false
-            ),
+
             KdlNodeDictionaryAttribute nd => new KdlMemberMap(
                 prop,
                 KdlMemberKind.ChildNode,
@@ -154,7 +148,7 @@ internal sealed record KdlTypeMapping
         prop.PropertyType switch
         {
             { IsDictionary: true } => new KdlNodeDictionaryAttribute(prop.Name.ToKebabCase()),
-            { IsIEnumerable: true } => new KdlNodeCollectionAttribute(prop.Name.ToKebabCase()),
+            { IsIEnumerable: true } => new KdlNodeAttribute(prop.Name.ToKebabCase()),
             { IsKdlScalar: true } => new KdlPropertyAttribute(prop.Name.ToKebabCase()),
             _ => new KdlNodeAttribute(prop.Name.ToKebabCase()),
         };

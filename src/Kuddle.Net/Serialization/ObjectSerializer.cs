@@ -156,9 +156,16 @@ internal class ObjectSerializer
             if (item is null)
                 continue;
 
-            yield return MapToNode(item, map.KdlName, map.TypeAnnotation);
+            string itemName = map.IsFlattened
+                ? map.KdlName
+                : map.ElementName ?? GetDefaultNodeName(item);
+
+            yield return MapToNode(item, itemName, map.TypeAnnotation);
         }
     }
+
+    private static string GetDefaultNodeName(object item) =>
+        item.GetType().IsKdlScalar ? "-" : KdlTypeMapping.For(item.GetType()).NodeName;
 
     private KdlNode MapToNode(object item, string kdlName, string? typeAnnotation)
     {

@@ -636,7 +636,7 @@ layouts {
 
     public class CollectionModel
     {
-        [KdlNode("plugins")]
+        [KdlNode("plugins", Flatten = false)]
         public List<PluginInfo> WrappedPlugins { get; set; } = [];
 
         [KdlNode("server", Flatten = true)]
@@ -683,7 +683,7 @@ layouts {
     [Test]
     public async Task Deserialize_FlattenedCollection_CollectsAllMatchingNodes()
     {
-        // Arrange: KDL with multiple 'server' nodes at the same level as 'plugins'
+        // Arrange
         var kdl = """
             plugins {
                 plugininfo "Auth"
