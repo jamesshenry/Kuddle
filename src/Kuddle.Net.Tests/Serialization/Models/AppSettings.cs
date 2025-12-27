@@ -4,10 +4,10 @@ namespace Kuddle.Tests.Serialization.Models;
 
 public class AppSettings
 {
-    [KdlNodeDictionary("themes")]
+    [KdlNode("themes")]
     public Dictionary<string, Theme> Themes { get; set; } = new();
 
-    [KdlNodeDictionary("layouts")]
+    [KdlNode("layouts")]
     public Dictionary<string, LayoutDefinition> Layouts { get; set; } = new();
 }
 

@@ -101,14 +101,23 @@ internal class ObjectSerializer
 
             if (map.IsDictionary && childData is IEnumerable mapDict)
             {
-                var container = new KdlNode(KdlValue.From(map.KdlName));
                 var items = SerializeDictionary(
                     mapDict,
                     map.DictionaryKeyProperty,
                     map.DictionaryValueProperty
                 );
-                container = container with { Children = new KdlBlock { Nodes = items.ToList() } };
-                childNodes.Add(container);
+                if (map.IsFlattened)
+                {
+                    childNodes.AddRange(items);
+                }
+                else
+                {
+                    var container = new KdlNode(KdlValue.From(map.KdlName))
+                    {
+                        Children = new KdlBlock { Nodes = items.ToList() },
+                    };
+                    childNodes.Add(container);
+                }
             }
             else if (map.IsCollection && childData is IEnumerable childCol)
             {

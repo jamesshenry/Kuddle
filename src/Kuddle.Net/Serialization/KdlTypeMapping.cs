@@ -90,7 +90,7 @@ internal sealed record KdlTypeMapping
         }
     }
 
-    private KdlMemberMap CreateMemberMap(PropertyInfo prop)
+    private static KdlMemberMap CreateMemberMap(PropertyInfo prop)
     {
         var all = prop.GetCustomAttributes<KdlEntryAttribute>();
         if (prop.GetCustomAttribute<KdlEntryAttribute>() is not KdlEntryAttribute attr)
@@ -127,13 +127,13 @@ internal sealed record KdlTypeMapping
                 collectionElementName: n.ElementName
             ),
 
-            KdlNodeDictionaryAttribute nd => new KdlMemberMap(
-                prop,
-                KdlMemberKind.ChildNode,
-                nd.Name ?? prop.Name.ToKebabCase(),
-                -1,
-                typeAnnotation
-            ),
+            // KdlNodeDictionaryAttribute nd => new KdlMemberMap(
+            //     prop,
+            //     KdlMemberKind.ChildNode,
+            //     nd.Name ?? prop.Name.ToKebabCase(),
+            //     -1,
+            //     typeAnnotation
+            // ),
             _ => new KdlMemberMap(
                 prop,
                 KdlMemberKind.ChildNode,
@@ -147,7 +147,7 @@ internal sealed record KdlTypeMapping
     private static KdlEntryAttribute InferAttribute(PropertyInfo prop) =>
         prop.PropertyType switch
         {
-            { IsDictionary: true } => new KdlNodeDictionaryAttribute(prop.Name.ToKebabCase()),
+            { IsDictionary: true } => new KdlNodeAttribute(prop.Name.ToKebabCase()),
             { IsIEnumerable: true } => new KdlNodeAttribute(prop.Name.ToKebabCase()),
             { IsKdlScalar: true } => new KdlPropertyAttribute(prop.Name.ToKebabCase()),
             _ => new KdlNodeAttribute(prop.Name.ToKebabCase()),

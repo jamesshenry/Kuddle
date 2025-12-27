@@ -732,10 +732,10 @@ layouts {
         [KdlProperty("version")]
         public string Version { get; set; } = "1.0.0";
 
-        [KdlNode("dependency")]
+        [KdlNode("dependency", Flatten = true)]
         public List<Dependency> Dependencies { get; set; } = [];
 
-        [KdlNode("devDependency")]
+        [KdlNode("devDependency", Flatten = true)]
         public List<Dependency> DevDependencies { get; set; } = [];
     }
 

@@ -7,7 +7,7 @@ public class DocumentToObjectTests
 {
     class AppConfig
     {
-        [KdlNode("plugin")]
+        [KdlNode("plugin", Flatten = true)]
         public List<Plugin> Plugins { get; set; } = new();
 
         [KdlNode("logging")]

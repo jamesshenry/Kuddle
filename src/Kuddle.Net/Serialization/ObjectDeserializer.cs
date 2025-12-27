@@ -205,28 +205,22 @@ internal class ObjectDeserializer
             if (matches is null || matches.Count == 0)
                 continue;
 
+            List<KdlNode> nodesToProcess = map.IsFlattened
+                ? matches
+                : matches[^1].Children?.Nodes ?? [];
+
             if (map.IsDictionary)
             {
-                var container = matches.Last();
-                if (container.Children != null)
-                {
-                    var dict = EnsureInstance(instance, map) as IDictionary;
-                    PopulateDictionary(
-                        dict!,
-                        container.Children.Nodes,
-                        map.DictionaryKeyProperty!.PropertyType,
-                        map.DictionaryValueProperty!.PropertyType
-                    );
-                }
+                var dict = EnsureInstance(instance, map) as IDictionary;
+                PopulateDictionary(
+                    dict!,
+                    nodesToProcess,
+                    map.DictionaryKeyProperty!.PropertyType,
+                    map.DictionaryValueProperty!.PropertyType
+                );
             }
             else if (map.IsCollection)
             {
-                KdlNode container = matches.Last();
-
-                List<KdlNode> nodesToProcess = container.HasChildren
-                    ? container.Children?.Nodes!
-                    : matches;
-
                 PopulateCollection(instance, nodesToProcess, map);
             }
             else
@@ -234,7 +228,7 @@ internal class ObjectDeserializer
                 var last = matches.Last();
                 object? value;
 
-                if (map.Property.PropertyType.IsKdlScalar) // Use your extension
+                if (map.Property.PropertyType.IsKdlScalar)
                 {
                     var arg = last.Arg(0);
                     value =
