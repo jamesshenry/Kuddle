@@ -135,15 +135,18 @@ public int MaxRetries { get; set; }
 
 Maps a property to **child nodes** within the parent's `{ }` block.
 
-### Basic Usage — Collection of Child Nodes
+### Basic Usage — Wrapped Collection
+
+By default, a collection is wrapped in a container node with the specified name:
 
 #### KDL
 
 ```kdl
-project web-app version="1.0.0" {
-    dependency lodash version="4.17.21"
-    dependency react version="18.2.0"
-    devDependency jest version="29.0.0"
+project {
+    dependencies {
+        dependency "lodash" version="4.17.21"
+        dependency "react" version="18.2.0"
+    }
 }
 ```
 
@@ -152,21 +155,60 @@ project web-app version="1.0.0" {
 ```csharp
 public class Project
 {
-    [KdlArgument(0)]
-    public string Name { get; set; } = "";
-    
-    [KdlProperty("version")]
-    public string Version { get; set; } = "1.0.0";
-    
-    [KdlNode("dependency")]
+    [KdlNode("dependencies")]
     public List<Dependency> Dependencies { get; set; } = [];
-    
-    [KdlNode("devDependency")]
-    public List<Dependency> DevDependencies { get; set; } = [];
 }
 ```
 
-### Single Complex Child
+### Flattened Collection
+
+If you want the child nodes to appear directly under the parent without a wrapper, use `Flatten = true`:
+
+#### KDL
+
+```kdl
+project {
+    dependency "lodash" version="4.17.21"
+    dependency "react" version="18.2.0"
+}
+```
+
+#### C# Model
+
+```csharp
+public class Project
+{
+    [KdlNode("dependency", Flatten = true)]
+    public List<Dependency> Dependencies { get; set; } = [];
+}
+```
+
+### Customizing Element Names
+
+For wrapped collections, you can specify the name of the item nodes using `ElementName`:
+
+#### KDL
+
+```kdl
+project {
+    dependencies {
+        pkg "lodash"
+        pkg "react"
+    }
+}
+```
+
+#### C# Model
+
+```csharp
+public class Project
+{
+    [KdlNode("dependencies", ElementName = "pkg")]
+    public List<Package> Packages { get; set; } = [];
+}
+```
+
+### Scalar Child Node
 
 When the property type is a **non-collection complex type**, it maps to a single child node:
 
@@ -260,6 +302,90 @@ public class User
     public DateTime LoadedAt { get; set; } = DateTime.UtcNow;
 }
 ```
+
+---
+
+## Dictionaries
+
+Dictionaries can be mapped in two ways depending on whether you want them as **Properties** or **Child Nodes**.
+
+### Dictionary as Properties (`[KdlProperty]`)
+
+Maps dictionary entries to `key=value` properties on the node.
+*Note: Value types must be scalars.*
+
+#### C# Model
+
+```csharp
+public class Header
+{
+    [KdlProperty("meta")]
+    public Dictionary<string, string> Metadata { get; set; } = [];
+}
+```
+
+#### KDL
+
+```kdl
+header meta:author="Alice" meta:version="1.2.3"
+```
+
+### Dictionary as Child Nodes (`[KdlNode]`)
+
+Maps dictionary entries to individual child nodes where the **key is the node name**.
+
+#### C# Model
+
+```csharp
+public class Environment
+{
+    [KdlNode("vars", Flatten = true)]
+    public Dictionary<string, string> Variables { get; set; } = [];
+}
+```
+
+#### KDL
+
+```kdl
+environment {
+    PATH "/usr/bin"
+    HOME "/home/alice"
+}
+```
+
+---
+
+## Enums
+
+Enums are automatically serialized and deserialized as bare strings.
+
+```csharp
+public enum LogLevel { Debug, Info, Warning, Error }
+
+public class Logger
+{
+    [KdlProperty]
+    public LogLevel Level { get; set; }
+}
+```
+
+**KDL:** `logger level=info` (Case-insensitive by default)
+
+---
+
+## Custom Type Annotations
+
+You can force a specific KDL type annotation on any argument, property, or node.
+
+```csharp
+public class Data
+{
+    [KdlProperty("checksum", TypeAnnotation = "hex")]
+    public string Hash { get; set; }
+}
+```
+
+**KDL:** `data checksum=(hex)"a1b2c3d4"`
 
 ---
 
@@ -426,8 +552,7 @@ public class Repository
 
 ## Limitations & Notes
 
-1. **No dictionary support** — `Dictionary<K,V>` types are not currently supported
-2. **No polymorphism** — Cannot deserialize to derived types based on discriminator
-3. **Case sensitivity** — Node/property name matching is case-insensitive by default
-4. **Argument gaps** — Missing argument indices will throw; ensure contiguous indices
-5. **Round-trip fidelity** — Comments, formatting, and slashdash elements are not preserved
+1. **No polymorphism** — Cannot deserialize to derived types based on discriminator
+2. **Case sensitivity** — Node/property name matching is case-insensitive by default
+3. **Argument gaps** — Missing argument indices will throw; ensure contiguous indices
+4. **No Round-trip fidelity** — Comments, formatting, and slashdash elements are not preserved
