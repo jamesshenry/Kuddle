@@ -584,7 +584,7 @@ layouts {
 
     public class ComplexValue
     {
-        public string Name { get; set; }
+        public string? Name { get; set; } = default;
     }
 
     [Test]

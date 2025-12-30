@@ -4,39 +4,15 @@
     <AssemblyName>Kuddle.Net</AssemblyName>
     <PackageId>Kuddle.Net</PackageId>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>preview</LangVersion>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
-    <!-- NuGet Package Properties -->
-    <Authors>jamesshenry</Authors>
-    <Company>jamesshenry</Company>
     <Description>Kuddle.Net is a .NET implementation of a KDL parser/serializer targeting v2 of the spec. KDL is concise, human-readable language built for configuration and data exchange.</Description>
-    <PackageTags>kdl;parser;serializer;configuration</PackageTags>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <PackageProjectUrl>https://github.com/jamesshenry/Kuddle.Net</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/jamesshenry/Kuddle.Net</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageReadmeFile>readme.md</PackageReadmeFile>
-    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>kdl;parser;serializer</PackageTags>
     <PackageReleaseNotes>Initial release of Kuddle.Net KDL parser/serializer.</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="6.0.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="Parlot" Version="1.5.6" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Kuddle.Net.Benchmarks" />
     <InternalsVisibleTo Include="Kuddle.Net.Tests" />
-  </ItemGroup>
-  <!-- NuGet Package Files -->
-  <ItemGroup>
-    <None Include="..\..\readme.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\.build\assets\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
