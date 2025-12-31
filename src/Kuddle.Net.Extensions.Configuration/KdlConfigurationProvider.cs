@@ -4,26 +4,23 @@ namespace Kuddle.Extensions.Configuration;
 
 internal class KdlConfigurationProvider : FileConfigurationProvider
 {
-    public KdlConfigurationProvider(FileConfigurationSource source)
-        : base(source) { }
+    private readonly KdlConfigurationSource _source;
+
+    public KdlConfigurationProvider(KdlConfigurationSource source)
+        : base(source)
+    {
+        _source = source;
+    }
 
     public override void Load(Stream stream)
     {
         try
         {
-            Data = KdlConfigurationFileParser.Parse(stream);
+            Data = KdlConfigurationFileParser.Parse(stream, _source.SerializerOptions);
         }
         catch (Exception ex)
         {
             throw new FormatException("kdl parse failed", ex);
         }
-    }
-}
-
-internal sealed class KdlConfigurationFileParser
-{
-    internal static IDictionary<string, string?> Parse(Stream stream)
-    {
-        throw new NotImplementedException();
     }
 }

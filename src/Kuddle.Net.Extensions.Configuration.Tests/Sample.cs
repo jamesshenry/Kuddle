@@ -1,4 +1,5 @@
 using Kuddle.Serialization;
+using Microsoft.Extensions.Configuration;
 
 namespace Kuddle.Extensions.Configuration.Tests;
 
@@ -21,7 +22,11 @@ public class Owner
 public class Database
 {
     public bool Enabled { get; init; }
+
+    // [KdlNode("ports", ElementName = "port")]
     public ushort[] Ports { get; init; } = [];
+
+    [ConfigurationKeyName("temp-targets")]
     public Dictionary<string, decimal> Temp_Targets { get; init; } = [];
 }
 

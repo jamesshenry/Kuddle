@@ -41,6 +41,31 @@ internal class ObjectSerializer
                     doc.Nodes.Add(worker.SerializeObject(item));
             }
         }
+        else if (options?.UnwrapRoot == true)
+        {
+            var rootNode = worker.SerializeObject(instance);
+
+            // 2. Promote Properties to top-level Nodes
+            // In KDL config, a "Property" at root is a node with one argument: title "example"
+            foreach (var entry in rootNode.Entries)
+            {
+                if (entry is KdlProperty prop)
+                {
+                    doc.Nodes.Add(
+                        new KdlNode(prop.Key) { Entries = [new KdlArgument(prop.Value)] }
+                    );
+                }
+                else if (entry is KdlArgument arg)
+                {
+                    // Map positional arguments to anonymous nodes
+                    doc.Nodes.Add(new KdlNode(KdlValue.From("-")) { Entries = [arg] });
+                }
+                if (rootNode.Children != null)
+                {
+                    doc.Nodes.AddRange(rootNode.Children.Nodes);
+                }
+            }
+        }
         else
         {
             doc.Nodes.Add(worker.SerializeObject(instance));

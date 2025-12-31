@@ -1,12 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
-using Kuddle.AST;
-using Kuddle.Extensions;
 
 namespace Kuddle.Serialization;
 
@@ -15,8 +8,6 @@ namespace Kuddle.Serialization;
 /// </summary>
 public static class KdlSerializer
 {
-    #region Deserialization
-
     /// <summary>
     /// Deserializes a KDL document containing multiple nodes of type T.
     /// </summary>
@@ -48,10 +39,6 @@ public static class KdlSerializer
         return ObjectDeserializer.DeserializeDocument<T>(doc, options);
     }
 
-    #endregion
-
-    #region Serialization
-
     /// <summary>
     /// Serializes an object to a KDL string.
     /// </summary>
@@ -60,32 +47,4 @@ public static class KdlSerializer
         var doc = ObjectSerializer.SerializeDocument(instance, options);
         return KdlWriter.Write(doc);
     }
-
-    // /// <summary>
-    // /// Serializes multiple objects to a KDL string.
-    // /// </summary>
-    // public static string SerializeMany<T>(
-    //     IEnumerable<T> items,
-    //     KdlSerializerOptions? options = null,
-    //     CancellationToken cancellationToken = default
-    // )
-    // {
-    //     ArgumentNullException.ThrowIfNull(items);
-
-    //     var doc = new KdlDocument();
-
-    //     foreach (var item in items)
-    //     {
-    //         cancellationToken.ThrowIfCancellationRequested();
-    //         if (item is null)
-    //             continue;
-
-    //         var node = ObjectSerializer.SerializeNode(item, options);
-    //         doc.Nodes.Add(node);
-    //     }
-
-    //     return KdlWriter.Write(doc);
-    // }
-
-    #endregion
 }
