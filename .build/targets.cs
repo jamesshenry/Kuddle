@@ -22,6 +22,11 @@ var versionOption = app.Option<string>(
     "The release version.",
     CommandOptionType.SingleValue
 );
+var packProjectOption = app.Option<string>(
+    "--pack-project <path>",
+    "The project file to pack (relative path). If omitted the default project will be used.",
+    CommandOptionType.SingleValue
+);
 
 app.Argument(
     "targets",
@@ -37,7 +42,9 @@ app.OnExecuteAsync(async _ =>
 {
     const string configuration = "Release";
     const string solution = "Kuddle.slnx";
-    const string packProject = "src/Kuddle.Net/Kuddle.Net.csproj";
+    // Default project path (relative to repo root) used when `--pack-project` isn't supplied.
+    // Example: "src/Kuddle.Net/Kuddle.Net.csproj"
+    const string defaultPackProject = "src/Kuddle.Net/Kuddle.Net.csproj";
 
     var root = Directory.GetCurrentDirectory();
 
@@ -91,6 +98,10 @@ app.OnExecuteAsync(async _ =>
         dependsOn: ["build"],
         async () =>
         {
+            var packProject = packProjectOption.Value();
+            if (string.IsNullOrWhiteSpace(packProject))
+                packProject = defaultPackProject;
+
             ArgumentException.ThrowIfNullOrWhiteSpace(packProject);
 
             var nugetOutputDir = Path.Combine(root, "dist", "nuget");
