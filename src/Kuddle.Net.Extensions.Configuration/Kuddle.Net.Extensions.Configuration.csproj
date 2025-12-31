@@ -5,7 +5,6 @@
     <PackageId>Kuddle.Net.Extensions.Configuration</PackageId>
     <Description>Microsoft.Extensions.Configuration provider for KDL configuration files using Kuddle.Net.</Description>
     <PackageTags>kdl;configuration</PackageTags>
-    <MinVerTagPrefix>kuddle-conf-</MinVerTagPrefix>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference

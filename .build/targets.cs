@@ -99,17 +99,24 @@ app.OnExecuteAsync(async _ =>
         async () =>
         {
             var packProject = packProjectOption.Value();
-            if (string.IsNullOrWhiteSpace(packProject))
-                packProject = defaultPackProject;
-
-            ArgumentException.ThrowIfNullOrWhiteSpace(packProject);
-
             var nugetOutputDir = Path.Combine(root, "dist", "nuget");
 
-            await RunAsync(
-                "dotnet",
-                $"pack {packProject} -c {configuration} -o {nugetOutputDir} --no-build"
-            );
+            if (string.IsNullOrWhiteSpace(packProject))
+            {
+                // Default to packing the solution
+                await RunAsync(
+                    "dotnet",
+                    $"pack {solution} -c {configuration} -o {nugetOutputDir} --no-build"
+                );
+            }
+            else
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(packProject);
+                await RunAsync(
+                    "dotnet",
+                    $"pack {packProject} -c {configuration} -o {nugetOutputDir} --no-build"
+                );
+            }
 
             var files = Directory.GetFiles(nugetOutputDir, "*.nupkg");
             if (files.Length == 0)

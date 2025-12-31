@@ -29,26 +29,12 @@ jobs:
           global-json-file: global.json
       - name: Run Tests
         run: dotnet run .build/targets.cs test
-      - name: Select project to pack
-        id: select_project
-        run: |
-          if [ -n "${{ github.event.inputs.project }}" ]; then
-            echo "project=${{ github.event.inputs.project }}" >> $GITHUB_OUTPUT
-          else
-            TAG_NAME="${GITHUB_REF##*/}"
-            if [[ "$TAG_NAME" == kuddle-conf-* ]]; then
-              echo "project=src/Kuddle.Net.Extensions.Configuration/Kuddle.Net.Extensions.Configuration.csproj" >> $GITHUB_OUTPUT
-            else
-              echo "project=src/Kuddle.Net/Kuddle.Net.csproj" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Pack NuGet Package (selected project)
+      - name: Pack NuGet Packages (solution)
         run: |
           set -e
           mkdir -p dist/nuget
-          echo "Packing ${{ steps.select_project.outputs.project }}"
-          dotnet run .build/targets.cs pack --pack-project "${{ steps.select_project.outputs.project }}"
+          echo "Packing solution Kuddle.slnx"
+          dotnet run .build/targets.cs pack
           echo "All packages in dist/nuget:"
           ls dist/nuget/*.nupkg
       - name: Push NuGet Package
