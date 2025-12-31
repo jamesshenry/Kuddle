@@ -24,4 +24,5 @@ public record KdlSerializerOptions
     /// Default options instance.
     /// </summary>
     public static KdlSerializerOptions Default { get; } = new();
+    public bool UnwrapRoot { get; init; } = false;
 }

@@ -17,13 +17,31 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
       - name: Run Tests
         run: dotnet run .build/targets.cs test
-      - name: Pack NuGet Package
-        run: dotnet run .build/targets.cs pack
+      - name: Select project to pack based on tag prefix
+        id: select_project
+        run: |
+          TAG_NAME="${GITHUB_REF##*/}"
+          if [[ "$TAG_NAME" == kuddle-conf-* ]]; then
+            echo "project=src/Kuddle.Net.Extensions.Configuration/Kuddle.Net.Extensions.Configuration.csproj" >> $GITHUB_OUTPUT
+          else
+            echo "project=src/Kuddle.Net/Kuddle.Net.csproj" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pack NuGet Package (selected project)
+        run: |
+          set -e
+          mkdir -p dist/nuget
+          echo "Packing ${{ steps.select_project.outputs.project }}"
+          dotnet run .build/targets.cs pack --pack-project "${{ steps.select_project.outputs.project }}"
+          echo "All packages in dist/nuget:"
+          ls dist/nuget/*.nupkg
       - name: Push NuGet Package
         run: dotnet nuget push "dist/nuget/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source "https://api.nuget.org/v3/index.json" --skip-duplicate

@@ -188,7 +188,7 @@ public sealed record KdlNumber(string RawValue) : KdlValue
         return (sanitised, radix, isNegative);
     }
 
-    internal string ToCanonicalString()
+    public string ToCanonicalString()
     {
         if (RawValue.StartsWith('#'))
             return RawValue;
