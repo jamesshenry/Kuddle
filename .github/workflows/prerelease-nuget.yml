@@ -27,14 +27,18 @@ jobs:
           global-json-file: global.json
       - name: Run Tests
         run: dotnet run .build/targets.cs test
-      - name: Select project to pack based on tag prefix
+      - name: Select project to pack
         id: select_project
         run: |
-          TAG_NAME="${GITHUB_REF##*/}"
-          if [[ "$TAG_NAME" == kuddle-conf-* ]]; then
-            echo "project=src/Kuddle.Net.Extensions.Configuration/Kuddle.Net.Extensions.Configuration.csproj" >> $GITHUB_OUTPUT
+          if [ -n "${{ github.event.inputs.project }}" ]; then
+            echo "project=${{ github.event.inputs.project }}" >> $GITHUB_OUTPUT
           else
-            echo "project=src/Kuddle.Net/Kuddle.Net.csproj" >> $GITHUB_OUTPUT
+            TAG_NAME="${GITHUB_REF##*/}"
+            if [[ "$TAG_NAME" == kuddle-conf-* ]]; then
+              echo "project=src/Kuddle.Net.Extensions.Configuration/Kuddle.Net.Extensions.Configuration.csproj" >> $GITHUB_OUTPUT
+            else
+              echo "project=src/Kuddle.Net/Kuddle.Net.csproj" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Pack NuGet Package (selected project)
