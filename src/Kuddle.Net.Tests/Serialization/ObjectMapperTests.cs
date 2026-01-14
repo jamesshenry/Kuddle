@@ -701,6 +701,104 @@ layouts {
         await Assert.That(result.FlattenedServers[1].Host).IsEqualTo("remote");
     }
 
+    [Test]
+    public async Task Serialize_WithSimpleCollectionNodeNames_True_UseDashNodeNames()
+    {
+        // Arrange
+        var model = new CollectionModel
+        {
+            WrappedPlugins = [new() { Name = "Auth" }],
+            FlattenedServers = [new() { Host = "localhost" }],
+        };
+
+        var options = new KdlSerializerOptions { SimpleCollectionNodeNames = true };
+
+        // Act
+        var kdl = KdlSerializer.Serialize(model, options);
+
+        // Assert - should use dash (-) for collection items
+        await Assert.That(kdl).Contains("plugins {");
+        await Assert.That(kdl).Contains("- Auth");
+    }
+
+    [Test]
+    public async Task Serialize_WithSimpleCollectionNodeNames_False_UseTypedNodeNames()
+    {
+        // Arrange
+        var model = new CollectionModel
+        {
+            WrappedPlugins = [new() { Name = "Auth" }],
+            FlattenedServers = [new() { Host = "localhost" }],
+        };
+
+        var options = new KdlSerializerOptions { SimpleCollectionNodeNames = false };
+
+        // Act
+        var kdl = KdlSerializer.Serialize(model, options);
+
+        // Assert - should use typed node names
+        await Assert.That(kdl).Contains("plugins {");
+        await Assert.That(kdl).Contains("plugin-info Auth");
+    }
+
+    [Test]
+    public async Task RoundTrip_SerializeAndDeserialize_WithSimpleCollectionNodeNames_True()
+    {
+        // Arrange
+        var originalModel = new CollectionModel
+        {
+            WrappedPlugins = [new() { Name = "Auth" }, new() { Name = "Logging" }],
+            FlattenedServers = [new() { Host = "localhost" }, new() { Host = "remote" }],
+        };
+
+        var options = new KdlSerializerOptions
+        {
+            SimpleCollectionNodeNames = true,
+            UnwrapRoot = true,
+        };
+
+        // Act
+        var kdl = KdlSerializer.Serialize(originalModel, options);
+        var deserializedModel = KdlSerializer.Deserialize<CollectionModel>(kdl, options);
+
+        // Assert
+        await Assert.That(deserializedModel.WrappedPlugins).Count().IsEqualTo(2);
+        await Assert.That(deserializedModel.WrappedPlugins[0].Name).IsEqualTo("Auth");
+        await Assert.That(deserializedModel.WrappedPlugins[1].Name).IsEqualTo("Logging");
+        await Assert.That(deserializedModel.FlattenedServers).Count().IsEqualTo(2);
+        await Assert.That(deserializedModel.FlattenedServers[0].Host).IsEqualTo("localhost");
+        await Assert.That(deserializedModel.FlattenedServers[1].Host).IsEqualTo("remote");
+    }
+
+    [Test]
+    public async Task RoundTrip_SerializeAndDeserialize_WithSimpleCollectionNodeNames_False()
+    {
+        // Arrange
+        var originalModel = new CollectionModel
+        {
+            WrappedPlugins = [new() { Name = "Auth" }, new() { Name = "Logging" }],
+            FlattenedServers = [new() { Host = "localhost" }, new() { Host = "remote" }],
+        };
+
+        var options = new KdlSerializerOptions
+        {
+            SimpleCollectionNodeNames = false,
+            UnwrapRoot = false,
+        };
+
+        // Act
+        var kdl = KdlSerializer.Serialize(originalModel, options);
+        var deserializedModel = KdlSerializer.Deserialize<CollectionModel>(kdl, options);
+
+        // Assert
+        await Assert.That(deserializedModel.WrappedPlugins).Count().IsEqualTo(2);
+        await Assert.That(deserializedModel.WrappedPlugins[0].Name).IsEqualTo("Auth");
+        await Assert.That(deserializedModel.WrappedPlugins[1].Name).IsEqualTo("Logging");
+        await Assert.That(deserializedModel.FlattenedServers).Count().IsEqualTo(2);
+        await Assert.That(deserializedModel.FlattenedServers[0].Host).IsEqualTo("localhost");
+        await Assert.That(deserializedModel.FlattenedServers[1].Host).IsEqualTo("remote");
+    }
+
     #endregion
 
     #region Test Models

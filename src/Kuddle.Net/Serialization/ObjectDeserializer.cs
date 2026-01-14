@@ -25,6 +25,17 @@ internal class ObjectDeserializer
 
         var mapping = KdlTypeMapping.For<T>();
         var instance = new T();
+        if (options?.UnwrapRoot == false)
+        {
+            if (doc.Nodes.Count != 1)
+            {
+                throw new KuddleSerializationException(
+                    $"Expected exactly 1 root node, but found {doc.Nodes.Count}."
+                );
+            }
+            worker.MapNodeToObject(doc.Nodes.First(), instance, mapping);
+            return instance;
+        }
 
         if (mapping.Arguments.Count > 0 || mapping.Properties.Count > 0)
         {

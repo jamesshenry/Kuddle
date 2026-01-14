@@ -6,6 +6,11 @@ namespace Kuddle.Serialization;
 public record KdlSerializerOptions
 {
     /// <summary>
+    /// Default options instance.
+    /// </summary>
+    public static KdlSerializerOptions Default { get; } = new();
+
+    /// <summary>
     /// Whether to ignore null values when serializing. Default is true.
     /// </summary>
     public bool IgnoreNullValues { get; init; } = true;
@@ -21,8 +26,8 @@ public record KdlSerializerOptions
     public bool WriteTypeAnnotations { get; init; } = true;
 
     /// <summary>
-    /// Default options instance.
+    /// Whether to use simple dash (-) for collection item node names instead of the mapped type name. Default is true.
     /// </summary>
-    public static KdlSerializerOptions Default { get; } = new();
+    public bool SimpleCollectionNodeNames { get; init; } = true;
     public bool UnwrapRoot { get; init; } = false;
 }
