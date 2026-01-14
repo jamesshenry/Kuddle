@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Kuddle.Extensions.Configuration.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.1.0" />
+    <PackageReference Include="TUnit" Version="1.7.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kuddle.Net.Extensions.Configuration\Kuddle.Net.Extensions.Configuration.csproj" />
+  </ItemGroup>
+</Project>

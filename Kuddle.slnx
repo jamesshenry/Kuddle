@@ -4,10 +4,10 @@
     <File Path="dotnet.config" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Kuddle.Benchmarks/Kuddle.Benchmarks.csproj" />
-    <Project Path="src/Kuddle.Generators/Kuddle.Generators.csproj" />
-    <Project Path="src/Kuddle.Tests/Kuddle.Tests.csproj" />
-    <Project Path="src/Kuddle/Kuddle.csproj" />
+    <Project Path="src/Kuddle.Net.Benchmarks/Kuddle.Net.Benchmarks.csproj" />
+    <Project Path="src/Kuddle.Net/Kuddle.Net.csproj" />
+    <Project Path="src/Kuddle.Net.Tests/Kuddle.Net.Tests.csproj" />
+    <Project Path="src/Kuddle.Net.Extensions.Configuration/Kuddle.Net.Extensions.Configuration.csproj" />
+    <Project Path="src/Kuddle.Net.Extensions.Configuration.Tests/Kuddle.Net.Extensions.Configuration.Tests.csproj" />
   </Folder>
-  <Project Path="sampleApp/sampleApp.csproj" />
 </Solution>

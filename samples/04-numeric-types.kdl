@@ -1,0 +1,31 @@
+// Various numeric types and formats
+// KDL supports integers, floats, hex, octal, binary
+
+config {
+    // Integer properties
+    timeout 5000
+    maxRetries 3
+    port 8080
+    
+    // Large numbers (long)
+    maxFileSize 9223372036854775807
+    
+    // Floating point
+    ratio 0.75
+    pi 3.14159265358979
+    
+    // Scientific notation
+    precision 1.5e-10
+    
+    // Different bases (all represent the same value: 255)
+    hexValue 0xFF
+    octalValue 0o377
+    binaryValue 0b11111111
+    
+    // Negative numbers
+    offset -100
+    temperature -273.15
+    
+    // Underscores for readability
+    population 7_900_000_000
+}

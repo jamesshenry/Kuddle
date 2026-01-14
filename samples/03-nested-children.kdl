@@ -1,0 +1,11 @@
+// Node with child nodes (children block)
+// Children are nodes inside { }
+
+project web-app version="1.0.0" {
+    dependency lodash version="4.17.21" optional=#false
+    dependency react version="18.2.0" optional=#false
+    dependency typescript version="5.0.0" optional=#true
+    
+    devDependency jest version="29.0.0"
+    devDependency eslint version="8.0.0"
+}

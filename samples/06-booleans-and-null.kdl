@@ -1,0 +1,19 @@
+// Boolean and null values use # prefix in KDL 2.0
+
+feature dark-mode {
+    enabled #true
+    beta #false
+    deprecatedAt #null
+}
+
+settings {
+    // All the keyword values
+    debug #true
+    production #false
+    overrideConfig #null
+    
+    // Special float keywords
+    infiniteTimeout #inf
+    negativeInfinity #-inf
+    undefinedValue #nan
+}

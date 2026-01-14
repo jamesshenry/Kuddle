@@ -1,86 +1,104 @@
-Here is your updated roadmap.
+# TODO
 
-You have effectively **completed Phase 1** (AST) and the heavy lifting of **Phase 2** (The Grammar/Parser Logic).
+## Phase 1: Foundation & Metadata (The "Brain")
 
-### Phase 1: The High-Fidelity DOM (AST) ✅
+*Before parsing a single byte, your system must understand the shape of your C# types.*
 
-*Goal: Define immutable data structures that represent the physical text of a KDL file.*
+* **1.1. Define the Attribute Suite**
+  * [ ] Create `KdlPropertyDictionaryAttribute`.
+  * [ ] Create `KdlNodeDictionaryAttribute` (with `string NodeName` property).
+  * [ ] Create `KdlKeyedNodesAttribute` (with `string NodeName` and `string KeyProperty`).
+  * [ ] Add `Enforce` bool to existing attributes (for future Strict Mode).
 
-* **1.1 Define the Base Object**
-  * [x] Create `KdlObject` with Trivia support.
-* **1.2 Implement Semantic Identifiers**
-  * [x] Create `KdlIdentifier` (supports RawText and Type Annotations).
-* **1.3 Implement Value Primitives**
-  * [x] `KdlValue` base class.
-  * [x] `KdlString` (Quoted, Raw, Multiline), `KdlBool`, `KdlNull`.
-  * [x] `KdlNumber` (with lazy parsing logic).
-* **1.4 Implement Node Structure**
-  * [x] Create `KdlEntry` hierarchy (Argument, Property, SkippedEntry).
-  * [x] Create `KdlNode` (Name, Entries List, Children Block).
-* **1.5 Implement Containers**
-  * [x] Create `KdlBlock` and `KdlDocument`.
+* **1.2. Upgrade `KdlEntryMapping`**
+  * [ ] Update the record to detect the 3 new Dictionary attributes.
+  * [ ] Add logic to resolve the effective `Name` (handling the fallback to property names).
+  * [ ] Add a field to store `KeyPropertyName` (specifically for `KdlKeyedNodes`).
 
-### Phase 2: The Parser Integration 🚧
+* **1.3. Implement Type Inspection Utilities**
+  * [ ] Implement `TypeHelpers.GetDictionaryInfo(Type t)`: Returns `(bool IsDict, Type KeyType, Type ValueType)`. Must handle `class MyDict : Dictionary<string, int>`.
+  * [ ] Implement `TypeHelpers.GetCollectionInfo(Type t)`: Returns `(bool IsCol, Type ElemType)`. Must handle Arrays and Lists.
 
-*Goal: Build the engine that populates the AST while enforcing the KDL spec.*
+* **1.4. Build the `TypeMetadata` Validator**
+  * [ ] Implement **Attribute Exclusion Check**: Throw if a property has both `[KdlProperty]` and `[KdlNode]`.
+  * [ ] Implement **Contiguity Check**: Throw if `[KdlArgument]` indices have gaps (e.g., 0, 2).
+  * [ ] Implement **Bucketing**: Pre-sort mappings into `Arguments`, `Properties`, `Children`, and `Dictionaries` lists so the parser doesn't scan attributes at runtime.
 
-* **2.1 Tokenizer & Grammar**
-  * [x] Implement `KuddleGrammar` using Parlot.
-  * [x] Implement complex String parsing (Raw, Multiline, Escapes).
-  * [x] Implement Number parsing (Hex, Binary, Octal).
-* **2.2 Structural Parsing**
-  * [x] Implement Node parsing (Name, Type, properties).
-  * [x] Implement Recursion (Node -> Children -> Nodes).
-  * [x] Implement "Slash-Dash" `/-` logic for skipping nodes/entries/children.
-* **2.3 API Wrapper**
-  * [x] Create the public static `KdlParser.Parse(string input)` method that invokes `KuddleGrammar.Document.Parse(...)`.
-  * [x] Add `KdlParseException` wrapping Parlot errors with line/column info.
-* **2.4 Reserved Type Validation**
-  * [x] **(New)** Add a post-parse visitor or validation pass to ensure `(u8)` values fit in bytes, `(uuid)` are valid GUIDs, etc.
+---
 
-### Phase 3: The Developer Experience (DX) & Extensions
+## Phase 2: Core Logic Refactoring (The "Muscle")
 
-*Goal: Provide a usable API without polluting the pure AST.*
+*Update the main loop to use your new Metadata instead of raw reflection.*
 
-* **3.1 Value Extensions (The "TryGet" Pattern)**
-  * [x] Create `KdlValueExtensions`.
-  * [x] Implement `TryGetUuid`, `TryGetDateTime`, `TryGetInt`, etc.
-* **3.2 Mutation Factories**
-  * [x] Add `KdlValue.From(Guid)`, `KdlValue.From(int)` helpers.
-* **3.3 Navigation Helpers**
-  * [x] Add indexers: `node["propName"]`.
-  * [x] Add `node.Arguments` (computed view).
+* **2.1. Refactor `Deserialize<T>`**
+  * [ ] Change the entry point to look up `TypeMetadata.For<T>()`.
+  * [ ] Replace current attribute lookups with loops over the pre-calculated Metadata buckets.
 
-### Phase 4: Serialization
+* **2.2. Implement Strict Argument Mapping**
+  * [ ] Iterate `meta.ArgumentAttributes`.
+  * [ ] Map KDL Argument `i` to Property `i`.
+  * [ ] **Validation**: If KDL has fewer arguments than required (non-nullable) properties, decide if you throw or use default.
 
-*Goal: Output KDL from the AST.*
+* **2.3. Implement Child Node Mapping (`[KdlNode]`)**
+  * [ ] **Collection Mode**: If `meta.IsCollection` or property is `List<T>`, find *all* matching children, deserialize, and Add.
+  * [ ] **Single Object Mode**: If property is a class, find *exactly one* matching child. Throw if multiple exist (ambiguous match).
+  * [ ] **Scalar Flattening**: If property is `int`/`string`, find child, read `Arg[0]`, assign.
 
-* **4.1 Round-Trip Writer**
-  * [x] Create `KdlWriter` implementation.
-  * [ ] Logic: Iterate AST, write `LeadingTrivia`, `TypeAnnotation`, `RawText`, `TrailingTrivia`.
-* **4.2 Formatting Writer**
-  * [x] Create `KdlFormatter` (or options for `KdlWriter`).
-  * [ ] Logic to ignore stored trivia and re-indent based on settings.
+---
 
-### Phase 5: Verification 🚧
+## Phase 3: The Dictionary Engine (The "Complex Part")
 
-*Goal: Ensure correctness.*
+*Implement the three strategies for IDictionary.*
 
-* **5.1 Unit Tests**
-  * [x] **(In Progress)** AST Structural Tests.
-  * [x] Grammar Logic Tests (Strings, Numbers).
-* **5.2 Integration Tests**
-  * [x] Run against the official `kdl-org/kdl` test suite.
+* **3.1. Implement `[KdlPropertyDictionary]`**
+  * [ ] Iterate over **Properties** of the *current* KDL node.
+  * [ ] Filter out properties already mapped to explicit C# properties.
+  * [ ] Cast/Convert remaining values to `TValue` (usually string) and add to the dictionary.
 
-### Phase 6: Object Mapping (POCOs) & Source Gen
+* **3.2. Implement `[KdlNodeDictionary]`**
+  * [ ] Iterate over **Child Nodes** of the current KDL node.
+  * [ ] **Key Extraction**: Use the Child Node's Name.
+  * [ ] **Value Extraction (Scalar)**: If `TValue` is primitive, read `Arg[0]`.
+  * [ ] **Value Extraction (Object)**: If `TValue` is complex, recursively call `DeserializeNode<TValue>`.
 
-*Goal: Map AST to strong C# types.*
+* **3.3. Implement `[KdlKeyedNodes]`**
+  * [ ] Find all child nodes matching the attribute's `NodeName`.
+  * [ ] Loop:
+        1. Deserialize child node into `TObject`.
+        2. Use Reflection to read `KeyProperty` from `TObject`.
+        3. Add `(Key, TObject)` to the dictionary.
 
-* **6.1 The "Sidecar" Source Generator**
-  * [ ] Create `[KdlAnnotate]` attribute.
-  * [ ] Generate partial classes for metadata storage.
-* **6.2 The Mapper**
-  * [ ] Implement `KdlSerializer.Deserialize<T>()`.
-  * [ ] Map Nodes to Classes, Entries to Properties.
-* **6.3 Polymorphism**
-  * [ ] Implement Discriminator logic using Node Annotations.
+---
+
+## Phase 4: Collection & Instantiation
+
+*Handle the "plumbing" of creating objects and lists.*
+
+* **4.1. Factory Logic**
+  * [ ] Ensure every target type has a parameterless constructor.
+  * [ ] For collections: Handle `List<T>`, `T[]` (needs buffering), and `Dictionary<K,V>`.
+  * [ ] Handle **Read-Only Properties**: If a collection property is `get` only but not null, `Clear()` it and reuse the instance rather than trying to set it.
+
+* **4.2. Nullability Safety**
+  * [ ] Check for `KdlNull` tokens.
+  * [ ] Throw `KdlInvalidCastException` if trying to assign `#null` to `int` or `bool`.
+
+---
+
+## Phase 5: Verification
+
+*Prove it works.*
+
+* **5.1. Test The "Theme/Layout" Scenario**
+  * [ ] Create the complex nested Dictionary structure from our previous discussion.
+  * [ ] Verify deeply nested recursion works.
+* **5.2. Test Failure Modes**
+  * [ ] Test "Duplicate Attributes" -> Expect Startup Crash.
+  * [ ] Test "Missing Argument Index" -> Expect Startup Crash.
+  * [ ] Test "Duplicate Key in Dictionary" -> Expect Deserialization Crash.
+
+## What is deferred (Post-v1)
+
+* Type Annotations logic (`(uuid)`, `(date-time)`).
+* Serialization (Writing C# -> KDL).
+* Polymorphism (Selecting different derived classes based on KDL annotations).

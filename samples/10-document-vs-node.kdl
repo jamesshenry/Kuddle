@@ -1,0 +1,24 @@
+// Document with multiple top-level nodes
+// This tests DeserializeMany<T> and document-level mapping
+
+// When deserializing as a document, each top-level node maps to a list item
+// When deserializing as a single node, you'd wrap in a container
+
+server "web-1" host="10.0.0.1" port=80 {
+    role "frontend"
+    role "load-balancer"
+}
+
+server "web-2" host="10.0.0.2" port=80 {
+    role "frontend"
+}
+
+server "api-1" host="10.0.1.1" port=8080 {
+    role "backend"
+    role "api"
+}
+
+server "db-1" host="10.0.2.1" port=5432 {
+    role "database"
+    role "primary"
+}

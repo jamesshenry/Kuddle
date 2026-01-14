@@ -1,0 +1,33 @@
+// KDL supports multiple string syntaxes
+
+strings {
+    // Bare/identifier strings (no quotes needed for simple values)
+    simple hello-world
+    kebab my-kebab-case
+    
+    // Quoted strings (required for whitespace, special chars)
+    withSpaces "hello world"
+    withQuote "say \"hello\""
+    withNewline "line1\nline2"
+    withTab "col1\tcol2"
+    unicode "emoji: \u{1F600}"
+    
+    // Raw strings (no escape processing)
+    rawPath #"C:\Users\name\file.txt"#
+    rawRegex #"^\d+\.\d+\.\d+$"#
+    rawWithQuotes ##"She said "hello""##
+    
+    // Multi-line strings
+    multiLine """
+        This is a multi-line string.
+        The indentation of the closing quotes
+        determines the base indentation.
+        All lines are dedented accordingly.
+        """
+    
+    // Raw multi-line
+    rawMultiLine #"""
+        No escapes here: \n \t \u{1234}
+        All literal backslashes.
+        """#
+}

@@ -1,0 +1,7 @@
+// Node with multiple positional arguments
+// Arguments are ordered and indexed (0, 1, 2...)
+
+command git commit -m Initial commit
+
+// Another example: coordinates
+point 10 20 30 label="origin"

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Kuddle</RootNamespace>
+    <AssemblyName>Kuddle.Net</AssemblyName>
+    <PackageId>Kuddle.Net</PackageId>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Description>Kuddle.Net is a .NET implementation of a KDL parser/serializer targeting v2 of the spec. KDL is concise, human-readable language built for configuration and data exchange.</Description>
+    <PackageTags>kdl;parser;serializer</PackageTags>
+    <PackageReleaseNotes>Initial release of Kuddle.Net KDL parser/serializer.</PackageReleaseNotes>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Parlot" Version="1.5.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kuddle.Net.Benchmarks" />
+    <InternalsVisibleTo Include="Kuddle.Net.Tests" />
+  </ItemGroup>
+</Project>
