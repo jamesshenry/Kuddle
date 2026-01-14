@@ -5,13 +5,12 @@
 # Customize the $sourceDirectory path to match your project's structure.
 
 $repoRoot = git rev-parse --show-toplevel
-
 Write-Host "Repository root: $repoRoot"
 
-$sourceDirectory = Join-Path $repoRoot 'src'  # Change this to your source directory
+$sourceDirectory = Join-Path $repoRoot 'src' 
 Write-Host "Source directory: $sourceDirectory"
 
-$outputDir = "$repoRoot/.ai/outputs"  # Change this to your preferred output location
+$outputDir = "$repoRoot/.ai/outputs"
 if (-not (Test-Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force
 }
@@ -19,9 +18,13 @@ if (-not (Test-Path $outputDir)) {
 $outputPath = Join-Path $outputDir 'codebase.txt'
 Write-Host "Output path: $outputPath"
 
+# Define the exclusion pattern (bin, obj, and Tests)
+# This regex matches the folder names surrounded by directory separators
+$excludePattern = '[\\/](bin|obj|Tests)([\\/]|$)'
+
 # Build directory tree
-$directoryTree = Get-ChildItem -Directory -Path $sourceDirectory -Recurse -Exclude obj, bin | Where-Object {
-    (-not $_.FullName.Contains('Tests'))
+$directoryTree = Get-ChildItem -Directory -Path $sourceDirectory -Recurse | Where-Object {
+    $_.FullName -notmatch $excludePattern
 } | ForEach-Object {
     $indent = '  ' * ($_.FullName.Split('\').Length - $sourceDirectory.Split('\').Length)
     "$indent- $($_.Name)"
@@ -44,15 +47,15 @@ $languageMap = @{
     '.js'   = 'javascript'
 }
 
-# Grab all files except bin/obj
+# Grab all files, filtering out the excluded directories
 $allFiles = Get-ChildItem -Path $sourceDirectory -Recurse -File -Include *.cs, *.ps1, *.json, *.xml, *.yml, *.yaml, *.md, *.sh, *.ts, *.js | Where-Object {
-    -not $_.DirectoryName.ToLower().Contains('tests')
+    $_.FullName -notmatch $excludePattern
 }
 
 foreach ($file in $allFiles) {
-    $relativePath = $file.FullName.Substring($PWD.Path.Length + 1)
+    # Calculate relative path from the repo root for clearer documentation
+    $relativePath = $file.FullName.Substring($repoRoot.Length + 1)
 
-    # Determine language based on extension (default: text)
     $ext = $file.Extension.ToLower()
     $lang = if ($languageMap.ContainsKey($ext)) { $languageMap[$ext] } else { 'text' }
 
@@ -65,7 +68,8 @@ foreach ($file in $allFiles) {
 "@
     $codeBlockEnd = "`n``````"
 
-    $fileContent = Get-Content -Path $file.FullName | Out-String
+    $fileContent = Get-Content -Path $file.FullName -Raw
     $formattedContent = $filePathHeader + $codeBlockStart + $fileContent + $codeBlockEnd
     Add-Content -Path $outputPath -Value $formattedContent
 }
+Write-Host "Done! Codebase exported to $outputPath" -ForegroundColor Green
