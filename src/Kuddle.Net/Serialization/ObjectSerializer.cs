@@ -60,10 +60,10 @@ internal class ObjectSerializer
                     // Map positional arguments to anonymous nodes
                     doc.Nodes.Add(new KdlNode(KdlValue.From("-")) { Entries = [arg] });
                 }
-                if (rootNode.Children != null)
-                {
-                    doc.Nodes.AddRange(rootNode.Children.Nodes);
-                }
+            }
+            if (rootNode.Children != null)
+            {
+                doc.Nodes.AddRange(rootNode.Children.Nodes);
             }
         }
         else
@@ -198,8 +198,15 @@ internal class ObjectSerializer
         }
     }
 
-    private static string GetDefaultNodeName(object item) =>
-        item.GetType().IsKdlScalar ? "-" : KdlTypeMapping.For(item.GetType()).NodeName;
+    private string GetDefaultNodeName(object item)
+    {
+        if (item.GetType().IsKdlScalar)
+            return "-";
+
+        return _options.SimpleCollectionNodeNames
+            ? "-"
+            : KdlTypeMapping.For(item.GetType()).NodeName;
+    }
 
     private KdlNode MapToNode(object item, string kdlName, string? typeAnnotation)
     {
