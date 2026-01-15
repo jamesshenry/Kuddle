@@ -4,7 +4,7 @@ namespace Kuddle.Tests.Serialization;
 
 public class KuddleParsingTests
 {
-    readonly KdlWriterOptions _options = new KdlWriterOptions() with { RoundTrip = false };
+    readonly KdlWriterOptions _options = new KdlWriterOptions();
 
     [Test]
     [MethodDataSource(

@@ -67,7 +67,7 @@ public class KdlWriter
             _sb.Append('}');
         }
 
-        if (_options.RoundTrip && node.TerminatedBySemicolon)
+        if (_options.StringStyle.HasFlag(KdlStringStyle.Preserve) && node.TerminatedBySemicolon)
         {
             _sb.Append(';');
         }
@@ -127,73 +127,129 @@ public class KdlWriter
 
     private void WriteString(KdlString s)
     {
-        StringKind kind;
+        var style = _options.StringStyle;
 
-        if (_options.RoundTrip)
+        if (style.HasFlag(KdlStringStyle.Preserve))
         {
-            kind = s.Kind;
+            WriteFormattedString(s.Value, s.Kind);
+            return;
+        }
 
-            if (kind == StringKind.Bare && !IsValidBareIdentifier(s.Value))
+        bool hasComplexControls = false;
+        foreach (char c in s.Value)
+        {
+            if (char.IsControl(c) && c != '\n' && c != '\r' && c != '\t')
             {
-                kind = StringKind.Quoted;
+                hasComplexControls = true;
+                break;
             }
+        }
+
+        bool useBare = false;
+        bool useRaw = false;
+        bool useMulti = false;
+        bool hasNewline = s.Value.Contains('\n') || s.Value.Contains('\r');
+
+        if (!hasComplexControls)
+        {
+            if (style.HasFlag(KdlStringStyle.AllowBare) && IsValidBareIdentifier(s.Value))
+            {
+                useBare = true;
+            }
+            else
+            {
+                if (style.HasFlag(KdlStringStyle.AllowMultiline) && hasNewline)
+                {
+                    useMulti = true;
+                }
+
+                bool rawIsSafeForNewlines = !hasNewline || useMulti;
+
+                if (rawIsSafeForNewlines)
+                {
+                    if (
+                        style.HasFlag(KdlStringStyle.PreferRaw)
+                        && (s.Value.Contains('"') || s.Value.Contains('\\'))
+                    )
+                    {
+                        useRaw = true;
+                    }
+                    else if (
+                        style.HasFlag(KdlStringStyle.RawPaths)
+                        && (s.Value.Contains('/') || s.Value.Contains('\\'))
+                    )
+                    {
+                        useRaw = true;
+                    }
+                }
+            }
+        }
+
+        if (useBare)
+        {
+            _sb.Append(s.Value);
+        }
+        else if (useRaw)
+        {
+            WriteFormattedString(
+                s.Value,
+                StringKind.Raw | (useMulti ? StringKind.MultiLine : StringKind.Quoted)
+            );
+        }
+        else if (useMulti)
+        {
+            WriteFormattedString(s.Value, StringKind.MultiLine);
         }
         else
         {
-            kind =
-                IsValidBareIdentifier(s.Value) || s.Kind == StringKind.Bare
-                    ? StringKind.Bare
-                    : StringKind.Quoted;
+            _sb.Append('"').Append(EscapeString(s.Value)).Append('"');
         }
+    }
 
-        switch (kind)
-        {
-            case StringKind.Bare:
-                _sb.Append(s.Value);
-                return;
-            case StringKind.Quoted:
-                _sb.Append('"');
-                _sb.Append(EscapeString(s.Value));
-                _sb.Append('"');
-                return;
-        }
-
-        bool isRaw = s.Kind.HasFlag(StringKind.Raw);
-        bool isMulti = s.Kind.HasFlag(StringKind.MultiLine);
+    private void WriteFormattedString(string value, StringKind kind)
+    {
+        bool isRaw = kind.HasFlag(StringKind.Raw);
+        bool isMulti = kind.HasFlag(StringKind.MultiLine);
 
         if (isRaw)
         {
-            int hashCount = s.Value.AsSpan().MaxConsecutive('#') + 1;
+            int hashCount = value.AsSpan().MaxConsecutive('#') + 1;
             string hashes = new('#', hashCount);
-
-            string quotes = isMulti ? new string('\"', 3) : new string('\"', 1);
+            string quotes = isMulti ? "\"\"\"" : "\"";
 
             _sb.Append(hashes).Append(quotes);
 
             if (isMulti)
-                _sb.Append('\n');
+            {
+                _sb.Append(_options.NewLine);
+            }
 
-            _sb.Append(s.Value);
+            _sb.Append(value);
 
             if (isMulti)
-                _sb.Append('\n');
+            {
+                _sb.Append(_options.NewLine);
+            }
 
             _sb.Append(quotes).Append(hashes);
         }
+        else if (isMulti)
+        {
+            _sb.Append("\"\"\"");
+            _sb.Append(_options.NewLine);
+            _sb.Append(value);
+            _sb.Append(_options.NewLine);
+            _sb.Append("\"\"\"");
+        }
+        else if (kind.HasFlag(StringKind.Quoted) || !IsValidBareIdentifier(value))
+        {
+            _sb.Append('"');
+            _sb.Append(EscapeString(value));
+            _sb.Append('"');
+        }
         else
         {
-            if (isMulti)
-            {
-                _sb.Append(new string('\"', 3));
-                _sb.Append(s.Value);
-                _sb.Append(new string('\"', 3));
-            }
-            else
-            {
-                _sb.Append(new string('\"', 1));
-                _sb.Append(EscapeString(s.Value));
-                _sb.Append(new string('\"', 1));
-            }
+            _sb.Append(value);
         }
     }
 

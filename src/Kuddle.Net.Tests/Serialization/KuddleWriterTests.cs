@@ -12,7 +12,10 @@ public class KuddleWriterTests
         var kdl = "node 1 2 key=\"val\"";
         var doc = KdlReader.Read(kdl);
 
-        var output = KdlWriter.Write(doc, KdlWriterOptions.Default);
+        var output = KdlWriter.Write(
+            doc,
+            new KdlWriterOptions { StringStyle = KdlStringStyle.Preserve }
+        );
 
         await Assert.That(output.Trim()).IsEqualTo("node 1 2 key=\"val\"");
     }
@@ -23,7 +26,10 @@ public class KuddleWriterTests
         var kdl = "parent { child; }";
         var doc = KdlReader.Read(kdl);
 
-        var output = KdlWriter.Write(doc);
+        var output = KdlWriter.Write(
+            doc,
+            new KdlWriterOptions { StringStyle = KdlStringStyle.Preserve }
+        );
 
         var expected = @"parent {
     child;
@@ -38,7 +44,10 @@ public class KuddleWriterTests
         var kdl = "node \"line1\\nline2\"";
         var doc = KdlReader.Read(kdl);
 
-        var output = KdlWriter.Write(doc);
+        var output = KdlWriter.Write(
+            doc,
+            new KdlWriterOptions { StringStyle = KdlStringStyle.Preserve }
+        );
 
         await Assert.That(output.Trim()).IsEqualTo("node \"line1\\nline2\"");
     }
@@ -51,7 +60,10 @@ public class KuddleWriterTests
             Nodes = [new KdlNode(new KdlString("node name", StringKind.Quoted))],
         };
 
-        var output = KdlWriter.Write(doc);
+        var output = KdlWriter.Write(
+            doc,
+            new KdlWriterOptions { StringStyle = KdlStringStyle.Preserve }
+        );
 
         await Assert.That(output.Trim()).IsEqualTo("\"node name\"");
     }
