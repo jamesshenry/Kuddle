@@ -53,7 +53,7 @@ public class VersionInfo
     public int Minor { get; set; }
     public int Patch { get; set; }
 
-    public DateTime? BuildDate { get; set; }
+    public DateTime BuildDate { get; set; }
 }
 
 public class DependencyInfo

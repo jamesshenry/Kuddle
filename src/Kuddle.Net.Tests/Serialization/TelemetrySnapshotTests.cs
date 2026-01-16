@@ -25,6 +25,7 @@ public class TelemetrySnapshotTests
                         Major = 1,
                         Minor = 2,
                         Patch = 3,
+                        BuildDate = DateTime.UtcNow,
                     },
                     Metrics = { ["cpu"] = 0.75 },
                     Dependencies =

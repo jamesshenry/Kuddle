@@ -17,55 +17,55 @@ public abstract record KdlValue : KdlObject
         return new KdlString(guid.ToString(), stringKind) { TypeAnnotation = "uuid" };
     }
 
+    /// <summary>Creates a KdlString from a DateTime with "date-time" type annotation.</summary>
+    public static KdlString From(DateTime date, StringKind stringKind = StringKind.Quoted)
+    {
+        // Using "O" ensures it includes the Z or Offset for KDL compliance
+        return new KdlString(date.ToString("O"), stringKind) { TypeAnnotation = "date-time" };
+    }
+
     /// <summary>Creates a KdlString from a DateTimeOffset with "date-time" type annotation (ISO 8601).</summary>
     public static KdlString From(DateTimeOffset date, StringKind stringKind = StringKind.Quoted)
     {
         return new KdlString(date.ToString("O"), stringKind) { TypeAnnotation = "date-time" };
     }
 
-    /// <summary>Creates a KdlString from a string value.</summary>
-    public static KdlString From(string value, StringKind stringKind = StringKind.Bare)
+    public static KdlString From(DateOnly date, StringKind stringKind = StringKind.Quoted)
     {
-        foreach (char c in value)
-        {
-            if (char.IsWhiteSpace(c))
-                stringKind = StringKind.Quoted;
-        }
-        return new KdlString(value, stringKind);
+        return new KdlString(date.ToString("O"), stringKind) { TypeAnnotation = "date" };
     }
 
-    /// <summary>Creates a KdlBool from a boolean value.</summary>
-    public static KdlBool From(bool value)
+    public static KdlString From(TimeOnly time, StringKind stringKind = StringKind.Quoted)
     {
-        return new KdlBool(value);
+        return new KdlString(time.ToString("O"), stringKind) { TypeAnnotation = "time" };
     }
 
-    /// <summary>Creates a KdlNumber from an integer value.</summary>
-    public static KdlNumber From(int value)
+    internal static KdlString From(TimeSpan timeSpan, StringKind stringKind = StringKind.Quoted)
     {
-        return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
+        return new KdlString(timeSpan.ToString("g"), stringKind) { TypeAnnotation = "duration" };
     }
 
-    /// <summary>Creates a KdlNumber from a long value.</summary>
-    public static KdlNumber From(long value)
-    {
-        return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
-    }
-
-    /// <summary>Creates a KdlNumber from a double value.</summary>
-    public static KdlNumber From(double value)
-    {
-        return new KdlNumber(value.ToString("G17", CultureInfo.InvariantCulture));
-    }
-
-    /// <summary>Creates a KdlNumber from a decimal value.</summary>
-    public static KdlNumber From(decimal value)
-    {
-        return new KdlNumber(value.ToString(CultureInfo.InvariantCulture));
-    }
-
-    internal static KdlString From(Enum e)
+    public static KdlString From(Enum e)
     {
         return new KdlString(e.ToString(), StringKind.Bare);
     }
+
+    public static KdlString From(string value, StringKind stringKind = StringKind.Bare)
+    {
+        if (stringKind == StringKind.Bare && value.Any(char.IsWhiteSpace))
+            stringKind = StringKind.Quoted;
+        return new KdlString(value, stringKind);
+    }
+
+    public static KdlBool From(bool value) => new(value);
+
+    public static KdlNumber From(int value) => new(value.ToString(CultureInfo.InvariantCulture));
+
+    public static KdlNumber From(long value) => new(value.ToString(CultureInfo.InvariantCulture));
+
+    public static KdlNumber From(double value) =>
+        new(value.ToString("G17", CultureInfo.InvariantCulture));
+
+    public static KdlNumber From(decimal value) =>
+        new(value.ToString(CultureInfo.InvariantCulture));
 }

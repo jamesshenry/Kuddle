@@ -427,20 +427,6 @@ public class ObjectMapperTests
 
     #region Error Handling Tests
 
-    [Test]
-    public async Task DeserializeObject_WithWrongNodeName_ThrowsException()
-    {
-        // Arrange
-        var kdl = """
-            application "wrong-node"
-            """;
-        var options = KdlSerializerOptions.Default with { RootMapping = KdlRootMapping.AsDocument };
-
-        // Act & Assert
-        await Assert
-            .That(async () => KdlSerializer.Deserialize<Package>(kdl, options))
-            .Throws<KuddleSerializationException>();
-    }
 
     [Test]
     public async Task DeserializeToDictionary_MapsCorrectly()
@@ -491,6 +477,8 @@ layouts {
 
         // Act
         var result = KdlSerializer.Deserialize<AppSettings>(kdl, options);
+
+        // Debug.WriteLine(KdlSerializer.Serialize<AppSettings>(result, options));
 
         // Assert
         var dashboard = result.Layouts["dashboard"];

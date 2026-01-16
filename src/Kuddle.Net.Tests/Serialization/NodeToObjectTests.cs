@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Kuddle.Exceptions;
 using Kuddle.Serialization;
 
@@ -57,18 +58,6 @@ public class NodeToObjectTests
 
         await Assert.That(result.Name).IsEqualTo("local");
         await Assert.That(result.Enabled).IsTrue();
-    }
-
-    [Test]
-    public async Task Deserialize_MismatchNodeName_ReturnsNull()
-    {
-        var kdl = "table \"production\" port=5432";
-        var options = KdlSerializerOptions.Default with { RootMapping = KdlRootMapping.AsDocument };
-
-        await Assert.ThrowsAsync<KuddleSerializationException>(async () =>
-        {
-            KdlSerializer.Deserialize<DbConfig>(kdl, options);
-        });
     }
 
     [Test]
