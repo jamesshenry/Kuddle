@@ -41,7 +41,7 @@ public class ConfigurationTests
         // 1. Serialize the object
         var serialized = KdlSerializer.Serialize(
             expected,
-            new KdlSerializerOptions { UnwrapRoot = true }
+            new KdlSerializerOptions { RootMapping = KdlRootMapping.AsDocument }
         );
 
         // 2. YOU MUST WRITE THE FILE TO DISK

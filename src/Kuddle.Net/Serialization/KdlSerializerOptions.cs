@@ -1,33 +1,20 @@
 namespace Kuddle.Serialization;
 
-/// <summary>
-/// Options for KDL serialization and deserialization.
-/// </summary>
 public record KdlSerializerOptions
 {
-    /// <summary>
-    /// Default options instance.
-    /// </summary>
-    public static KdlSerializerOptions Default { get; } = new();
+    public static KdlSerializerOptions Default { get; } = new KdlSerializerOptions();
 
-    /// <summary>
-    /// Whether to ignore null values when serializing. Default is true.
-    /// </summary>
     public bool IgnoreNullValues { get; init; } = true;
 
-    /// <summary>
-    /// Whether property/node name comparison is case-insensitive. Default is true.
-    /// </summary>
-    public bool CaseInsensitiveNames { get; init; } = true;
-
-    /// <summary>
-    /// Whether to include type annotations in output. Default is true.
-    /// </summary>
-    public bool WriteTypeAnnotations { get; init; } = true;
-
-    /// <summary>
-    /// Whether to use simple dash (-) for collection item node names instead of the mapped type name. Default is true.
-    /// </summary>
     public bool SimpleCollectionNodeNames { get; init; } = true;
-    public bool UnwrapRoot { get; init; } = false;
+
+    public KdlRootMapping RootMapping { get; init; } = KdlRootMapping.AsNode;
+
+    public KdlReaderOptions Reader { get; init; } = KdlReaderOptions.Default;
+    public KdlWriterOptions Writer { get; init; } = KdlWriterOptions.Default;
+    public KdlStringStyle StringStyle
+    {
+        get => Writer.StringStyle;
+        init => Writer = Writer with { StringStyle = value };
+    }
 }
