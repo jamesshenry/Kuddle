@@ -2,6 +2,6 @@
 
 public record KdlReaderOptions
 {
-    public static KdlReaderOptions Default => new() { ValidateReservedTypes = true };
+    public static KdlReaderOptions Default { get; } = new();
     public bool ValidateReservedTypes { get; init; } = true;
 }

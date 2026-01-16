@@ -63,12 +63,11 @@ public class NodeToObjectTests
     public async Task Deserialize_MismatchNodeName_ReturnsNull()
     {
         var kdl = "table \"production\" port=5432";
+        var options = KdlSerializerOptions.Default with { RootMapping = KdlRootMapping.AsDocument };
 
-        // var result = KdlSerializer.Deserialize<DbConfig>(kdl);
-        // await Assert.That(result).IsNull();
         await Assert.ThrowsAsync<KuddleSerializationException>(async () =>
         {
-            KdlSerializer.Deserialize<DbConfig>(kdl);
+            KdlSerializer.Deserialize<DbConfig>(kdl, options);
         });
     }
 

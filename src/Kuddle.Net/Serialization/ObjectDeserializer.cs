@@ -18,14 +18,14 @@ internal class ObjectDeserializer
         _options = options ?? KdlSerializerOptions.Default;
     }
 
-    internal static T DeserializeDocument<T>(KdlDocument doc, KdlSerializerOptions? options)
+    internal static T DeserializeDocument<T>(KdlDocument doc, KdlSerializerOptions options)
         where T : new()
     {
         var worker = new ObjectDeserializer(options);
 
         var mapping = KdlTypeMapping.For<T>();
         var instance = new T();
-        if (options?.UnwrapRoot == false)
+        if (options.RootMapping == KdlRootMapping.AsNode)
         {
             if (doc.Nodes.Count != 1)
             {
@@ -88,7 +88,7 @@ internal class ObjectDeserializer
         return instance;
     }
 
-    internal static T DeserializeNode<T>(KdlNode node, KdlSerializerOptions? options)
+    internal static T DeserializeNode<T>(KdlNode node, KdlSerializerOptions options)
         where T : new()
     {
         var worker = new ObjectDeserializer(options);

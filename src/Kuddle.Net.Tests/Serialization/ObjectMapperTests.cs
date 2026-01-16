@@ -434,10 +434,11 @@ public class ObjectMapperTests
         var kdl = """
             application "wrong-node"
             """;
+        var options = KdlSerializerOptions.Default with { RootMapping = KdlRootMapping.AsDocument };
 
         // Act & Assert
         await Assert
-            .That(async () => KdlSerializer.Deserialize<Package>(kdl))
+            .That(async () => KdlSerializer.Deserialize<Package>(kdl, options))
             .Throws<KuddleSerializationException>();
     }
 
@@ -486,9 +487,10 @@ layouts {
     }
 }
 """;
+        var options = KdlSerializerOptions.Default with { RootMapping = KdlRootMapping.AsDocument };
 
         // Act
-        var result = KdlSerializer.Deserialize<AppSettings>(kdl);
+        var result = KdlSerializer.Deserialize<AppSettings>(kdl, options);
 
         // Assert
         var dashboard = result.Layouts["dashboard"];
@@ -691,9 +693,10 @@ layouts {
             server host="localhost"
             server host="remote"
             """;
+        var options = KdlSerializerOptions.Default with { RootMapping = KdlRootMapping.AsDocument };
 
         // Act
-        var result = KdlSerializer.Deserialize<CollectionModel>(kdl);
+        var result = KdlSerializer.Deserialize<CollectionModel>(kdl, options);
 
         // Assert
         await Assert.That(result.WrappedPlugins).Count().IsEqualTo(1);
@@ -754,7 +757,7 @@ layouts {
         var options = new KdlSerializerOptions
         {
             SimpleCollectionNodeNames = true,
-            UnwrapRoot = true,
+            RootMapping = KdlRootMapping.AsDocument,
         };
 
         // Act
@@ -783,7 +786,7 @@ layouts {
         var options = new KdlSerializerOptions
         {
             SimpleCollectionNodeNames = false,
-            UnwrapRoot = false,
+            RootMapping = KdlRootMapping.AsNode,
         };
 
         // Act
