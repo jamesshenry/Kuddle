@@ -1,7 +1,7 @@
 using Kuddle.Exceptions;
 using Kuddle.Serialization;
 
-namespace Kuddle.Tests.Errors;
+namespace Kuddle.Tests.Parsing;
 
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
 

@@ -1,7 +1,7 @@
 using Kuddle.Exceptions;
 using Kuddle.Serialization;
 
-namespace Kuddle.Tests.Serialization;
+namespace Kuddle.Tests.Conversion;
 
 public class DocumentToObjectTests
 {

@@ -3,7 +3,7 @@ using Kuddle.Extensions;
 using Kuddle.Parser;
 using Kuddle.Serialization;
 
-namespace Kuddle.Tests.Extensions;
+namespace Kuddle.Tests.Types;
 
 public class DxTests
 {
