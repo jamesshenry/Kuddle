@@ -6,4 +6,5 @@ internal enum KdlMemberKind
     Property,
     ChildNode,
     TypeAnnotation,
+    ExtensionData, // Added for Rule 20
 }

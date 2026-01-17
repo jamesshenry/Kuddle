@@ -3,7 +3,7 @@ using System;
 namespace Kuddle.Exceptions;
 
 [Serializable]
-internal class KdlConfigurationException : Exception
+public class KdlConfigurationException : Exception
 {
     public KdlConfigurationException() { }
 

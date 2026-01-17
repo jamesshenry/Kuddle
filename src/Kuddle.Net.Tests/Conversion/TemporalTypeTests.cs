@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Kuddle.Serialization;
 using Kuddle.Tests.Serialization.Models;
 
-namespace Kuddle.Tests.Serialization;
+namespace Kuddle.Tests.Conversion;
 
 public class DateTimeStressTests
 {

@@ -48,5 +48,11 @@ internal sealed record KdlMemberMap
 
     public object? GetValue(object instance) => Property.GetValue(instance);
 
-    public void SetValue(object instance, object? value) => Property.SetValue(instance, value);
+    public void SetValue(object instance, object? value)
+    {
+        if (Property.CanWrite)
+        {
+            Property.SetValue(instance, value);
+        }
+    }
 }

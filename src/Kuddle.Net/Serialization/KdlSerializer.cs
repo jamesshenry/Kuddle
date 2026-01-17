@@ -20,7 +20,7 @@ public static class KdlSerializer
     {
         options ??= KdlSerializerOptions.Default;
 
-        var doc = KdlReader.Read(text);
+        var doc = KdlReader.Read(text, options.Reader);
 
         foreach (var node in doc.Nodes)
         {
@@ -37,7 +37,7 @@ public static class KdlSerializer
     {
         options ??= KdlSerializerOptions.Default;
 
-        var doc = KdlReader.Read(text);
+        var doc = KdlReader.Read(text, options.Reader);
 
         return ObjectDeserializer.DeserializeDocument<T>(doc, options);
     }
@@ -51,6 +51,6 @@ public static class KdlSerializer
 
         var doc = ObjectSerializer.SerializeDocument(instance, options);
 
-        return KdlWriter.Write(doc);
+        return KdlWriter.Write(doc, options.Writer);
     }
 }

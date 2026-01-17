@@ -161,21 +161,49 @@ internal class ObjectDeserializer
     /// </summary>
     private void MapNodeToObject(KdlNode node, object instance, KdlTypeMapping mapping)
     {
+        var consumedPropKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var consumedChildNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 1. Map Positional Arguments
         foreach (var map in mapping.Arguments)
         {
-            var kdlValue = node.Arg(map.ArgumentIndex);
-            if (kdlValue != null)
+            if (map.IsCollection)
             {
-                var val = KdlValueConverter.FromKdlOrThrow(
-                    kdlValue,
-                    map.Property.PropertyType,
-                    map.KdlName,
-                    map.TypeAnnotation
+                // RULE 8: Rest Arguments
+                // Collect all arguments from map.ArgumentIndex to the end
+                var argsList = node.Arguments.Skip(map.ArgumentIndex).ToList();
+                var targetList = CreateList(map.ElementType!);
+
+                foreach (var kdlVal in argsList)
+                {
+                    var val = KdlValueConverter.FromKdlOrThrow(
+                        kdlVal,
+                        map.ElementType!,
+                        map.KdlName
+                    );
+                    targetList.Add(val);
+                }
+                map.SetValue(
+                    instance,
+                    ConvertCollection(targetList, map.Property.PropertyType, map.ElementType!)
                 );
-                map.SetValue(instance, val);
+            }
+            else
+            {
+                var kdlValue = node.Arg(map.ArgumentIndex);
+                if (kdlValue != null)
+                {
+                    var val = KdlValueConverter.FromKdlOrThrow(
+                        kdlValue,
+                        map.Property.PropertyType,
+                        map.KdlName,
+                        map.TypeAnnotation
+                    );
+                    map.SetValue(instance, val);
+                }
             }
         }
-        var consumedPropKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var map in mapping.Properties.Where(m => !m.IsDictionary))
         {
             var kdlValue = node.Prop(map.KdlName);
@@ -186,8 +214,11 @@ internal class ObjectDeserializer
                     n.Name.Value.Equals(map.KdlName, NodeNameComparison)
                 );
 
-                // Per KDL convention for "scalar nodes," we take the first argument
-                kdlValue = childNode?.Arg(0);
+                if (childNode != null)
+                {
+                    kdlValue = childNode.Arg(0);
+                    consumedChildNames.Add(map.KdlName);
+                }
             }
 
             if (kdlValue != null)
@@ -203,24 +234,19 @@ internal class ObjectDeserializer
                 consumedPropKeys.Add(map.KdlName);
             }
         }
+
         foreach (var map in mapping.Properties.Where(m => m.IsDictionary))
         {
             var dict = EnsureInstance(instance, map) as IDictionary;
             bool isNamespaced = !string.IsNullOrWhiteSpace(map.KdlName);
             string prefix = isNamespaced ? $"{map.KdlName}:" : "";
-            // Iterate through all actual properties in the KDL node
+
             foreach (var kdlProp in node.Properties)
             {
                 string key = kdlProp.Key.Value;
 
                 if (isNamespaced)
                 {
-                    // NAMESPACED logic: continue if it doesn't match our prefix
-                    if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
                     if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     {
                         string dictKey = key.Substring(prefix.Length);
@@ -229,28 +255,30 @@ internal class ObjectDeserializer
                             map.Property.PropertyType.GetGenericArguments()[1],
                             key
                         );
+                        consumedPropKeys.Add(key);
                     }
                 }
                 else
                 {
-                    // Greedy: take anything that wasn't matched by an explicit property in Pass 1
                     if (consumedPropKeys.Contains(key) || key.Contains(':'))
                     {
                         continue;
                     }
                     var valueType = map.Property.PropertyType.GetGenericArguments()[1];
                     dict![key] = KdlValueConverter.FromKdlOrThrow(kdlProp.Value, valueType, key);
+                    consumedPropKeys.Add(key);
                 }
             }
         }
+
         if (node.Children != null)
         {
-            // Mode B: Document Mode or Intrinsic Dictionary at root
             if (mapping.IsDictionary)
             {
                 var explicitChildNames = mapping
                     .Children.Select(c => c.KdlName)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
                 var dictionaryNodes = node.Children.Nodes.Where(n =>
                     !explicitChildNames.Contains(n.Name.Value)
                 );
@@ -261,15 +289,54 @@ internal class ObjectDeserializer
                     mapping.DictionaryKeyProperty!.PropertyType,
                     mapping.DictionaryValueProperty!.PropertyType
                 );
+
+                // In a root dictionary, all child nodes are considered consumed
+                foreach (var n in node.Children.Nodes)
+                    consumedChildNames.Add(n.Name.Value);
             }
-            MapChildren(node.Children.Nodes, instance, mapping);
+
+            MapChildren(node.Children.Nodes, instance, mapping, consumedChildNames);
+        }
+
+        if (mapping.ExtensionDataProperty != null)
+        {
+            var extDict = EnsureInstance(instance, mapping.ExtensionDataProperty) as IDictionary;
+
+            // Capture unmapped KDL properties
+            foreach (var prop in node.Properties)
+            {
+                if (!consumedPropKeys.Contains(prop.Key.Value))
+                {
+                    // Convert to native CLR type (string, double, bool) so Assertions pass
+                    KdlValueConverter.TryFromKdl(prop.Value, typeof(object), out var nativeVal);
+                    extDict![prop.Key.Value] = nativeVal;
+                }
+            }
+
+            // Capture unmapped Child Nodes
+            if (node.Children != null)
+            {
+                foreach (var childNode in node.Children.Nodes)
+                {
+                    if (!consumedChildNames.Contains(childNode.Name.Value))
+                    {
+                        // Store the actual KdlNode AST for complex unmapped structures
+                        extDict![childNode.Name.Value] = childNode;
+                    }
+                }
+            }
         }
     }
 
     /// <summary>
     /// Maps child KDL nodes to properties marked with [KdlNode].
     /// </summary>
-    private void MapChildren(List<KdlNode>? nodes, object instance, KdlTypeMapping mapping)
+    private void MapChildren(
+        List<KdlNode>? nodes,
+        object instance,
+        KdlTypeMapping mapping,
+        HashSet<string> consumedNames
+    )
     {
         if (nodes is null || nodes.Count == 0)
             return;
@@ -280,8 +347,10 @@ internal class ObjectDeserializer
                 .Where(n => n.Name.Value.Equals(map.KdlName, NodeNameComparison))
                 .ToList();
 
-            if (matches is null || matches.Count == 0)
+            if (matches.Count == 0)
                 continue;
+
+            consumedNames.Add(map.KdlName);
 
             List<KdlNode> nodesToProcess = map.IsFlattened
                 ? matches

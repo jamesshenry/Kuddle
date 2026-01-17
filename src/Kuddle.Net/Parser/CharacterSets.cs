@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Kuddle.Parser;
 
@@ -140,4 +141,29 @@ public static class CharacterSets
         && TypeAnnotationToClrType.TryGetValue(typeAnnotation, out var type)
             ? type
             : null;
+
+    public static bool IsDisallowedLiteral(Rune r)
+    {
+        int cp = r.Value;
+
+        // Spec: U+0000-0008, U+000E-001F, U+007F
+        if (cp <= 0x08 || (cp >= 0x0E && cp <= 0x1F) || cp == 0x7F)
+            return true;
+
+        // Spec: Unicode direction control characters
+        // U+200E-200F, U+202A-202E, U+2066-2069
+        if (
+            cp == 0x200E
+            || cp == 0x200F
+            || (cp >= 0x202A && cp <= 0x202E)
+            || (cp >= 0x2066 && cp <= 0x2069)
+        )
+            return true;
+
+        // Spec: U+FEFF (BOM) is disallowed except as the first character
+        if (cp == 0xFEFF)
+            return true;
+
+        return false;
+    }
 }

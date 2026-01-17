@@ -9,7 +9,7 @@ public abstract record KdlValue : KdlObject
     public string? TypeAnnotation { get; init; }
 
     /// <summary>Gets a KdlNull value.</summary>
-    public static KdlValue Null => new KdlNull();
+    public static KdlNull Null => new KdlNull();
 
     /// <summary>Creates a KdlString from a Guid with "uuid" type annotation.</summary>
     public static KdlString From(Guid guid, StringKind stringKind = StringKind.Quoted)

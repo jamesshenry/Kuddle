@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using Kuddle.AST;
 using Kuddle.Extensions;
+using Kuddle.Parser;
 
 namespace Kuddle.Serialization;
 
@@ -135,15 +136,19 @@ public class KdlWriter
             return;
         }
 
+        bool hasUnicode = false;
         bool hasComplexControls = false;
         foreach (char c in s.Value)
         {
+            if (c > 127)
+                hasUnicode = true;
             if (char.IsControl(c) && c != '\n' && c != '\r' && c != '\t')
             {
                 hasComplexControls = true;
-                break;
             }
         }
+
+        bool unicodeConflict = _options.EscapeUnicode && hasUnicode;
 
         bool useBare = false;
         bool useRaw = false;
@@ -152,7 +157,11 @@ public class KdlWriter
 
         if (!hasComplexControls)
         {
-            if (style.HasFlag(KdlStringStyle.AllowBare) && IsValidBareIdentifier(s.Value))
+            if (
+                style.HasFlag(KdlStringStyle.AllowBare)
+                && IsValidBareIdentifier(s.Value)
+                && !unicodeConflict
+            )
             {
                 useBare = true;
             }
@@ -202,7 +211,7 @@ public class KdlWriter
         }
         else
         {
-            _sb.Append('"').Append(EscapeString(s.Value)).Append('"');
+            WriteQuotedString(s.Value);
         }
     }
 
@@ -213,24 +222,29 @@ public class KdlWriter
 
         if (isRaw)
         {
-            int hashCount = value.AsSpan().MaxConsecutive('#') + 1;
-            string hashes = new('#', hashCount);
+            // KDL v2 Spec: Raw strings are indicated by one or more '#'
+            // preceding the opening quotes. No 'r' prefix.
+            int requiredHashes = 1;
+            if (value.Contains('"'))
+            {
+                // Ensure we have enough hashes so that "# (or "## etc)
+                // within the string doesn't close it prematurely.
+                requiredHashes = value.AsSpan().MaxConsecutive('#') + 1;
+            }
+
+            string hashes = new('#', requiredHashes);
             string quotes = isMulti ? "\"\"\"" : "\"";
 
+            // Start: # "
             _sb.Append(hashes).Append(quotes);
 
             if (isMulti)
-            {
                 _sb.Append(_options.NewLine);
-            }
-
             _sb.Append(value);
-
             if (isMulti)
-            {
                 _sb.Append(_options.NewLine);
-            }
 
+            // End: " #
             _sb.Append(quotes).Append(hashes);
         }
         else if (isMulti)
@@ -243,9 +257,7 @@ public class KdlWriter
         }
         else if (kind.HasFlag(StringKind.Quoted) || !IsValidBareIdentifier(value))
         {
-            _sb.Append('"');
-            _sb.Append(EscapeString(value));
-            _sb.Append('"');
+            WriteQuotedString(value);
         }
         else
         {
@@ -253,58 +265,15 @@ public class KdlWriter
         }
     }
 
-    private static string EscapeString(string input)
-    {
-        if (string.IsNullOrEmpty(input))
-            return "";
-
-        var sb = new StringBuilder(input.Length + 2);
-
-        foreach (char c in input)
-        {
-            switch (c)
-            {
-                case '\\':
-                    sb.Append("\\\\");
-                    break;
-                case '"':
-                    sb.Append("\\\"");
-                    break;
-                case '\n':
-                    sb.Append("\\n");
-                    break;
-                case '\r':
-                    sb.Append("\\r");
-                    break;
-                case '\t':
-                    sb.Append("\\t");
-                    break;
-                case '\b':
-                    sb.Append("\\b");
-                    break;
-                case '\f':
-                    sb.Append("\\f");
-                    break;
-                default:
-                    if (char.IsControl(c))
-                    {
-                        sb.Append($"\\u{(int)c:X4}");
-                    }
-                    else
-                    {
-                        sb.Append(c);
-                    }
-                    break;
-            }
-        }
-        return sb.ToString();
-    }
-
     private void WriteQuotedString(string val)
     {
         _sb.Append('"');
-        foreach (char c in val)
+
+        foreach (Rune r in val.EnumerateRunes())
         {
+            int codePoint = r.Value;
+
+            char c = (char)codePoint;
             switch (c)
             {
                 case '\\':
@@ -331,7 +300,7 @@ public class KdlWriter
                 default:
                     if (char.IsControl(c) || (_options.EscapeUnicode && c > 127))
                     {
-                        _sb.Append($"\\u{(int)c:X4}");
+                        _sb.Append($"\\u{{{codePoint:X4}}}");
                     }
                     else
                     {
@@ -340,6 +309,7 @@ public class KdlWriter
                     break;
             }
         }
+
         _sb.Append('"');
     }
 

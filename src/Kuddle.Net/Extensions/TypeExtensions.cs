@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace Kuddle.Serialization;
 
@@ -36,6 +37,19 @@ internal static class TypeExtensions
             || type == typeof(TimeSpan)
             || type == typeof(DateOnly)
             || type == typeof(TimeOnly);
+
+        internal bool IsAnonymousType()
+        {
+            return Attribute.IsDefined(
+                    type,
+                    typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute),
+                    false
+                )
+                && type.IsGenericType
+                && type.Name.Contains("AnonymousType")
+                && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+                && (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+        }
 
         public Type? GetCollectionElementType()
         {
