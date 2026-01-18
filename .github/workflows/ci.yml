@@ -11,6 +11,11 @@ jobs:
   build-and-test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: read
+      pull-requests: write
+
     strategy:
       matrix:
         os: [ubuntu-latest]
