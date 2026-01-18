@@ -1,6 +1,6 @@
 using Kuddle.AST;
 
-namespace Kuddle.Tests.AST;
+namespace Kuddle.Tests.Types;
 
 public class KdlNumberTests
 {

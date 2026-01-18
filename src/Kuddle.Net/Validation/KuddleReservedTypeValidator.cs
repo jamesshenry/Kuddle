@@ -100,8 +100,37 @@ public static class KdlReservedTypeValidator
                     if (!Guid.TryParse(EnsureString(val), out _))
                         throw new FormatException();
                     break;
+                case "date": // Added
+                    if (
+                        !DateOnly.TryParse(
+                            EnsureString(val),
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None,
+                            out _
+                        )
+                    )
+                        throw new FormatException();
+                    break;
+                case "time": // Added
+                    if (
+                        !TimeOnly.TryParse(
+                            EnsureString(val),
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None,
+                            out _
+                        )
+                    )
+                        throw new FormatException();
+                    break;
                 case "date-time":
-                    if (!DateTimeOffset.TryParse(EnsureString(val), out _))
+                    if (
+                        !DateTimeOffset.TryParse(
+                            EnsureString(val),
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None,
+                            out _
+                        )
+                    )
                         throw new FormatException();
                     break;
                 case "ipv4":

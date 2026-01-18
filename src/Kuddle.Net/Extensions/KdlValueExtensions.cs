@@ -13,118 +13,62 @@ public static class KdlValueExtensions
         public bool IsString => value is KdlString;
         public bool IsBool => value is KdlBool;
 
-        public bool TryGetInt(out int result)
+        public bool TryGetInt(out int res) => TryConvert(value, n => n.ToInt32(), out res);
+
+        public bool TryGetLong(out long res) => TryConvert(value, n => n.ToInt64(), out res);
+
+        public bool TryGetDouble(out double res) => TryConvert(value, n => n.ToDouble(), out res);
+
+        public bool TryGetDecimal(out decimal res) =>
+            TryConvert(value, n => n.ToDecimal(), out res);
+
+        public bool TryGetBool(out bool res)
         {
-            result = 0;
-            if (value is KdlNumber num)
-            {
-                try
-                {
-                    result = num.ToInt32();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        public bool TryGetLong(out long result)
-        {
-            result = 0;
-            if (value is KdlNumber num)
-            {
-                try
-                {
-                    result = num.ToInt64();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        // --- Floats ---
-
-        public bool TryGetDouble(out double result)
-        {
-            result = 0;
-            if (value is KdlNumber num)
-            {
-                try
-                {
-                    result = num.ToDouble();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        public bool TryGetDecimal(out decimal result)
-        {
-            result = 0;
-            if (value is KdlNumber num)
-            {
-                try
-                {
-                    result = num.ToDecimal();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        // --- Booleans ---
-
-        public bool TryGetBool(out bool result)
-        {
+            res = default;
             if (value is KdlBool b)
             {
-                result = b.Value;
+                res = b.Value;
                 return true;
             }
-            result = false;
             return false;
         }
 
-        // --- Strings ---
-
-        public bool TryGetString([NotNullWhen(true)] out string? result)
+        public bool TryGetString([NotNullWhen(true)] out string? res)
         {
-            if (value is KdlString s)
+            res = (value as KdlString)?.Value;
+            return res != null;
+        }
+
+        public bool TryGetUuid(out Guid res) => Guid.TryParse((value as KdlString)?.Value, out res);
+
+        public bool TryGetDateTime(out DateTimeOffset res) =>
+            DateTimeOffset.TryParse((value as KdlString)?.Value, out res);
+
+        public bool TryGetDateOnly(out DateOnly res) =>
+            DateOnly.TryParse((value as KdlString)?.Value, out res);
+
+        public bool TryGetTimeOnly(out TimeOnly res) =>
+            TimeOnly.TryParse((value as KdlString)?.Value, out res);
+
+        public bool TryGetTimeSpan(out TimeSpan res) =>
+            TimeSpan.TryParse((value as KdlString)?.Value, out res);
+    }
+
+    private static bool TryConvert<T>(KdlValue val, Func<KdlNumber, T> converter, out T result)
+    {
+        if (val is KdlNumber num)
+        {
+            try
             {
-                result = s.Value;
+                result = converter(num);
                 return true;
             }
-            result = null;
-            return false;
+            catch
+            {
+                // Ignore parsing/overflow errors
+            }
         }
-
-        // --- Complex Types (UUID, Date, IP) ---
-
-        public bool TryGetUuid(out Guid result)
-        {
-            result = Guid.Empty;
-            return value is KdlString s && Guid.TryParse(s.Value, out result);
-        }
-
-        public bool TryGetDateTime(out DateTimeOffset result)
-        {
-            result = default;
-            return value is KdlString s && DateTimeOffset.TryParse(s.Value, out result);
-        }
+        result = default!;
+        return false;
     }
 }

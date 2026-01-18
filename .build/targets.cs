@@ -91,6 +91,36 @@ app.OnExecuteAsync(async _ =>
         }
     );
 
+    Target(
+        "coverage",
+        ["test"],
+        async () =>
+        {
+            var testResultFolder = "TestResults";
+            var coverageFileName = "coverage.xml";
+            var coverageInputPath = Path.Combine(root, testResultFolder, coverageFileName);
+            var reportOutputDir = Path.Combine(root, testResultFolder, "report");
+
+            if (!File.Exists(coverageInputPath))
+            {
+                throw new InvalidOperationException(
+                    $"Coverage file not found at {coverageInputPath}. Run the 'test' target first."
+                );
+            }
+
+            var reportTypes = "Html;MarkdownSummaryGithub";
+
+            await RunAsync(
+                "dotnet",
+                $"""
+tool run reportgenerator -reports:"{coverageInputPath}" -targetdir:"{reportOutputDir}" -reporttypes:"{reportTypes}" -title:"Kuddle.Net Coverage Report"
+"""
+            );
+
+            Console.WriteLine($"Coverage report generated at: {reportOutputDir}/summary.md");
+        }
+    );
+
     Target("default", ["build"], () => Console.WriteLine("Default target ran."));
 
     Target(

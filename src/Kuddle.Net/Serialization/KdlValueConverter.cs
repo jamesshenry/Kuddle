@@ -5,145 +5,60 @@ using Kuddle.Parser;
 
 namespace Kuddle.Serialization;
 
-/// <summary>
-/// Provides unified conversion between CLR values and KDL values.
-/// </summary>
 internal static class KdlValueConverter
 {
-    /// <summary>
-    /// Attempts to convert a KDL value to a CLR type.
-    /// </summary>
     public static bool TryFromKdl(KdlValue kdlValue, Type targetType, out object? value)
     {
         value = default;
-
         if (kdlValue is KdlNull)
-        {
-            if (!IsNullable(targetType))
-            {
-                return false;
-            }
-            value = null;
-            return true;
-        }
+            return IsNullable(targetType);
 
         var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
 
+        // 1. Strings & Enums
+        if (underlying == typeof(string))
+            return kdlValue.TryGetString(out var s) && (value = s) is not null;
         if (underlying.IsEnum)
         {
-            kdlValue.TryGetString(out var enumString);
-            bool success = Enum.TryParse(underlying, enumString, true, out var result);
-            value = result;
-            return success;
-        }
-        // String
-        if (underlying == typeof(string) && kdlValue.TryGetString(out var stringVal))
-        {
-            value = stringVal;
-            return true;
+            return kdlValue.TryGetString(out var s)
+                && Enum.TryParse(underlying, s, true, out value);
         }
 
-        // Integers (signed)
-        if (underlying == typeof(int) && kdlValue.TryGetInt(out var intVal))
-        {
-            value = intVal;
-            return true;
-        }
+        // 2. Numerics
+        if (underlying == typeof(int))
+            return kdlValue.TryGetInt(out var i) && (value = i) is not null;
+        if (underlying == typeof(long))
+            return kdlValue.TryGetLong(out var l) && (value = l) is not null;
+        if (underlying == typeof(short))
+            return kdlValue.TryGetInt(out var sh) && (value = (short)sh) is not null;
+        if (underlying == typeof(double))
+            return kdlValue.TryGetDouble(out var d) && (value = d) is not null;
+        if (underlying == typeof(decimal))
+            return kdlValue.TryGetDecimal(out var m) && (value = m) is not null;
+        if (underlying == typeof(float))
+            return kdlValue.TryGetDouble(out var f) && (value = (float)f) is not null;
+        if (underlying == typeof(bool))
+            return kdlValue.TryGetBool(out var b) && (value = b) is not null;
+        if (underlying == typeof(byte))
+            return kdlValue.TryGetInt(out var by) && (value = (byte)by) is not null;
 
-        if (underlying == typeof(long) && kdlValue.TryGetLong(out var longVal))
-        {
-            value = longVal;
-            return true;
-        }
-
-        if (underlying == typeof(short) && kdlValue.TryGetInt(out var shortVal))
-        {
-            value = (short)shortVal;
-            return true;
-        }
-
-        if (underlying == typeof(sbyte) && kdlValue.TryGetInt(out var sbyteVal))
-        {
-            value = (sbyte)sbyteVal;
-            return true;
-        }
-
-        // Integers (unsigned)
-        if (underlying == typeof(uint) && kdlValue.TryGetLong(out var uintVal))
-        {
-            value = (uint)uintVal;
-            return true;
-        }
-
-        if (underlying == typeof(ulong) && kdlValue.TryGetLong(out var ulongVal))
-        {
-            value = (ulong)ulongVal;
-            return true;
-        }
-
-        if (underlying == typeof(ushort) && kdlValue.TryGetInt(out var ushortVal))
-        {
-            value = (ushort)ushortVal;
-            return true;
-        }
-
-        if (underlying == typeof(byte) && kdlValue.TryGetInt(out var byteVal))
-        {
-            value = (byte)byteVal;
-            return true;
-        }
-
-        // Floating point
-        if (underlying == typeof(double) && kdlValue.TryGetDouble(out var doubleVal))
-        {
-            value = doubleVal;
-            return true;
-        }
-
-        if (underlying == typeof(decimal) && kdlValue.TryGetDecimal(out var decimalVal))
-        {
-            value = decimalVal;
-            return true;
-        }
-
-        if (underlying == typeof(float) && kdlValue.TryGetDouble(out var floatVal))
-        {
-            value = (float)floatVal;
-            return true;
-        }
-
-        // Boolean
-        if (underlying == typeof(bool) && kdlValue.TryGetBool(out var boolVal))
-        {
-            value = boolVal;
-            return true;
-        }
-
-        // Special types with type annotations
-        if (underlying == typeof(Guid) && kdlValue.TryGetUuid(out var uuid))
-        {
-            value = uuid;
-            return true;
-        }
-
-        if (underlying == typeof(DateTimeOffset) && kdlValue.TryGetDateTime(out var dto))
-        {
-            value = dto;
-            return true;
-        }
-
-        if (underlying == typeof(DateTime) && kdlValue.TryGetDateTime(out var dt))
-        {
-            value = dt.DateTime;
-            return true;
-        }
+        // 3. Temporal & Specialized
+        if (underlying == typeof(Guid))
+            return kdlValue.TryGetUuid(out var g) && (value = g) is not null;
+        if (underlying == typeof(DateTimeOffset))
+            return kdlValue.TryGetDateTime(out var dto) && (value = dto) is not null;
+        if (underlying == typeof(DateTime))
+            return kdlValue.TryGetDateTime(out var dt) && (value = dt.DateTime) is not null;
+        if (underlying == typeof(DateOnly))
+            return kdlValue.TryGetDateOnly(out var do1) && (value = do1) is not null;
+        if (underlying == typeof(TimeOnly))
+            return kdlValue.TryGetTimeOnly(out var to1) && (value = to1) is not null;
+        if (underlying == typeof(TimeSpan))
+            return kdlValue.TryGetTimeSpan(out var ts) && (value = ts) is not null;
 
         return false;
     }
 
-    /// <summary>
-    /// Attempts to convert a CLR value to a KDL value.
-    /// </summary>
     public static bool TryToKdl(object? input, out KdlValue kdlValue, string? typeAnnotation = null)
     {
         if (input is null)
@@ -168,16 +83,17 @@ internal static class KdlValueConverter
             decimal m => KdlValue.From(m),
             bool b => KdlValue.From(b),
             Guid uuid => KdlValue.From(uuid),
+            DateTime dt => KdlValue.From(dt),
             DateTimeOffset dto => KdlValue.From(dto),
-            DateTime dt => KdlValue.From(new DateTimeOffset(dt)),
+            DateOnly d => KdlValue.From(d),
+            TimeOnly t => KdlValue.From(t),
+            TimeSpan ts => KdlValue.From(ts),
             Enum e => KdlValue.From(e),
             _ => null!,
         };
 
         if (kdlValue is not null && typeAnnotation is not null)
-        {
             kdlValue = kdlValue with { TypeAnnotation = typeAnnotation };
-        }
 
         return kdlValue is not null;
     }
@@ -192,9 +108,14 @@ internal static class KdlValueConverter
         string? expectedTypeAnnotation = null
     )
     {
-        var finalTargetType =
-            CharacterSets.GetClrType(expectedTypeAnnotation ?? kdlValue.TypeAnnotation)
-            ?? targetType;
+        var finalTargetType = targetType;
+
+        if (targetType == typeof(object))
+        {
+            finalTargetType =
+                CharacterSets.GetClrType(expectedTypeAnnotation ?? kdlValue.TypeAnnotation)
+                ?? targetType;
+        }
 
         if (!TryFromKdl(kdlValue, finalTargetType, out var result))
         {
@@ -202,7 +123,7 @@ internal static class KdlValueConverter
                 $"Cannot convert KDL value '{kdlValue}' to {targetType.Name}. {context}"
             );
         }
-        return result ?? throw new Exception();
+        return result ?? throw new KuddleSerializationException("Conversion resulted in null.");
     }
 
     /// <summary>

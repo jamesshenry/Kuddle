@@ -3,38 +3,47 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: read
+      pull-requests: write
+
     strategy:
       matrix:
         os: [ubuntu-latest]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        global-json-file: global.json
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
 
-    - name: Restore .NET tools
-      run: dotnet tool restore
+      - name: Restore .NET tools
+        run: dotnet tool restore
 
-    - name: Run Tests
-      run: dotnet run .build/targets.cs test
+      - name: Run Coverage
+        run: dotnet run .build/targets.cs coverage
 
-    - name: Upload test results
-      if: always() # Run this step even if tests fail
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-${{ matrix.os }}
-        path: TestResults/
+      - name: Publish Coverage Summary
+        if: always()
+        run: cat TestResults/report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Add PR Coverage Comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: TestResults/report/SummaryGithub.md
