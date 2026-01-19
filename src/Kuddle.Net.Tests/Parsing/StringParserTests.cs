@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Kuddle.AST;
 using Kuddle.Parser;
 
-namespace Kuddle.Tests.Grammar;
+namespace Kuddle.Tests.Parsing;
 
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
 

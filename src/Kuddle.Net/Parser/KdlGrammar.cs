@@ -497,13 +497,14 @@ public static class KdlGrammar
         Node = baseNode
             .And(nodeTerminator)
             .Then(x =>
-                x.Item1 is null
+            {
+                return x.Item1 is null
                     ? null
                     : x.Item1 with
                     {
                         TerminatedBySemicolon = x.Item2.Span.Contains(';'),
-                    }
-            )
+                    };
+            })
             .Debug("Node");
 
         (FinalNode as Deferred<KdlNode?>)!.Parser = baseNode.AndSkip(nodeTerminator.Optional());

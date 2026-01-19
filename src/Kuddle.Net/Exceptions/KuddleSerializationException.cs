@@ -3,7 +3,7 @@ using System;
 namespace Kuddle.Serialization;
 
 [Serializable]
-internal class KuddleSerializationException : Exception
+public class KuddleSerializationException : Exception
 {
     private readonly Exception? _ex;
 

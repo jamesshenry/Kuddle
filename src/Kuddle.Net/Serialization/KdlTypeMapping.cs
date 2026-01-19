@@ -19,8 +19,7 @@ internal sealed record KdlTypeMapping
         Type = type;
 
         var typeAttr = type.GetCustomAttribute<KdlTypeAttribute>();
-        NodeName = typeAttr?.Name ?? type.Name.ToKebabCase();
-
+        NodeName = typeAttr?.Name ?? (type.IsAnonymousType() ? "-" : type.Name.ToKebabCase());
         IsDictionary = type.IsDictionary;
         if (IsDictionary)
         {
@@ -33,7 +32,20 @@ internal sealed record KdlTypeMapping
         {
             if (!prop.IsKdlSerializable())
                 continue;
+            if (prop.GetCustomAttribute<KdlExtensionDataAttribute>() != null)
+            {
+                if (!prop.PropertyType.IsDictionary)
+                    throw new KdlConfigurationException(
+                        $"ExtensionData property '{prop.Name}' must be a Dictionary."
+                    );
 
+                ExtensionDataProperty = new KdlMemberMap(
+                    prop,
+                    KdlMemberKind.ExtensionData,
+                    "##extension_data##"
+                );
+                continue;
+            }
             var map = CreateMemberMap(prop);
 
             switch (map.Kind)
@@ -61,30 +73,85 @@ internal sealed record KdlTypeMapping
     public PropertyInfo? DictionaryKeyProperty { get; }
     public PropertyInfo? DictionaryValueProperty { get; }
     public bool HasMembers => Arguments.Count > 0 || Properties.Count > 0 || Children.Count > 0;
+    public KdlMemberMap? ExtensionDataProperty { get; private set; }
 
     private void ValidateMapping()
     {
-        // Sort arguments and check for continuity
+        // --- Rule 5: Slot Uniqueness (Properties & Children) ---
+        var usedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var prop in Properties)
+        {
+            if (!usedKeys.Add(prop.KdlName))
+            {
+                throw new KdlConfigurationException(
+                    $"Type '{Type.Name}' has multiple properties mapping to the KDL key '{prop.KdlName}'."
+                );
+            }
+        }
+
+        // Children usually share the same name if they are part of a collection,
+        // but distinct properties shouldn't map to the same node name unless flattened.
+        var usedChildNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var child in Children)
+        {
+            if (!child.IsCollection && !usedChildNames.Add(child.KdlName))
+            {
+                throw new KdlConfigurationException(
+                    $"Type '{Type.Name}' has multiple non-collection members mapping to the KDL node '{child.KdlName}'."
+                );
+            }
+        }
+
+        // --- Rule 9: Argument Ambiguity (Rest Position) ---
+        // Sort arguments by index to check sequence
         var sortedArgs = Arguments.OrderBy(a => a.ArgumentIndex).ToList();
+
         for (int i = 0; i < sortedArgs.Count; i++)
         {
+            // Check for continuity (Existing logic)
             if (sortedArgs[i].ArgumentIndex != i)
+            {
                 throw new KdlConfigurationException(
                     $"Type '{Type.Name}' has non-contiguous KDL arguments. Expected index {i}, found {sortedArgs[i].ArgumentIndex}."
                 );
+            }
+
+            // Rule 9: If this is a collection (Rest argument), it MUST be the last one.
+            if (sortedArgs[i].IsCollection && i < sortedArgs.Count - 1)
+            {
+                throw new KdlConfigurationException(
+                    $"Property '{sortedArgs[i].Property.Name}' in type '{Type.Name}' is a collection argument (Rest argument) "
+                        + $"at index {i}, but it is followed by another argument. Rest arguments must be the final argument."
+                );
+            }
         }
 
-        Arguments.Clear();
-        Arguments.AddRange(sortedArgs);
+        // --- Rule 16: Illegal Flattening ---
+        foreach (var child in Children)
+        {
+            if (child.IsFlattened)
+            {
+                // Flattening a scalar (int, string, bool) makes no sense in KDL
+                // because there are no properties or sub-nodes to hoist.
+                if (child.Property.PropertyType.IsKdlScalar)
+                {
+                    throw new KdlConfigurationException(
+                        $"Property '{child.Property.Name}' in type '{Type.Name}' has Flatten=true, "
+                            + $"but the type '{child.Property.PropertyType.Name}' is a scalar. Flattening is only supported for collections or complex types."
+                    );
+                }
+            }
+        }
 
+        // Existing Dictionary validation
         foreach (var prop in Properties)
         {
             if (prop.IsDictionary && !prop.DictionaryValueProperty!.PropertyType.IsKdlScalar)
             {
                 throw new KdlConfigurationException(
-                    $"Property '{prop.Property.PropertyType.Name}.{prop.Property.Name}' is marked with [KdlProperty], "
-                        + $"but its value type '{prop.DictionaryValueProperty!.Name}' is complex. "
-                        + "KDL properties only support scalar values. Use [KdlNode] instead."
+                    $"Property '{prop.Property.Name}' is marked as [KdlProperty] but contains a complex Dictionary. "
+                        + "Use [KdlNode] for dictionaries of complex objects."
                 );
             }
         }
@@ -171,9 +238,34 @@ public static class KdlTypeMappingExtensions
 
     extension(PropertyInfo info)
     {
-        internal bool IsKdlSerializable() =>
-            info.CanWrite
-            && info.GetCustomAttribute<KdlIgnoreAttribute>() == null
-            && info.GetIndexParameters().Length == 0;
+        internal bool IsKdlSerializable()
+        {
+            // 1. Basic checks
+            if (
+                info.GetMethod == null
+                || info.GetCustomAttribute<KdlIgnoreAttribute>() != null
+                || info.GetIndexParameters().Length > 0
+            )
+            {
+                return false;
+            }
+
+            // 2. Filter out BCL Collection infrastructure (Comparer, Count, Keys, etc.)
+            var declaringType = info.DeclaringType;
+            if (declaringType != null && declaringType.IsGenericType)
+            {
+                var genDef = declaringType.GetGenericTypeDefinition();
+                if (
+                    genDef == typeof(Dictionary<,>)
+                    || genDef == typeof(List<>)
+                    || declaringType.Namespace?.StartsWith("System.Collections") == true
+                )
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

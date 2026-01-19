@@ -1,10 +1,15 @@
 using Kuddle.Exceptions;
 using Kuddle.Serialization;
 
-namespace Kuddle.Tests.Serialization;
+namespace Kuddle.Tests.Conversion;
 
 public class DocumentToObjectTests
 {
+    readonly KdlSerializerOptions _options = KdlSerializerOptions.Default with
+    {
+        RootMapping = KdlRootMapping.AsDocument,
+    };
+
     class AppConfig
     {
         [KdlNode("plugin", Flatten = true)]
@@ -49,7 +54,7 @@ public class DocumentToObjectTests
             }
             """;
 
-        var result = KdlSerializer.Deserialize<AppConfig>(kdl);
+        var result = KdlSerializer.Deserialize<AppConfig>(kdl, _options);
 
         // Assert
         await Assert.That(result.Plugins).Count().IsEqualTo(2);
@@ -66,7 +71,7 @@ public class DocumentToObjectTests
     {
         var kdl = "";
 
-        var result = KdlSerializer.Deserialize<AppConfig>(kdl);
+        var result = KdlSerializer.Deserialize<AppConfig>(kdl, _options);
 
         await Assert.That(result).IsNotNull();
         await Assert.That(result.Plugins).IsEmpty();
@@ -85,7 +90,7 @@ public class DocumentToObjectTests
             }
             """;
 
-        var result = KdlSerializer.Deserialize<AppConfig>(kdl);
+        var result = KdlSerializer.Deserialize<AppConfig>(kdl, _options);
 
         await Assert.That(result.Plugins).Count().IsEqualTo(1);
         await Assert.That(result.Plugins[0].Name).IsEqualTo("Core");
@@ -101,7 +106,7 @@ public class DocumentToObjectTests
             experiments enabled=#true
         ";
 
-        var result = KdlSerializer.Deserialize<AppConfig>(kdl);
+        var result = KdlSerializer.Deserialize<AppConfig>(kdl, _options);
 
         await Assert.That(result.Experiments).IsNotNull();
         await Assert.That(result.Experiments!.Enabled).IsTrue();
@@ -115,7 +120,7 @@ public class DocumentToObjectTests
             logging { level ""info"" }
             logging { level ""error"" }
         ";
-        var config = KdlSerializer.Deserialize<AppConfig>(kdl);
+        var config = KdlSerializer.Deserialize<AppConfig>(kdl, _options);
 
         await Assert.That(config.Logging!.LogLevel).IsEqualTo("error");
     }

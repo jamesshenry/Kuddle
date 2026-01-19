@@ -18,8 +18,9 @@ public static class KdlSerializer
     )
         where T : new()
     {
-        var doc = KdlReader.Read(text);
-        var metadata = KdlTypeMapping.For<T>();
+        options ??= KdlSerializerOptions.Default;
+
+        var doc = KdlReader.Read(text, options.Reader);
 
         foreach (var node in doc.Nodes)
         {
@@ -34,7 +35,9 @@ public static class KdlSerializer
     public static T Deserialize<T>(string text, KdlSerializerOptions? options = null)
         where T : new()
     {
-        var doc = KdlReader.Read(text);
+        options ??= KdlSerializerOptions.Default;
+
+        var doc = KdlReader.Read(text, options.Reader);
 
         return ObjectDeserializer.DeserializeDocument<T>(doc, options);
     }
@@ -44,7 +47,10 @@ public static class KdlSerializer
     /// </summary>
     public static string Serialize<T>(T instance, KdlSerializerOptions? options = null)
     {
+        options ??= KdlSerializerOptions.Default;
+
         var doc = ObjectSerializer.SerializeDocument(instance, options);
-        return KdlWriter.Write(doc);
+
+        return KdlWriter.Write(doc, options.Writer);
     }
 }

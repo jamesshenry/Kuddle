@@ -2,11 +2,13 @@ namespace Kuddle.Serialization;
 
 public record KdlWriterOptions
 {
-    public static KdlWriterOptions Default => new();
-
-    public string IndentChar { get; init; } = "    ";
-    public string NewLine { get; init; } = "\n";
-    public string SpaceAfterProp { get; init; } = " ";
+    public static KdlWriterOptions Default { get; } = new();
+    public KdlWriterIndentType IndentType { get; init; } = KdlWriterIndentType.Spaces;
+    public KdlWriterIndentSize IndentSize { get; init; } = KdlWriterIndentSize.Four;
+    internal string IndentChar =>
+        IndentType == KdlWriterIndentType.Tabs ? "\t" : new string(' ', (int)IndentSize);
+    internal string NewLine { get; } = "\n";
+    internal string SpaceAfterProp { get; } = " ";
     public bool EscapeUnicode { get; init; } = false;
-    public bool RoundTrip { get; set; } = true;
+    public KdlStringStyle StringStyle { get; init; } = KdlStringStyle.Default;
 }

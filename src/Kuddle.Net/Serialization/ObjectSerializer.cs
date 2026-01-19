@@ -16,7 +16,7 @@ internal class ObjectSerializer
         _options = options ?? KdlSerializerOptions.Default;
     }
 
-    internal static KdlDocument SerializeDocument<T>(T? instance, KdlSerializerOptions? options)
+    internal static KdlDocument SerializeDocument<T>(T? instance, KdlSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -41,7 +41,7 @@ internal class ObjectSerializer
                     doc.Nodes.Add(worker.SerializeObject(item));
             }
         }
-        else if (options?.UnwrapRoot == true)
+        else if (options.RootMapping == KdlRootMapping.AsDocument)
         {
             var rootNode = worker.SerializeObject(instance);
 
